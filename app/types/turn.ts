@@ -1,26 +1,27 @@
 import { CardType } from './card'
 
 export const TurnPhase = {
-  PLAYER_ACTION: 'PLAYER_ACTION',
-  OBSERVER_RESPONSE: 'OBSERVER_RESPONSE',
-  BLOCK_RESPONSE: 'BLOCK_RESPONSE',
+  ACTION_DECLARED: 'ACTION_DECLARED',
+  CHALLENGE_BLOCK_WINDOW: 'CHALLENGE_BLOCK_WINDOW',
   CHALLENGE_RESOLUTION: 'CHALLENGE_RESOLUTION',
-  ACTION_RESOLUTION: 'ACTION_RESOLUTION'
+  BLOCK_DECLARED: 'BLOCK_DECLARED',
+  BLOCK_CHALLENGE_WINDOW: 'BLOCK_CHALLENGE_WINDOW',
+  BLOCK_CHALLENGE_RESOLUTION: 'BLOCK_CHALLENGE_RESOLUTION',
+  ACTION_RESOLUTION: 'ACTION_RESOLUTION',
+  ACTION_FAILED: 'ACTION_FAILED',
+  LOSE_INFLUENCE: 'LOSE_INFLUENCE'
 } as const
 export type TurnPhase = (typeof TurnPhase)[keyof typeof TurnPhase]
 
 export interface TurnState {
   phase: TurnPhase
-  activePlayer: string
   action: Action
-  blockingPlayer?: string
-  challengingPlayer?: string
   timeoutAt: number // Unix timestamp for timeout
   respondedPlayers: string[] // Players who have explicitly responded
-  resolvedChallenges: {
-    blockChallenge?: boolean
-    actionChallenge?: boolean
-  }
+  resolvedChallenges: Record<string, boolean>
+  challengingPlayer?: string
+  blockingPlayer?: string
+  blockingCard?: CardType
 }
 
 export const ActionType = {
@@ -43,5 +44,5 @@ export interface Action {
   blockableBy: CardType[] // Which characters can block this?
   canBeChallenged: boolean // Can this action be challenged?
   autoResolve: boolean // Should this resolve immediately?
-  coinCost?: number // Cost in coins to perform
+  coinCost: number // Cost in coins to perform
 }

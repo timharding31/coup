@@ -1,278 +1,279 @@
-import { type Reference } from 'firebase-admin/database'
-import { Action, Card, CardType, Game, Player, TurnState } from '~/types'
+import { Reference } from 'firebase-admin/database'
+import { Action, Card, CardType, Game, GameStatus, Player, TurnPhase, TurnState } from '~/types'
+import { IGameService } from './game.interface'
+import { PlayerService } from './player.server'
+import { PinService } from './pin.server'
 import { db } from './firebase.server'
+import { ActionService } from './action.server'
+import { DeckService } from './deck.server'
+import { ChallengeService } from './challenge.server'
+import { TurnService } from './turn.server'
 
-export class GameService {
+export class GameService implements IGameService {
   private gamesRef: Reference = db.ref('games')
-  private playersRef: Reference = db.ref('players')
 
-  async createGame(hostId: string): Promise<string> {
-    // First fetch the host's player data
-    const hostSnapshot = await this.playersRef.child(hostId).get()
-    const hostData = hostSnapshot.val() as Player
+  private actionService: ActionService
+  private challengeService: ChallengeService
+  private deckService: DeckService
+  private pinService: PinService
+  private playerService: PlayerService
+  private turnService: TurnService
 
-    if (!hostData) {
+  constructor(playerService: PlayerService) {
+    this.playerService = playerService
+    this.pinService = new PinService()
+    this.actionService = new ActionService(this.gamesRef)
+    this.deckService = new DeckService(this.gamesRef)
+    this.challengeService = new ChallengeService(this.gamesRef, this.deckService, this.actionService)
+    this.turnService = new TurnService(this.gamesRef, this.actionService, this.challengeService)
+  }
+
+  async createGame(hostId: string): Promise<{ gameId: string; pin: string }> {
+    const { player: host } = await this.playerService.getPlayer(hostId)
+    if (!host) {
       throw new Error('Host player not found')
     }
 
+    const pin = await this.pinService.generateUniquePin()
     const newGameRef = this.gamesRef.push()
+    const gameId = newGameRef.key!
 
-    // Initialize the game deck
-    const deck = this.createInitialDeck()
-
-    // Deal initial cards to the host
-    const [hostInfluence, remainingDeck] = this.dealCards(deck, 2)
+    const deck = this.deckService.createInitialDeck()
+    const [hostInfluence, remainingDeck] = this.deckService.dealCards(deck, 2)
 
     const initialGame: Game = {
-      id: newGameRef.key!,
-      status: 'WAITING',
+      id: gameId,
+      pin,
+      hostId,
+      status: GameStatus.WAITING,
       players: [
         {
           id: hostId,
-          username: hostData.username,
+          username: host.username,
           influence: hostInfluence,
-          coins: 2, // Starting coins
-          isActive: true,
-          currentGame: newGameRef.key!
+          coins: 2
         }
       ],
       deck: remainingDeck,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      currentTurn: 0
+      currentPlayerIndex: 0
     }
 
-    await newGameRef.set(initialGame)
+    await Promise.all([
+      newGameRef.set(initialGame),
+      this.playerService.updatePlayer(hostId, { currentGameId: gameId }),
+      this.pinService.saveGameIdByPin(pin, gameId)
+    ])
 
-    // Update the host's currentGame reference
-    await this.playersRef.child(hostId).update({
-      currentGame: newGameRef.key
-    })
-
-    return newGameRef.key!
+    return { gameId, pin }
   }
 
-  async getGame(gameId: string): Promise<Game | null> {
-    const snapshot = await this.gamesRef.child(gameId).get()
-    return snapshot.val() as Game | null
-  }
-
-  async startGameTurn(gameId: string, action: Action): Promise<void> {
-    const turnRef = this.gamesRef.child(`${gameId}/currentTurn`)
-
-    await turnRef.transaction((currentTurn: TurnState | null) => {
-      if (currentTurn && currentTurn.phase !== 'ACTION_RESOLUTION') {
-        return undefined // Abort if there's an ongoing turn
-      }
-
-      return {
-        phase: 'PLAYER_ACTION',
-        activePlayer: action.playerId,
-        action,
-        timeoutAt: Date.now() + (action.autoResolve ? 0 : 20000),
-        respondedPlayers: []
-      }
-    })
+  async startGameTurn(gameId: string, action: Action): Promise<{ success: boolean; turnState: TurnState | null }> {
+    return this.turnService.startTurn(gameId, action)
   }
 
   async handlePlayerResponse(
     gameId: string,
     playerId: string,
-    response: 'accept' | 'challenge' | 'block'
-  ): Promise<void> {
-    const turnRef = this.gamesRef.child(`${gameId}/currentTurn`)
+    response: 'accept' | 'challenge' | 'block',
+    blockingCard?: CardType
+  ): Promise<{ success: boolean; newTurnState: TurnState | null }> {
+    return this.turnService.handlePlayerResponse(gameId, playerId, response, blockingCard)
+  }
 
-    await turnRef.transaction(async (currentTurn: TurnState | null) => {
-      if (!currentTurn || !this.isValidResponse(currentTurn, playerId, response)) {
-        return // Abort transaction
-      }
+  async joinGameByPin(playerId: string, pin: string): Promise<{ gameId: string }> {
+    const gameId = await this.pinService.getGameIdByPin(pin)
 
-      const updatedTurn = { ...currentTurn }
-      updatedTurn.respondedPlayers.push(playerId)
+    if (!gameId) {
+      throw new Error('Game not found')
+    }
 
-      switch (response) {
-        case 'challenge':
-          updatedTurn.phase = 'CHALLENGE_RESOLUTION'
-          updatedTurn.challengingPlayer = playerId
-          updatedTurn.timeoutAt = Date.now() + 10000
-          break
+    return { gameId: await this.joinGame(playerId, gameId) }
+  }
 
-        case 'block':
-          updatedTurn.phase = 'BLOCK_RESPONSE'
-          updatedTurn.blockingPlayer = playerId
-          updatedTurn.timeoutAt = Date.now() + 20000
-          updatedTurn.respondedPlayers = [] // Reset for new phase
-          break
+  private async joinGame(playerId: string, gameId: string): Promise<string> {
+    const { player } = await this.playerService.getPlayer(playerId)
 
-        case 'accept':
-          if (await this.haveAllPlayersResponded(gameId, updatedTurn)) {
-            return this.resolveAction(gameId, updatedTurn)
+    if (!player) {
+      throw new Error('Player not found')
+    }
+
+    if (player.currentGameId) {
+      throw new Error('Player is already in a game')
+    }
+
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+      if (!game) return null
+      if (game.status !== GameStatus.WAITING) return null
+      if (game.players.length >= 6) return null
+      if (game.players.some(p => p.id === playerId)) return null
+
+      const [influence, remainingDeck] = this.deckService.dealCards(game.deck, 2)
+
+      return {
+        ...game,
+        players: [
+          ...game.players,
+          {
+            id: playerId,
+            username: player.username,
+            influence,
+            coins: 2
           }
-          break
+        ],
+        deck: remainingDeck,
+        updatedAt: Date.now()
+      }
+    })
+
+    if (!result.committed) {
+      throw new Error('Failed to join game')
+    }
+
+    await this.playerService.updatePlayer(playerId, { currentGameId: gameId })
+
+    return gameId
+  }
+
+  async leaveGame(playerId: string, gameId: string) {
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+      if (!game || game.status !== GameStatus.WAITING) return null
+
+      const playerIndex = game.players.findIndex(p => p.id === playerId)
+      if (playerIndex === -1) return null
+
+      const playerCards = game.players[playerIndex].influence
+      const updatedDeck = this.deckService.shuffleDeck([...game.deck, ...playerCards])
+      const updatedPlayers = game.players.filter(p => p.id !== playerId)
+
+      // If no players left, clean up the game
+      if (updatedPlayers.length === 0) {
+        return null
       }
 
-      return updatedTurn
+      return {
+        ...game,
+        players: updatedPlayers,
+        deck: updatedDeck,
+        updatedAt: Date.now()
+      }
     })
-  }
 
-  private async resolveAction(gameId: string, turnState: TurnState): Promise<TurnState> {
-    const gameSnapshot = await this.gamesRef.child(gameId).get()
-    const game = gameSnapshot.val() as Game
-
-    // First, update player states based on the action
-    await this.applyActionEffects(gameId, turnState.action)
-
-    // Then, check if the game is over
-    const gameStatus = await this.checkGameStatus(gameId)
-    if (gameStatus === 'COMPLETED') {
-      await this.gamesRef.child(gameId).child('status').set('COMPLETED')
-      return turnState // End the game
+    if (!result.committed) {
+      throw new Error('Failed to leave game')
     }
 
-    // Move to next player
-    const currentPlayerIndex = game.players.findIndex(p => p.id === turnState.activePlayer)
-    const nextPlayerIndex = (currentPlayerIndex + 1) % game.players.length
+    await this.playerService.updatePlayer(playerId, { currentGameId: null })
 
-    return {
-      phase: 'ACTION_RESOLUTION',
-      activePlayer: game.players[nextPlayerIndex].id,
-      action: turnState.action,
-      resolvedChallenges: turnState.resolvedChallenges,
-      respondedPlayers: [],
-      timeoutAt: 0
-    }
+    return { success: true }
   }
 
-  private async applyActionEffects(gameId: string, action: Action): Promise<void> {
-    switch (action.type) {
-      case 'INCOME':
-        await this.updatePlayerCoins(gameId, action.playerId, 1)
-        break
+  async startGame(gameId: string, hostId: string) {
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+      if (!game) return null
+      if (game.status !== GameStatus.WAITING) return null
+      if (game.hostId !== hostId) return null
+      if (game.players.length < 2) return null
 
-      case 'FOREIGN_AID':
-        await this.updatePlayerCoins(gameId, action.playerId, 2)
-        break
+      const firstPlayerIndex = Math.floor(Math.random() * game.players.length)
 
-      case 'TAX':
-        await this.updatePlayerCoins(gameId, action.playerId, 3)
-        break
-
-      case 'STEAL':
-        if (action.targetPlayerId) {
-          await Promise.all([
-            this.updatePlayerCoins(gameId, action.playerId, 2),
-            this.updatePlayerCoins(gameId, action.targetPlayerId, -2)
-          ])
-        }
-        break
-
-      case 'ASSASSINATE':
-        if (action.targetPlayerId) {
-          await Promise.all([
-            this.updatePlayerCoins(gameId, action.playerId, -3),
-            this.revealInfluence(gameId, action.targetPlayerId)
-          ])
-        }
-        break
-
-      case 'COUP':
-        if (action.targetPlayerId) {
-          await Promise.all([
-            this.updatePlayerCoins(gameId, action.playerId, -7),
-            this.revealInfluence(gameId, action.targetPlayerId)
-          ])
-        }
-        break
-    }
-  }
-
-  private async updatePlayerCoins(gameId: string, playerId: string, amount: number): Promise<void> {
-    const coinsRef = this.gamesRef.child(`${gameId}/players/${playerId}/coins`)
-
-    await coinsRef.transaction((currentCoins: number) => {
-      return (currentCoins || 0) + amount
+      return {
+        ...game,
+        status: GameStatus.IN_PROGRESS,
+        currentPlayerIndex: firstPlayerIndex,
+        updatedAt: Date.now()
+      }
     })
+
+    if (!result.committed) {
+      throw new Error('Failed to start game')
+    }
+
+    return { game: result.snapshot.val() }
   }
 
-  private async revealInfluence(gameId: string, playerId: string): Promise<void> {
-    const playerRef = this.gamesRef.child(`${gameId}/players/${playerId}`)
+  async handleCardSelection(gameId: string, playerId: string, cardType: CardType): Promise<{ success: boolean }> {
+    const gameRef = this.gamesRef.child(gameId)
+    const game = (await gameRef.get()).val() as Game
 
-    await playerRef.transaction((player: Player) => {
-      if (!player) return undefined
+    // Verify the card can be revealed
+    if (!game.currentTurn || !this.canSelectCard(game, playerId)) {
+      throw new Error('Invalid card selection')
+    }
 
-      const unrevealed = player.influence.findIndex(card => !card.isRevealed)
-      if (unrevealed === -1) return undefined // No cards to reveal
+    const result = await gameRef.transaction((game: Game | null) => {
+      if (!game) return null
 
-      player.influence[unrevealed].isRevealed = true
-      return player
+      const playerIndex = game.players.findIndex(p => p.id === playerId)
+      if (playerIndex === -1) return null
+
+      const cardIndex = game.players[playerIndex].influence.findIndex(
+        card => !card.isRevealed && card.type === cardType
+      )
+      if (cardIndex === -1) return null
+
+      const updatedPlayers = game.players.map(p => {
+        if (p.id === playerId) {
+          const updatedInfluence = [...p.influence]
+          updatedInfluence[cardIndex] = {
+            ...updatedInfluence[cardIndex],
+            isRevealed: true
+          }
+          return { ...p, influence: updatedInfluence }
+        }
+        return p
+      })
+
+      return {
+        ...game,
+        players: updatedPlayers,
+        updatedAt: Date.now()
+      }
     })
+
+    if (!result.committed) {
+      throw new Error('Failed to handle card selection')
+    }
+
+    await this.turnService.progressToNextPhase(gameId)
+
+    return { success: true }
   }
 
-  private async checkGameStatus(gameId: string): Promise<'IN_PROGRESS' | 'COMPLETED'> {
-    const snapshot = await this.gamesRef.child(`${gameId}/players`).get()
-    const players = snapshot.val() as Player[]
+  private canSelectCard(game: Game, playerId: string): boolean {
+    const turn = game.currentTurn
+    if (!turn) return false
 
-    const activePlayers = players.filter(player => player.influence.some(card => !card.isRevealed))
+    // Player must lose influence in LOSE_INFLUENCE phase
+    if (turn.phase === 'LOSE_INFLUENCE') {
+      if (turn.action.type === 'ASSASSINATE' || turn.action.type === 'COUP') {
+        return turn.action.targetPlayerId === playerId
+      }
+    }
 
-    return activePlayers.length <= 1 ? 'COMPLETED' : 'IN_PROGRESS'
+    // Handle challenge losses
+    if (
+      (turn.phase === 'CHALLENGE_RESOLUTION' || turn.phase === 'BLOCK_CHALLENGE_RESOLUTION') &&
+      turn.challengingPlayer === playerId &&
+      !turn.resolvedChallenges[playerId]
+    ) {
+      return true
+    }
+
+    return false
   }
 
-  private isValidResponse(
-    currentTurn: TurnState,
-    playerId: string,
-    response: 'accept' | 'challenge' | 'block'
-  ): boolean {
-    // Player can't respond to their own action
-    if (playerId === currentTurn.activePlayer) return false
-
-    // Player can't respond twice in the same phase
-    if (currentTurn.respondedPlayers.includes(playerId)) return false
-
-    // Can't block or challenge if action doesn't allow it
-    if (response === 'block' && !currentTurn.action.canBeBlocked) return false
-    if (response === 'challenge' && !currentTurn.action.canBeChallenged) return false
-
-    return true
+  async getGame(gameId: string | undefined) {
+    if (!gameId) {
+      throw new Error('Game ID is required')
+    }
+    const snapshot = await this.gamesRef.child(gameId).get()
+    return { game: snapshot.val() }
   }
 
-  private async haveAllPlayersResponded(gameId: string, turnState: TurnState): Promise<boolean> {
-    const snapshot = await this.gamesRef.child(`${gameId}/players`).get()
-    const players = snapshot.val() as Player[]
-
-    const requiredResponses = players.filter(
-      p => p.id !== turnState.activePlayer && p.influence.some(card => !card.isRevealed)
-    ).length
-
-    return turnState.respondedPlayers.length >= requiredResponses
-  }
-
-  private createInitialDeck(): Card[] {
-    const cardTypes = [
-      CardType.DUKE,
-      CardType.ASSASSIN,
-      CardType.CONTESSA,
-      CardType.CAPTAIN,
-      CardType.AMBASSADOR
-    ]
-
-    // Create 3 copies of each card
-    const deck = cardTypes.flatMap(type =>
-      Array(3)
-        .fill(null)
-        .map(() => ({
-          id: crypto.randomUUID(),
-          type,
-          isRevealed: false
-        }))
-    )
-
-    // Shuffle the deck
-    return deck.sort(() => Math.random() - 0.5)
-  }
-
-  private dealCards(deck: Card[], count: number): [Card[], Card[]] {
-    const dealt = deck.slice(0, count)
-    const remaining = deck.slice(count)
-    return [dealt, remaining]
+  async getCurrentTurn(gameId: string) {
+    const snapshot = await this.gamesRef.child(`${gameId}/currentTurn`).get()
+    return { turn: snapshot.val() as TurnState | null }
   }
 }

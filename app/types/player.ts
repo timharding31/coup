@@ -5,6 +5,5 @@ export interface Player {
   username: string
   influence: Card[]
   coins: number
-  isActive: boolean // In game or eliminated
-  currentGame?: string // Reference to current game
+  currentGameId?: string | null // Reference to current game
 }
