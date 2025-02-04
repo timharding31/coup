@@ -1,7 +1,7 @@
 import { Server as HTTPServer } from 'http'
 import { Server } from 'socket.io'
 
-import type { IGameService } from './game.interface'
+import type { IGameService } from './game.server'
 import type { Game, CoupSocket, CardType } from '~/types'
 
 export class SocketService {
@@ -23,6 +23,18 @@ export class SocketService {
   private setupEventHandlers() {
     this.io.on('connection', (socket: CoupSocket.Socket) => {
       console.log('Client connected:', socket.id)
+
+      if (socket.handshake.auth.playerId) {
+        const { playerId } = socket.handshake.auth
+        this.gameService.getGameByPlayerId(playerId).then(({ game }) => {
+          if (game) {
+            socket.data.gameId = game.id
+            socket.data.playerId = playerId
+            socket.join(`game:${game.id}`)
+            socket.emit('reconnectSuccess', { game })
+          }
+        })
+      }
 
       socket.on('joinGameRoom', async ({ gameId, playerId }) => {
         socket.join(`game:${gameId}`)
@@ -56,55 +68,48 @@ export class SocketService {
 
       socket.on('gameAction', async ({ gameId, playerId, action }) => {
         try {
-          const { success, turnState } = await this.gameService.startGameTurn(gameId, { ...action, playerId })
+          await this.gameService.startGameTurn(gameId, { ...action, playerId })
+          const { game } = await this.gameService.getGame(gameId)
+          if (game) {
+            this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
+          }
 
-          if (success) {
-            const { game } = await this.gameService.getGame(gameId)
-            if (game) {
-              this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
-            }
-
-            // Start response timer if the action isn't auto-resolved
-            if (!action.autoResolve) {
-              this.startResponseTimer(gameId)
-            }
+          // Start response timer if the action isn't auto-resolved
+          if (!action.autoResolve) {
+            this.startResponseTimer(gameId)
+            // Emit timer started event with expiry
+            this.io.to(`game:${gameId}`).emit('turnTimerStarted', {
+              expiresAt: Date.now() + 20000 // 20 seconds
+            })
           }
         } catch (error) {
           socket.emit('error', { message: 'Invalid action' })
         }
       })
 
-      socket.on('playerResponse', async ({ gameId, playerId, response, blockingCard }) => {
+      socket.on('playerResponse', async ({ gameId, playerId, response }) => {
         try {
-          const { success, newTurnState } = await this.gameService.handlePlayerResponse(
-            gameId,
-            playerId,
-            response,
-            blockingCard
-          )
-
-          if (success) {
-            const { game } = await this.gameService.getGame(gameId)
-            if (game) {
-              this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
-            }
+          const { game } = await this.gameService.getGame(gameId)
+          if (game?.currentTurn?.phase === 'BLOCK_CHALLENGE_WINDOW' && response !== 'block') {
+            await this.gameService.handleBlockResponse(gameId, playerId, response)
+          } else {
+            await this.gameService.handleActionResponse(gameId, playerId, response)
           }
+          // TODO: Emit player response to socket
         } catch (error) {
           socket.emit('error', { message: 'Invalid response' })
         }
       })
 
-      socket.on('selectCard', async ({ gameId, playerId, cardType }) => {
+      socket.on('selectCard', async ({ gameId, playerId, cardId }) => {
         try {
-          const { success } = await this.gameService.handleCardSelection(gameId, playerId, cardType)
-
-          if (success) {
-            const { game } = await this.gameService.getGame(gameId)
-            if (game) {
-              this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
-            }
+          await this.gameService.handleCardSelection(gameId, playerId, cardId)
+          const { game } = await this.gameService.getGame(gameId)
+          if (game) {
+            this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
           }
         } catch (error) {
+          console.log(error)
           socket.emit('error', { message: 'Invalid card selection' })
         }
       })
@@ -120,8 +125,8 @@ export class SocketService {
 
   private async startResponseTimer(gameId: string) {
     setTimeout(async () => {
-      const { turn } = await this.gameService.getCurrentTurn(gameId)
       const { game } = await this.gameService.getGame(gameId)
+      const turn = game?.currentTurn
 
       if (game && turn?.timeoutAt && turn.timeoutAt <= Date.now()) {
         // Auto-accept for all players who haven't responded
@@ -129,14 +134,24 @@ export class SocketService {
         const remaining = game.players.filter(p => !responses.includes(p.id) && p.id !== turn.action.playerId)
 
         // Process automatic accepts
-        await Promise.all(remaining.map(p => this.gameService.handlePlayerResponse(gameId, p.id, 'accept')))
+        await Promise.all(
+          remaining.map(p => {
+            if (turn.phase === 'BLOCK_CHALLENGE_RESOLUTION') {
+              return this.gameService.handleBlockResponse(gameId, p.id, 'accept')
+            } else {
+              return this.gameService.handleActionResponse(gameId, p.id, 'accept')
+            }
+          })
+        )
 
         const updatedGame = await this.gameService.getGame(gameId)
         if (updatedGame.game) {
           this.io.to(`game:${gameId}`).emit('gameStateChanged', { game: updatedGame.game })
+          // Emit timer ended event
+          this.io.to(`game:${gameId}`).emit('turnTimerEnded')
         }
       }
-    }, 20000) // 20 second timer
+    }, 20_000)
   }
 
   public emitGameUpdate(gameId: string, game: Game) {

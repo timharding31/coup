@@ -1,9 +1,9 @@
 import React from 'react'
-import type { CardType } from '~/types'
+import type { Card, CardType } from '~/types'
 
 interface LoseInfluenceControlsProps {
-  onSelectCard: (card: CardType) => void
-  availableCards: CardType[]
+  onSelectCard: (cardId: string) => void
+  availableCards: Card[]
   reason?: 'CHALLENGE_LOST' | 'COUP' | 'ASSASSINATE'
 }
 
@@ -17,8 +17,8 @@ export const LoseInfluenceControls: React.FC<LoseInfluenceControlsProps> = ({
       <h3>Lose Influence {getLoseReason(reason)}</h3>
       <div className='card-selection'>
         {availableCards.map(card => (
-          <button key={card} onClick={() => onSelectCard(card)} className='card-button'>
-            Reveal {card}
+          <button key={card.id} onClick={() => onSelectCard(card.id)} className='card-button'>
+            Reveal {card.type}
           </button>
         ))}
       </div>

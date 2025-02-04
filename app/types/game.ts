@@ -18,7 +18,8 @@ export interface Game {
   deck: Card[]
   currentPlayerIndex: number // Index of current player
   currentTurn?: TurnState
-  winner?: string
+  winnerId?: string
   createdAt: number // Unix timestamp
   updatedAt: number // Unix timestamp
+  completedAt?: number
 }

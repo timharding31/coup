@@ -4,7 +4,7 @@ import { BlockControls } from './BlockControls'
 import { ChallengeControls } from './ChallengeControls'
 
 interface ResponseControlsProps {
-  onResponse: (type: 'accept' | 'challenge' | 'block', blockingCard?: CardType) => void
+  onResponse: (type: 'accept' | 'challenge' | 'block') => void
   action: Action
   availableResponses: {
     canAccept: boolean

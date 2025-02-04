@@ -1,4 +1,5 @@
 import { CardType } from './card'
+import { Game } from './game'
 
 export const TurnPhase = {
   ACTION_DECLARED: 'ACTION_DECLARED',
@@ -13,15 +14,21 @@ export const TurnPhase = {
 } as const
 export type TurnPhase = (typeof TurnPhase)[keyof typeof TurnPhase]
 
+export interface TurnChallengeResult {
+  challengingPlayer: string
+  successful: boolean | null
+  defendingCardId: string | null // Used when challenge is unsuccessful
+  lostCardId: string | null // Used when challenge is successful
+}
+
 export interface TurnState {
   phase: TurnPhase
   action: Action
   timeoutAt: number // Unix timestamp for timeout
   respondedPlayers: string[] // Players who have explicitly responded
-  resolvedChallenges: Record<string, boolean>
-  challengingPlayer?: string
-  blockingPlayer?: string
-  blockingCard?: CardType
+  challengeResult: TurnChallengeResult | null
+  blockingPlayer: string | null
+  lostInfluenceCardId: string | null
 }
 
 export const ActionType = {
@@ -35,14 +42,35 @@ export const ActionType = {
 } as const
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
-export interface Action {
-  type: ActionType
+interface BaseAction {
   playerId: string
-  targetPlayerId?: string
-  requiredCharacter?: CardType // Character needed for the action
-  canBeBlocked: boolean // Can this action be blocked?
-  blockableBy: CardType[] // Which characters can block this?
-  canBeChallenged: boolean // Can this action be challenged?
-  autoResolve: boolean // Should this resolve immediately?
-  coinCost: number // Cost in coins to perform
+  requiredCharacter?: CardType
+  canBeBlocked: boolean
+  blockableBy: CardType[]
+  canBeChallenged: boolean
+  coinCost: number
+}
+
+export type TargetedActionType = Extract<ActionType, 'STEAL' | 'ASSASSINATE' | 'COUP'>
+
+export interface TargetedAction extends BaseAction {
+  type: Extract<ActionType, 'STEAL' | 'ASSASSINATE' | 'COUP'>
+  targetPlayerId: string
+  autoResolve: false
+}
+
+export type UntargetedActionType = Extract<ActionType, 'INCOME' | 'FOREIGN_AID' | 'TAX' | 'EXCHANGE'>
+export interface UntargetedAction extends BaseAction {
+  type: Extract<ActionType, 'INCOME' | 'FOREIGN_AID' | 'TAX' | 'EXCHANGE'>
+  targetPlayerId?: never
+  autoResolve: boolean
+}
+
+export type Action = TargetedAction | UntargetedAction
+
+export interface StateTransition {
+  from: TurnPhase
+  to: TurnPhase
+  condition?: (turn: TurnState, game: Game) => boolean
+  onTransition?: (turn: TurnState, game: Game) => Promise<void>
 }

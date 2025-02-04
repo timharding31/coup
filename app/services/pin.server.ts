@@ -60,4 +60,8 @@ export class PinService {
     const normalizedPin = pin.trim().toUpperCase()
     await this.gamesByPinRef.child(normalizedPin).set(gameId)
   }
+
+  async removeGamePin(pin: string): Promise<void> {
+    await this.gamesByPinRef.child(pin).remove()
+  }
 }

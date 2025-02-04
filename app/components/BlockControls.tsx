@@ -2,7 +2,7 @@ import React from 'react'
 import type { Action, CardType } from '~/types'
 
 interface BlockControlsProps {
-  onResponse: (response: 'accept' | 'challenge' | 'block', blockingCard?: CardType) => void
+  onResponse: (response: 'accept' | 'challenge' | 'block') => void
   action: Action
   availableBlocks: CardType[]
 }
@@ -13,10 +13,11 @@ export const BlockControls: React.FC<BlockControlsProps> = ({ onResponse, action
       <h3>Block {action.type} with:</h3>
       <div className='block-options'>
         {availableBlocks.map(card => (
-          <button key={card} onClick={() => onResponse('block', card)} className='block-button'>
+          <button key={card} onClick={() => onResponse('block')} className='block-button'>
             {card} ({getBlockDescription(card, action.type)})
           </button>
         ))}
+        <button onClick={() => onResponse('block')}>Bluff</button>
       </div>
     </div>
   )

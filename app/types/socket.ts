@@ -20,6 +20,9 @@ export interface ServerToClientEvents {
   playerJoined: (data: { playerId: string }) => void
   playerLeft: (data: { playerId: string }) => void
   playerDisconnected: (data: { playerId: string }) => void
+  reconnectSuccess: (data: { game: Game }) => void
+  turnTimerStarted: (data: { expiresAt: number }) => void
+  turnTimerEnded: () => void
   error: (error: ErrorResponse) => void
 }
 
@@ -29,10 +32,9 @@ export interface ClientToServerEvents {
   leaveGameRoom: (data: GameSocketData) => void
   startGame: (data: GameSocketData) => void
   gameAction: (data: GameSocketData<{ action: Action }>) => void
-  playerResponse: (
-    data: GameSocketData<{ response: 'accept' | 'challenge' | 'block'; blockingCard?: CardType }>
-  ) => void
-  selectCard: (data: GameSocketData<{ cardType: CardType }>) => void
+  playerResponse: (data: GameSocketData<{ response: 'accept' | 'challenge' | 'block' }>) => void
+  selectCard: (data: GameSocketData<{ cardId: string }>) => void
+  exchangeCards: (data: GameSocketData<{ selectedCardIds: string[] }>) => void
 }
 
 export namespace CoupSocket {

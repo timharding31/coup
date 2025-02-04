@@ -5,16 +5,16 @@ import { ResponseControls } from './ResponseControls'
 import { LoseInfluenceControls } from './LoseInfluenceControls'
 import { GameTimer } from './GameTimer'
 import { Link } from '@remix-run/react'
-import { CardType, Game } from '~/types'
+import { CardType, Game, Player } from '~/types'
 
 interface GameBoardProps {
   playerId: string
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, startGame, performAction, sendResponse, selectCard } = useGameSocket()
+  const { game, startGame, sendResponse, selectCard } = useGameSocket()
 
-  const { canAct, canRespond, canChallengeBlock, availableResponses, mustLoseInfluence } = useMemo(() => {
+  const { canAct, canRespond, canChallengeBlock, availableResponses, mustLoseInfluence, challenge } = useMemo(() => {
     return getPlayerMenuState(game, playerId)
   }, [game, playerId])
 
@@ -32,9 +32,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
             <button onClick={() => startGame()}>Start Game</button>
           )}
 
-          {canAct && <ActionControls onAction={performAction} coins={currentPlayer?.coins || 0} />}
+          {canAct && (
+            <ActionControls
+              targets={game.players.filter((_, i) => i !== game.currentPlayerIndex)}
+              coins={currentPlayer?.coins || 0}
+            />
+          )}
 
-          {canRespond && (
+          {(canRespond || canChallengeBlock) && (
             <ResponseControls
               onResponse={sendResponse}
               action={game.currentTurn!.action}
@@ -46,12 +51,27 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
           {mustLoseInfluence && (
             <LoseInfluenceControls
               onSelectCard={selectCard}
-              availableCards={playerCards.map(c => c.type)}
+              availableCards={playerCards}
               // reason={game.currentTurn?.loseInfluenceReason || 'CHALLENGE_LOST'}
             />
           )}
 
-          <GameTimer timeoutAt={game.currentTurn?.timeoutAt} />
+          {challenge != null && (
+            <div>
+              <span>{challenge.reason}</span>
+              <div className='mt-2 flex'>
+                {playerCards
+                  .filter(card => !card.isRevealed)
+                  .map(card => (
+                    <button key={card.id} onClick={() => selectCard(card.id)}>
+                      {card.type}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* <GameTimer getRemainingTime={getRemainingTime} /> */}
         </>
       )}
       <pre>{JSON.stringify({ isHost: game?.hostId === playerId, ...game }, null, 2)}</pre>
@@ -69,6 +89,10 @@ interface MenuState {
     canChallenge: boolean
     canBlock: boolean
     availableBlocks: CardType[] // Cards that can be used to block
+  }
+  challenge?: {
+    by: Player
+    reason: string
   }
 }
 
@@ -91,7 +115,8 @@ function getPlayerMenuState(game: Game | null, playerId: string): MenuState {
     return menuState
   }
 
-  const isCurrentPlayer = game.players[game.currentPlayerIndex].id === playerId
+  const currentPlayer = game.players[game.currentPlayerIndex]
+  const isCurrentPlayer = currentPlayer?.id === playerId
   const turn = game.currentTurn
 
   // No turn in progress, current player can act
@@ -100,28 +125,11 @@ function getPlayerMenuState(game: Game | null, playerId: string): MenuState {
     return menuState
   }
 
-  // Already responded in this phase
-  if (turn.respondedPlayers?.includes(playerId)) {
-    return menuState
-  }
-
-  // Can't respond to your own action
-  if (turn.action.playerId === playerId) {
-    // Exception: can challenge a block against your action
-    if (turn.phase === 'BLOCK_CHALLENGE_WINDOW') {
-      menuState.canChallengeBlock = true
-      menuState.availableResponses = {
-        canAccept: true,
-        canChallenge: true,
-        canBlock: false,
-        availableBlocks: []
-      }
-    }
-    return menuState
-  }
-
   switch (turn.phase) {
     case 'CHALLENGE_BLOCK_WINDOW':
+      if (turn.respondedPlayers?.includes(playerId)) {
+        return menuState
+      }
       menuState.canRespond = true
       menuState.availableResponses = {
         canAccept: true,
@@ -133,16 +141,31 @@ function getPlayerMenuState(game: Game | null, playerId: string): MenuState {
 
     case 'CHALLENGE_RESOLUTION':
       // Only the challenged player can respond
-      if (turn.challengingPlayer === playerId) {
+      const challenger = game.players.find(p => p.id === turn.challengeResult?.challengingPlayer)
+      console.log('challenger', challenger?.id, 'player', playerId)
+      if (turn.challengeResult?.successful == null && challenger && challenger.id !== playerId) {
         menuState.canRespond = true
-        menuState.availableResponses = {
-          canAccept: true, // Lose influence
-          canChallenge: true, // Reveal card
-          canBlock: false,
-          availableBlocks: []
+        menuState.challenge = {
+          by: challenger,
+          reason: `${challenger.username} challenged your ${turn.action.type}`
         }
+      } else if (turn.challengeResult?.successful === false && challenger?.id === playerId) {
+        menuState.canRespond = true
+        menuState.mustLoseInfluence = true
       }
       break
+
+    case 'BLOCK_CHALLENGE_RESOLUTION':
+      // Only the challenged player can respond
+      const blockChallenger = game.players.find(p => p.id === turn.challengeResult?.challengingPlayer)
+      const blocker = game.players.find(p => p.id === turn.blockingPlayer)
+      if (blockChallenger && blocker?.id === playerId) {
+        menuState.canRespond = true
+        menuState.challenge = {
+          by: blockChallenger,
+          reason: `${blockChallenger.username} challenged your block of ${currentPlayer!.username}'s ${turn.action.type}`
+        }
+      }
 
     case 'BLOCK_CHALLENGE_WINDOW':
       // Only the original action player can challenge the block

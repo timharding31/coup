@@ -2345,7 +2345,7 @@ var Socket2 = class extends Emitter {
    * @return self
    */
   emit(ev, ...args) {
-    var _a, _b, _c10;
+    var _a, _b, _c9;
     if (RESERVED_EVENTS2.hasOwnProperty(ev)) {
       throw new Error('"' + ev.toString() + '" is a reserved event name');
     }
@@ -2367,7 +2367,7 @@ var Socket2 = class extends Emitter {
       packet.id = id;
     }
     const isTransportWritable = (_b = (_a = this.io.engine) === null || _a === void 0 ? void 0 : _a.transport) === null || _b === void 0 ? void 0 : _b.writable;
-    const isConnected = this.connected && !((_c10 = this.io.engine) === null || _c10 === void 0 ? void 0 : _c10._hasPingExpired());
+    const isConnected = this.connected && !((_c9 = this.io.engine) === null || _c9 === void 0 ? void 0 : _c9._hasPingExpired());
     const discardPacket = this.flags.volatile && !isTransportWritable;
     if (discardPacket) {
     } else if (isConnected) {
@@ -3406,10 +3406,20 @@ if (import.meta) {
     //@ts-expect-error
     "app/utils/action.ts"
   );
-  import.meta.hot.lastModified = "1738364033503.7334";
+  import.meta.hot.lastModified = "1738610684462.4753";
 }
-function getActionFromType(playerId, type) {
-  return { playerId, type, ...ACTION_REQUIREMENTS[type] };
+function getActionFromType(playerId, type, targetPlayerId) {
+  switch (type) {
+    case "INCOME":
+    case "FOREIGN_AID":
+    case "TAX":
+    case "EXCHANGE":
+      return { playerId, type, ...ACTION_REQUIREMENTS[type] };
+    case "STEAL":
+    case "ASSASSINATE":
+    case "COUP":
+      return { playerId, type, targetPlayerId, ...ACTION_REQUIREMENTS[type] };
+  }
 }
 var ACTION_REQUIREMENTS = {
   INCOME: {
@@ -3487,7 +3497,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/context/GameSocket.tsx"
   );
-  import.meta.hot.lastModified = "1738366292881.3005";
+  import.meta.hot.lastModified = "1738626145624.7915";
 }
 var GameSocketContext = (0, import_react.createContext)(null);
 function GameSocketProvider({
@@ -3502,17 +3512,41 @@ function GameSocketProvider({
   const [socket, setSocket] = (0, import_react.useState)(null);
   const [game, setGame] = (0, import_react.useState)(initialGame);
   const [error, setError] = (0, import_react.useState)(null);
+  const [isConnected, setIsConnected] = (0, import_react.useState)(false);
+  const [timerExpiresAt, setTimerExpiresAt] = (0, import_react.useState)(null);
   (0, import_react.useEffect)(() => {
     const socket2 = lookup2(socketUrl, {
       auth: {
         playerId
-      }
+      },
+      reconnection: true,
+      reconnectionDelay: 1e3,
+      reconnectionAttempts: 5
     });
+    socket2.onAny(console.log);
     socket2.on("connect", () => {
+      setIsConnected(true);
       socket2.emit("joinGameRoom", {
         gameId,
         playerId
       });
+    });
+    socket2.on("disconnect", () => {
+      setIsConnected(false);
+    });
+    socket2.on("reconnectSuccess", ({
+      game: game2
+    }) => {
+      setGame(game2);
+      setIsConnected(true);
+    });
+    socket2.on("turnTimerStarted", ({
+      expiresAt
+    }) => {
+      setTimerExpiresAt(expiresAt);
+    });
+    socket2.on("turnTimerEnded", () => {
+      setTimerExpiresAt(null);
     });
     socket2.on("gameStateChanged", ({
       game: game2
@@ -3536,26 +3570,39 @@ function GameSocketProvider({
       socket2.disconnect();
     };
   }, [gameId, playerId, navigate, socketUrl]);
-  const performAction = (0, import_react.useCallback)((actionType) => {
+  const performTargetedAction = (0, import_react.useCallback)((actionType, targetPlayerId) => {
     socket?.emit("gameAction", {
       gameId,
       playerId,
-      action: getActionFromType(playerId, actionType)
+      action: getActionFromType(playerId, actionType, targetPlayerId)
     });
   }, [socket, gameId, playerId]);
-  const sendResponse = (0, import_react.useCallback)((response, blockingCard) => {
+  const performUntargetedAction = (0, import_react.useCallback)((actionType) => {
+    socket?.emit("gameAction", {
+      gameId,
+      playerId,
+      action: getActionFromType(playerId, actionType, void 0)
+    });
+  }, [socket, gameId, playerId]);
+  const sendResponse = (0, import_react.useCallback)((response) => {
     socket?.emit("playerResponse", {
       gameId,
       playerId,
-      response,
-      blockingCard
+      response
     });
   }, [socket, gameId, playerId]);
-  const selectCard = (0, import_react.useCallback)((cardType) => {
+  const selectCard = (0, import_react.useCallback)((cardId) => {
     socket?.emit("selectCard", {
       gameId,
       playerId,
-      cardType
+      cardId
+    });
+  }, [socket, gameId, playerId]);
+  const exchangeCards = (0, import_react.useCallback)((selectedCardIds) => {
+    socket?.emit("exchangeCards", {
+      gameId,
+      playerId,
+      selectedCardIds
     });
   }, [socket, gameId, playerId]);
   const startGame = (0, import_react.useCallback)(() => {
@@ -3567,17 +3614,20 @@ function GameSocketProvider({
   return /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)(GameSocketContext.Provider, { value: {
     game,
     error,
+    isConnected,
     startGame,
-    performAction,
+    performTargetedAction,
+    performUntargetedAction,
     sendResponse,
-    selectCard
+    selectCard,
+    exchangeCards
   }, children }, void 0, false, {
     fileName: "app/context/GameSocket.tsx",
-    lineNumber: 101,
+    lineNumber: 145,
     columnNumber: 10
   }, this);
 }
-_s(GameSocketProvider, "kQpkzK2gKxE2UMCYP6BCMuF/ZUU=", false, function() {
+_s(GameSocketProvider, "yTAN3osf1Bn8/AVzqo/QD8ESA3Y=", false, function() {
   return [useNavigate];
 });
 _c = GameSocketProvider;
@@ -3607,6 +3657,7 @@ function useGameSocket() {
 }
 
 // app/components/ActionControls.tsx
+var import_react4 = __toESM(require_react(), 1);
 var import_jsx_dev_runtime2 = __toESM(require_jsx_dev_runtime(), 1);
 if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
   console.warn("remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.");
@@ -3620,61 +3671,98 @@ if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
 }
 var prevRefreshReg;
 var prevRefreshSig;
+var _s2 = $RefreshSig$();
 if (import.meta) {
   import.meta.hot = createHotContext(
     //@ts-expect-error
     "app/components/ActionControls.tsx"
   );
-  import.meta.hot.lastModified = "1738358775295.7178";
+  import.meta.hot.lastModified = "1738611239107.8362";
 }
 var ActionControls = ({
-  onAction,
+  targets,
   coins
 }) => {
-  if (coins >= 10) {
-    return /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => onAction("COUP"), children: "Coup (Required)" }, void 0, false, {
+  _s2();
+  const {
+    performTargetedAction,
+    performUntargetedAction
+  } = useGameSocket();
+  const [targetedAction, setTargetedAction] = (0, import_react4.useState)();
+  if (targetedAction) {
+    return /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("div", { children: [
+      /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("span", { children: [
+        targetedAction,
+        targetedAction === "STEAL" ? " from" : "",
+        " which player?"
+      ] }, void 0, true, {
+        fileName: "app/components/ActionControls.tsx",
+        lineNumber: 36,
+        columnNumber: 9
+      }, this),
+      targets.map((target) => /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => performTargetedAction(targetedAction, target.id), children: [
+        target.username,
+        " (",
+        target.coins,
+        " coins)"
+      ] }, `target-${target.id}`, true, {
+        fileName: "app/components/ActionControls.tsx",
+        lineNumber: 40,
+        columnNumber: 32
+      }, this))
+    ] }, void 0, true, {
       fileName: "app/components/ActionControls.tsx",
-      lineNumber: 28,
+      lineNumber: 35,
+      columnNumber: 12
+    }, this);
+  }
+  if (coins >= 10) {
+    return /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => setTargetedAction("COUP"), children: "Coup (Required)" }, void 0, false, {
+      fileName: "app/components/ActionControls.tsx",
+      lineNumber: 48,
       columnNumber: 12
     }, this);
   }
   return /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("div", { children: [
-    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => onAction("INCOME"), children: "Income (+1 coin)" }, void 0, false, {
+    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => performUntargetedAction("INCOME"), children: "Income (+1 coin)" }, void 0, false, {
       fileName: "app/components/ActionControls.tsx",
-      lineNumber: 31,
+      lineNumber: 51,
       columnNumber: 7
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => onAction("FOREIGN_AID"), children: "Foreign Aid (+2 coins)" }, void 0, false, {
+    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => performUntargetedAction("FOREIGN_AID"), children: "Foreign Aid (+2 coins)" }, void 0, false, {
       fileName: "app/components/ActionControls.tsx",
-      lineNumber: 32,
+      lineNumber: 52,
       columnNumber: 7
     }, this),
-    coins >= 7 && /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => onAction("COUP"), children: "Coup (-7 coins)" }, void 0, false, {
+    coins >= 7 && /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => setTargetedAction("COUP"), children: "Coup (-7 coins)" }, void 0, false, {
       fileName: "app/components/ActionControls.tsx",
-      lineNumber: 33,
+      lineNumber: 53,
       columnNumber: 22
     }, this),
-    coins >= 3 && /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => onAction("ASSASSINATE"), children: "Assassinate (-3 coins)" }, void 0, false, {
+    coins >= 3 && /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => setTargetedAction("ASSASSINATE"), children: "Assassinate (-3 coins)" }, void 0, false, {
       fileName: "app/components/ActionControls.tsx",
-      lineNumber: 34,
+      lineNumber: 54,
       columnNumber: 22
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => onAction("TAX"), children: "Tax (+3 coins)" }, void 0, false, {
+    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => performUntargetedAction("TAX"), children: "Tax (+3 coins)" }, void 0, false, {
       fileName: "app/components/ActionControls.tsx",
-      lineNumber: 35,
+      lineNumber: 55,
       columnNumber: 7
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => onAction("STEAL"), children: "Steal (Take 2 coins)" }, void 0, false, {
+    /* @__PURE__ */ (0, import_jsx_dev_runtime2.jsxDEV)("button", { onClick: () => setTargetedAction("STEAL"), children: "Steal (Take 2 coins)" }, void 0, false, {
       fileName: "app/components/ActionControls.tsx",
-      lineNumber: 36,
+      lineNumber: 56,
       columnNumber: 7
     }, this)
   ] }, void 0, true, {
     fileName: "app/components/ActionControls.tsx",
-    lineNumber: 30,
+    lineNumber: 50,
     columnNumber: 10
   }, this);
 };
+_s2(ActionControls, "Ro4+8rulX26/5E3sViYKh2PaORs=", false, function() {
+  return [useGameSocket];
+});
 _c2 = ActionControls;
 var _c2;
 $RefreshReg$(_c2, "ActionControls");
@@ -3682,7 +3770,7 @@ window.$RefreshReg$ = prevRefreshReg;
 window.$RefreshSig$ = prevRefreshSig;
 
 // app/components/ResponseControls.tsx
-var import_react4 = __toESM(require_react(), 1);
+var import_react5 = __toESM(require_react(), 1);
 
 // app/components/BlockControls.tsx
 var import_jsx_dev_runtime3 = __toESM(require_jsx_dev_runtime(), 1);
@@ -3703,7 +3791,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/components/BlockControls.tsx"
   );
-  import.meta.hot.lastModified = "1738366021682.2532";
+  import.meta.hot.lastModified = "1738465868040.054";
 }
 var BlockControls = ({
   onResponse,
@@ -3720,16 +3808,23 @@ var BlockControls = ({
       lineNumber: 28,
       columnNumber: 7
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("div", { className: "block-options", children: availableBlocks.map((card) => /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("button", { onClick: () => onResponse("block", card), className: "block-button", children: [
-      card,
-      " (",
-      getBlockDescription(card, action.type),
-      ")"
-    ] }, card, true, {
-      fileName: "app/components/BlockControls.tsx",
-      lineNumber: 30,
-      columnNumber: 38
-    }, this)) }, void 0, false, {
+    /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("div", { className: "block-options", children: [
+      availableBlocks.map((card) => /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("button", { onClick: () => onResponse("block"), className: "block-button", children: [
+        card,
+        " (",
+        getBlockDescription(card, action.type),
+        ")"
+      ] }, card, true, {
+        fileName: "app/components/BlockControls.tsx",
+        lineNumber: 30,
+        columnNumber: 38
+      }, this)),
+      /* @__PURE__ */ (0, import_jsx_dev_runtime3.jsxDEV)("button", { onClick: () => onResponse("block"), children: "Bluff" }, void 0, false, {
+        fileName: "app/components/BlockControls.tsx",
+        lineNumber: 33,
+        columnNumber: 9
+      }, this)
+    ] }, void 0, true, {
       fileName: "app/components/BlockControls.tsx",
       lineNumber: 29,
       columnNumber: 7
@@ -3875,13 +3970,13 @@ if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
 }
 var prevRefreshReg;
 var prevRefreshSig;
-var _s2 = $RefreshSig$();
+var _s3 = $RefreshSig$();
 if (import.meta) {
   import.meta.hot = createHotContext(
     //@ts-expect-error
     "app/components/ResponseControls.tsx"
   );
-  import.meta.hot.lastModified = "1738366057198.3838";
+  import.meta.hot.lastModified = "1738465816734.202";
 }
 var ResponseControls = ({
   onResponse,
@@ -3889,8 +3984,8 @@ var ResponseControls = ({
   availableResponses,
   targetPlayer
 }) => {
-  _s2();
-  const [showBlockOptions, setShowBlockOptions] = import_react4.default.useState(false);
+  _s3();
+  const [showBlockOptions, setShowBlockOptions] = import_react5.default.useState(false);
   if (showBlockOptions) {
     return /* @__PURE__ */ (0, import_jsx_dev_runtime5.jsxDEV)(BlockControls, { onResponse: (response) => {
       setShowBlockOptions(false);
@@ -3925,7 +4020,7 @@ var ResponseControls = ({
     columnNumber: 10
   }, this);
 };
-_s2(ResponseControls, "7kZFTQL+hE6WtN06T/x97QD+Wrs=");
+_s3(ResponseControls, "7kZFTQL+hE6WtN06T/x97QD+Wrs=");
 _c5 = ResponseControls;
 var _c5;
 $RefreshReg$(_c5, "ResponseControls");
@@ -3951,7 +4046,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/components/LoseInfluenceControls.tsx"
   );
-  import.meta.hot.lastModified = "1738366640396.0344";
+  import.meta.hot.lastModified = "1738442696873.784";
 }
 var LoseInfluenceControls = ({
   onSelectCard,
@@ -3967,10 +4062,10 @@ var LoseInfluenceControls = ({
       lineNumber: 28,
       columnNumber: 7
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("div", { className: "card-selection", children: availableCards.map((card) => /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("button", { onClick: () => onSelectCard(card), className: "card-button", children: [
+    /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("div", { className: "card-selection", children: availableCards.map((card) => /* @__PURE__ */ (0, import_jsx_dev_runtime6.jsxDEV)("button", { onClick: () => onSelectCard(card.id), className: "card-button", children: [
       "Reveal ",
-      card
-    ] }, card, true, {
+      card.type
+    ] }, card.id, true, {
       fileName: "app/components/LoseInfluenceControls.tsx",
       lineNumber: 30,
       columnNumber: 37
@@ -4003,64 +4098,8 @@ $RefreshReg$(_c6, "LoseInfluenceControls");
 window.$RefreshReg$ = prevRefreshReg;
 window.$RefreshSig$ = prevRefreshSig;
 
-// app/components/GameTimer.tsx
-var import_react5 = __toESM(require_react(), 1);
-var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime(), 1);
-if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
-  console.warn("remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.");
-} else {
-  prevRefreshReg = window.$RefreshReg$;
-  prevRefreshSig = window.$RefreshSig$;
-  window.$RefreshReg$ = (type, id) => {
-    window.$RefreshRuntime$.register(type, '"app/components/GameTimer.tsx"' + id);
-  };
-  window.$RefreshSig$ = window.$RefreshRuntime$.createSignatureFunctionForTransform;
-}
-var prevRefreshReg;
-var prevRefreshSig;
-var _s3 = $RefreshSig$();
-if (import.meta) {
-  import.meta.hot = createHotContext(
-    //@ts-expect-error
-    "app/components/GameTimer.tsx"
-  );
-  import.meta.hot.lastModified = "1738358879991.571";
-}
-var GameTimer = ({
-  timeoutAt
-}) => {
-  _s3();
-  const [timeLeft, setTimeLeft] = (0, import_react5.useState)(0);
-  (0, import_react5.useEffect)(() => {
-    if (!timeoutAt)
-      return;
-    const interval = setInterval(() => {
-      const remaining = Math.max(0, timeoutAt - Date.now());
-      setTimeLeft(Math.floor(remaining / 1e3));
-    }, 1e3);
-    return () => clearInterval(interval);
-  }, [timeoutAt]);
-  if (!timeoutAt || timeLeft <= 0)
-    return null;
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("div", { className: "timer", children: [
-    "Time remaining: ",
-    timeLeft,
-    "s"
-  ] }, void 0, true, {
-    fileName: "app/components/GameTimer.tsx",
-    lineNumber: 37,
-    columnNumber: 10
-  }, this);
-};
-_s3(GameTimer, "+8R8qG0ytIJ3hDO9yvGoGENFV+4=");
-_c7 = GameTimer;
-var _c7;
-$RefreshReg$(_c7, "GameTimer");
-window.$RefreshReg$ = prevRefreshReg;
-window.$RefreshSig$ = prevRefreshSig;
-
 // app/components/GameBoard.tsx
-var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime(), 1);
+var import_jsx_dev_runtime7 = __toESM(require_jsx_dev_runtime(), 1);
 if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
   console.warn("remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.");
 } else {
@@ -4079,7 +4118,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/components/GameBoard.tsx"
   );
-  import.meta.hot.lastModified = "1738367182405.3914";
+  import.meta.hot.lastModified = "1738626161741.6838";
 }
 var GameBoard = ({
   playerId
@@ -4088,7 +4127,6 @@ var GameBoard = ({
   const {
     game,
     startGame,
-    performAction,
     sendResponse,
     selectCard
   } = useGameSocket();
@@ -4097,72 +4135,88 @@ var GameBoard = ({
     canRespond,
     canChallengeBlock,
     availableResponses,
-    mustLoseInfluence
+    mustLoseInfluence,
+    challenge
   } = (0, import_react6.useMemo)(() => {
     return getPlayerMenuState(game, playerId);
   }, [game, playerId]);
   const currentPlayer = game?.players[game.currentPlayerIndex];
   const playerCards = game?.players.find((p) => p.id === playerId)?.influence || [];
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)("div", { children: [
-    game && /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(import_jsx_dev_runtime8.Fragment, { children: [
-      game.hostId === playerId && game.status === "WAITING" && /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)("button", { onClick: () => startGame(), children: "Start Game" }, void 0, false, {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("div", { children: [
+    game && /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(import_jsx_dev_runtime7.Fragment, { children: [
+      game.hostId === playerId && game.status === "WAITING" && /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("button", { onClick: () => startGame(), children: "Start Game" }, void 0, false, {
         fileName: "app/components/GameBoard.tsx",
-        lineNumber: 55,
+        lineNumber: 54,
         columnNumber: 69
       }, this),
-      canAct && /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(ActionControls, { onAction: performAction, coins: currentPlayer?.coins || 0 }, void 0, false, {
+      canAct && /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(ActionControls, { targets: game.players.filter((_, i) => i !== game.currentPlayerIndex), coins: currentPlayer?.coins || 0 }, void 0, false, {
         fileName: "app/components/GameBoard.tsx",
-        lineNumber: 57,
+        lineNumber: 56,
         columnNumber: 22
       }, this),
-      canRespond && /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(ResponseControls, { onResponse: sendResponse, action: game.currentTurn.action, availableResponses, targetPlayer: game.players[game.currentPlayerIndex].username }, void 0, false, {
+      (canRespond || canChallengeBlock) && /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(ResponseControls, { onResponse: sendResponse, action: game.currentTurn.action, availableResponses, targetPlayer: game.players[game.currentPlayerIndex].username }, void 0, false, {
         fileName: "app/components/GameBoard.tsx",
-        lineNumber: 59,
-        columnNumber: 26
+        lineNumber: 58,
+        columnNumber: 49
       }, this),
-      mustLoseInfluence && /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(
+      mustLoseInfluence && /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)(
         LoseInfluenceControls,
         {
           onSelectCard: selectCard,
-          availableCards: playerCards.map((c) => c.type)
+          availableCards: playerCards
         },
         void 0,
         false,
         {
           fileName: "app/components/GameBoard.tsx",
-          lineNumber: 61,
+          lineNumber: 60,
           columnNumber: 33
         },
         this
       ),
-      /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(GameTimer, { timeoutAt: game.currentTurn?.timeoutAt }, void 0, false, {
+      challenge != null && /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("span", { children: challenge.reason }, void 0, false, {
+          fileName: "app/components/GameBoard.tsx",
+          lineNumber: 65,
+          columnNumber: 15
+        }, this),
+        /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("div", { className: "mt-2 flex", children: playerCards.filter((card) => !card.isRevealed).map((card) => /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("button", { onClick: () => selectCard(card.id), children: card.type }, card.id, false, {
+          fileName: "app/components/GameBoard.tsx",
+          lineNumber: 67,
+          columnNumber: 75
+        }, this)) }, void 0, false, {
+          fileName: "app/components/GameBoard.tsx",
+          lineNumber: 66,
+          columnNumber: 15
+        }, this)
+      ] }, void 0, true, {
         fileName: "app/components/GameBoard.tsx",
-        lineNumber: 65,
-        columnNumber: 11
+        lineNumber: 64,
+        columnNumber: 33
       }, this)
     ] }, void 0, true, {
       fileName: "app/components/GameBoard.tsx",
-      lineNumber: 52,
+      lineNumber: 51,
       columnNumber: 16
     }, this),
-    /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)("pre", { children: JSON.stringify({
+    /* @__PURE__ */ (0, import_jsx_dev_runtime7.jsxDEV)("pre", { children: JSON.stringify({
       isHost: game?.hostId === playerId,
       ...game
     }, null, 2) }, void 0, false, {
       fileName: "app/components/GameBoard.tsx",
-      lineNumber: 67,
+      lineNumber: 75,
       columnNumber: 7
     }, this)
   ] }, void 0, true, {
     fileName: "app/components/GameBoard.tsx",
-    lineNumber: 50,
+    lineNumber: 49,
     columnNumber: 10
   }, this);
 };
-_s4(GameBoard, "zYB20QevvyOVIXqO3R+F+bVjoa4=", false, function() {
+_s4(GameBoard, "ERAkxGPZX4yaQaqkDg9gYWSI8ok=", false, function() {
   return [useGameSocket];
 });
-_c8 = GameBoard;
+_c7 = GameBoard;
 function getPlayerMenuState(game, playerId) {
   const menuState = {
     canAct: false,
@@ -4179,29 +4233,18 @@ function getPlayerMenuState(game, playerId) {
   if (!game || game.status !== "IN_PROGRESS") {
     return menuState;
   }
-  const isCurrentPlayer = game.players[game.currentPlayerIndex].id === playerId;
+  const currentPlayer = game.players[game.currentPlayerIndex];
+  const isCurrentPlayer = currentPlayer?.id === playerId;
   const turn = game.currentTurn;
   if (!turn) {
     menuState.canAct = isCurrentPlayer;
     return menuState;
   }
-  if (turn.respondedPlayers?.includes(playerId)) {
-    return menuState;
-  }
-  if (turn.action.playerId === playerId) {
-    if (turn.phase === "BLOCK_CHALLENGE_WINDOW") {
-      menuState.canChallengeBlock = true;
-      menuState.availableResponses = {
-        canAccept: true,
-        canChallenge: true,
-        canBlock: false,
-        availableBlocks: []
-      };
-    }
-    return menuState;
-  }
   switch (turn.phase) {
     case "CHALLENGE_BLOCK_WINDOW":
+      if (turn.respondedPlayers?.includes(playerId)) {
+        return menuState;
+      }
       menuState.canRespond = true;
       menuState.availableResponses = {
         canAccept: true,
@@ -4211,18 +4254,29 @@ function getPlayerMenuState(game, playerId) {
       };
       break;
     case "CHALLENGE_RESOLUTION":
-      if (turn.challengingPlayer === playerId) {
+      const challenger = game.players.find((p) => p.id === turn.challengeResult?.challengingPlayer);
+      console.log("challenger", challenger?.id, "player", playerId);
+      if (turn.challengeResult?.successful == null && challenger && challenger.id !== playerId) {
         menuState.canRespond = true;
-        menuState.availableResponses = {
-          canAccept: true,
-          // Lose influence
-          canChallenge: true,
-          // Reveal card
-          canBlock: false,
-          availableBlocks: []
+        menuState.challenge = {
+          by: challenger,
+          reason: `${challenger.username} challenged your ${turn.action.type}`
         };
+      } else if (turn.challengeResult?.successful === false && challenger?.id === playerId) {
+        menuState.canRespond = true;
+        menuState.mustLoseInfluence = true;
       }
       break;
+    case "BLOCK_CHALLENGE_RESOLUTION":
+      const blockChallenger = game.players.find((p) => p.id === turn.challengeResult?.challengingPlayer);
+      const blocker = game.players.find((p) => p.id === turn.blockingPlayer);
+      if (blockChallenger && blocker?.id === playerId) {
+        menuState.canRespond = true;
+        menuState.challenge = {
+          by: blockChallenger,
+          reason: `${blockChallenger.username} challenged your block of ${currentPlayer.username}'s ${turn.action.type}`
+        };
+      }
     case "BLOCK_CHALLENGE_WINDOW":
       if (turn.action.playerId === playerId) {
         menuState.canRespond = true;
@@ -4242,13 +4296,13 @@ function getPlayerMenuState(game, playerId) {
   }
   return menuState;
 }
-var _c8;
-$RefreshReg$(_c8, "GameBoard");
+var _c7;
+$RefreshReg$(_c7, "GameBoard");
 window.$RefreshReg$ = prevRefreshReg;
 window.$RefreshSig$ = prevRefreshSig;
 
 // app/routes/game.$gameId.tsx
-var import_jsx_dev_runtime9 = __toESM(require_jsx_dev_runtime(), 1);
+var import_jsx_dev_runtime8 = __toESM(require_jsx_dev_runtime(), 1);
 if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
   console.warn("remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.");
 } else {
@@ -4267,7 +4321,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/routes/game.$gameId.tsx"
   );
-  import.meta.hot.lastModified = "1738361075291.8567";
+  import.meta.hot.lastModified = "1738444298171.8708";
 }
 function GameRoute() {
   _s5();
@@ -4277,7 +4331,7 @@ function GameRoute() {
     socketUrl,
     game
   } = useLoaderData();
-  return /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(GameSocketProvider, { gameId, playerId, socketUrl, game, children: /* @__PURE__ */ (0, import_jsx_dev_runtime9.jsxDEV)(GameBoard, { playerId }, void 0, false, {
+  return /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(GameSocketProvider, { gameId, playerId, socketUrl, game, children: /* @__PURE__ */ (0, import_jsx_dev_runtime8.jsxDEV)(GameBoard, { playerId }, void 0, false, {
     fileName: "app/routes/game.$gameId.tsx",
     lineNumber: 58,
     columnNumber: 7
@@ -4290,12 +4344,12 @@ function GameRoute() {
 _s5(GameRoute, "0yAXoM5uXkKZoK4AV4L1QAYvhrs=", false, function() {
   return [useLoaderData];
 });
-_c9 = GameRoute;
-var _c9;
-$RefreshReg$(_c9, "GameRoute");
+_c8 = GameRoute;
+var _c8;
+$RefreshReg$(_c8, "GameRoute");
 window.$RefreshReg$ = prevRefreshReg;
 window.$RefreshSig$ = prevRefreshSig;
 export {
   GameRoute as default
 };
-//# sourceMappingURL=/build/routes/game.$gameId-2DK2XNVO.js.map
+//# sourceMappingURL=/build/routes/game.$gameId-HNDD55WP.js.map

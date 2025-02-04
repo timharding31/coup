@@ -1,6 +1,5 @@
 import { Reference } from 'firebase-admin/database'
 import { Action, Card, CardType, Game, GameStatus, Player, TurnPhase, TurnState } from '~/types'
-import { IGameService } from './game.interface'
 import { PlayerService } from './player.server'
 import { PinService } from './pin.server'
 import { db } from './firebase.server'
@@ -8,6 +7,20 @@ import { ActionService } from './action.server'
 import { DeckService } from './deck.server'
 import { ChallengeService } from './challenge.server'
 import { TurnService } from './turn.server'
+
+export interface IGameService {
+  createGame(hostId: string): Promise<{ gameId: string; pin: string }>
+  joinGameByPin(playerId: string, pin: string): Promise<{ gameId: string }>
+  leaveGame(playerId: string, gameId: string): Promise<{ success: boolean }>
+  startGame(gameId: string, hostId: string): Promise<{ game: Game | null }>
+  getGame(gameId: string): Promise<{ game: Game | null }>
+  getGameByPlayerId(playerId: string): Promise<{ game: Game | null }>
+  getCurrentTurn(gameId: string): Promise<{ turn: TurnState | null }>
+  startGameTurn(gameId: string, action: Action): Promise<void>
+  handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'challenge' | 'block'): Promise<void>
+  handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge'): Promise<void>
+  handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<void>
+}
 
 export class GameService implements IGameService {
   private gamesRef: Reference = db.ref('games')
@@ -24,11 +37,16 @@ export class GameService implements IGameService {
     this.pinService = new PinService()
     this.actionService = new ActionService(this.gamesRef)
     this.deckService = new DeckService(this.gamesRef)
-    this.challengeService = new ChallengeService(this.gamesRef, this.deckService, this.actionService)
-    this.turnService = new TurnService(this.gamesRef, this.actionService, this.challengeService)
+    this.challengeService = new ChallengeService(this.gamesRef, this.deckService)
+    this.turnService = new TurnService(
+      this.gamesRef,
+      this.actionService,
+      this.challengeService,
+      this.cleanupGame.bind(this)
+    )
   }
 
-  async createGame(hostId: string): Promise<{ gameId: string; pin: string }> {
+  async createGame(hostId: string) {
     const { player: host } = await this.playerService.getPlayer(hostId)
     if (!host) {
       throw new Error('Host player not found')
@@ -69,17 +87,47 @@ export class GameService implements IGameService {
     return { gameId, pin }
   }
 
-  async startGameTurn(gameId: string, action: Action): Promise<{ success: boolean; turnState: TurnState | null }> {
-    return this.turnService.startTurn(gameId, action)
+  handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'challenge' | 'block') {
+    return this.turnService.handleActionResponse(gameId, playerId, response)
   }
 
-  async handlePlayerResponse(
-    gameId: string,
-    playerId: string,
-    response: 'accept' | 'challenge' | 'block',
-    blockingCard?: CardType
-  ): Promise<{ success: boolean; newTurnState: TurnState | null }> {
-    return this.turnService.handlePlayerResponse(gameId, playerId, response, blockingCard)
+  handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge') {
+    return this.turnService.handleBlockResponse(gameId, playerId, response)
+  }
+
+  async handleCardSelection(gameId: string, playerId: string, cardId: string) {
+    const gameRef = this.gamesRef.child(gameId)
+    const game = (await gameRef.get()).val() as Game
+
+    if (!game?.currentTurn) {
+      throw new Error('No active turn')
+    }
+
+    const turn = game.currentTurn
+
+    // Validate card selection based on current phase
+    switch (turn.phase) {
+      case 'CHALLENGE_RESOLUTION':
+      case 'BLOCK_CHALLENGE_RESOLUTION':
+        if (!turn.challengeResult) {
+          throw new Error('No active challenge')
+        }
+        if (turn.challengeResult.successful === false) {
+          return this.turnService.selectFailedChallengerCard(gameId, playerId, cardId)
+        } else {
+          return this.turnService.selectChallengeDefenseCard(gameId, playerId, cardId)
+        }
+
+      case 'LOSE_INFLUENCE':
+        return this.turnService.selectCardToLose(gameId, playerId, cardId)
+
+      default:
+        throw new Error(`Invalid phase for card selection: ${turn.phase}`)
+    }
+  }
+
+  startGameTurn(gameId: string, action: Action) {
+    return this.turnService.startTurn(gameId, action)
   }
 
   async joinGameByPin(playerId: string, pin: string): Promise<{ gameId: string }> {
@@ -99,29 +147,17 @@ export class GameService implements IGameService {
       throw new Error('Player not found')
     }
 
-    if (player.currentGameId) {
-      throw new Error('Player is already in a game')
-    }
-
     const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
       if (!game) return null
-      if (game.status !== GameStatus.WAITING) return null
-      if (game.players.length >= 6) return null
-      if (game.players.some(p => p.id === playerId)) return null
+      if (game.status !== GameStatus.WAITING) return game
+      if (game.players.length >= 6) return game
+      if (game.players.some(p => p.id === playerId)) return game
 
       const [influence, remainingDeck] = this.deckService.dealCards(game.deck, 2)
 
       return {
         ...game,
-        players: [
-          ...game.players,
-          {
-            id: playerId,
-            username: player.username,
-            influence,
-            coins: 2
-          }
-        ],
+        players: game.players.slice().concat({ id: playerId, username: player.username, influence, coins: 2 }),
         deck: remainingDeck,
         updatedAt: Date.now()
       }
@@ -138,19 +174,17 @@ export class GameService implements IGameService {
 
   async leaveGame(playerId: string, gameId: string) {
     const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
-      if (!game || game.status !== GameStatus.WAITING) return null
+      if (!game || game.status !== GameStatus.WAITING) return game
 
       const playerIndex = game.players.findIndex(p => p.id === playerId)
-      if (playerIndex === -1) return null
+      if (playerIndex === -1) return game
 
       const playerCards = game.players[playerIndex].influence
       const updatedDeck = this.deckService.shuffleDeck([...game.deck, ...playerCards])
       const updatedPlayers = game.players.filter(p => p.id !== playerId)
 
       // If no players left, clean up the game
-      if (updatedPlayers.length === 0) {
-        return null
-      }
+      if (updatedPlayers.length === 0) return null
 
       return {
         ...game,
@@ -172,9 +206,9 @@ export class GameService implements IGameService {
   async startGame(gameId: string, hostId: string) {
     const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
       if (!game) return null
-      if (game.status !== GameStatus.WAITING) return null
-      if (game.hostId !== hostId) return null
-      if (game.players.length < 2) return null
+      if (game.status !== GameStatus.WAITING) return game
+      if (game.hostId !== hostId) return game
+      if (game.players.length < 2) return game
 
       const firstPlayerIndex = Math.floor(Math.random() * game.players.length)
 
@@ -193,87 +227,41 @@ export class GameService implements IGameService {
     return { game: result.snapshot.val() }
   }
 
-  async handleCardSelection(gameId: string, playerId: string, cardType: CardType): Promise<{ success: boolean }> {
-    const gameRef = this.gamesRef.child(gameId)
-    const game = (await gameRef.get()).val() as Game
-
-    // Verify the card can be revealed
-    if (!game.currentTurn || !this.canSelectCard(game, playerId)) {
-      throw new Error('Invalid card selection')
-    }
-
-    const result = await gameRef.transaction((game: Game | null) => {
-      if (!game) return null
-
-      const playerIndex = game.players.findIndex(p => p.id === playerId)
-      if (playerIndex === -1) return null
-
-      const cardIndex = game.players[playerIndex].influence.findIndex(
-        card => !card.isRevealed && card.type === cardType
-      )
-      if (cardIndex === -1) return null
-
-      const updatedPlayers = game.players.map(p => {
-        if (p.id === playerId) {
-          const updatedInfluence = [...p.influence]
-          updatedInfluence[cardIndex] = {
-            ...updatedInfluence[cardIndex],
-            isRevealed: true
-          }
-          return { ...p, influence: updatedInfluence }
-        }
-        return p
-      })
-
-      return {
-        ...game,
-        players: updatedPlayers,
-        updatedAt: Date.now()
-      }
-    })
-
-    if (!result.committed) {
-      throw new Error('Failed to handle card selection')
-    }
-
-    await this.turnService.progressToNextPhase(gameId)
-
-    return { success: true }
-  }
-
-  private canSelectCard(game: Game, playerId: string): boolean {
-    const turn = game.currentTurn
-    if (!turn) return false
-
-    // Player must lose influence in LOSE_INFLUENCE phase
-    if (turn.phase === 'LOSE_INFLUENCE') {
-      if (turn.action.type === 'ASSASSINATE' || turn.action.type === 'COUP') {
-        return turn.action.targetPlayerId === playerId
-      }
-    }
-
-    // Handle challenge losses
-    if (
-      (turn.phase === 'CHALLENGE_RESOLUTION' || turn.phase === 'BLOCK_CHALLENGE_RESOLUTION') &&
-      turn.challengingPlayer === playerId &&
-      !turn.resolvedChallenges[playerId]
-    ) {
-      return true
-    }
-
-    return false
-  }
-
-  async getGame(gameId: string | undefined) {
+  async getGame(gameId?: string | null) {
     if (!gameId) {
       throw new Error('Game ID is required')
     }
     const snapshot = await this.gamesRef.child(gameId).get()
-    return { game: snapshot.val() }
+    return { game: snapshot.val() as Game | null }
+  }
+
+  async getGameByPlayerId(playerId: string) {
+    const { player } = await this.playerService.getPlayer(playerId)
+    const { currentGameId } = player || {}
+    try {
+      return await this.getGame(currentGameId)
+    } catch (e) {
+      return { game: null }
+    }
   }
 
   async getCurrentTurn(gameId: string) {
     const snapshot = await this.gamesRef.child(`${gameId}/currentTurn`).get()
     return { turn: snapshot.val() as TurnState | null }
+  }
+
+  private async cleanupGame(gameId: string, winnerId = ''): Promise<void> {
+    const gameRef = this.gamesRef.child(gameId)
+    const snapshot = await gameRef.get()
+    const game = snapshot.val() as Game
+
+    if (!game) return
+
+    // Clear player game references, remove PIN and mark game as completed
+    await Promise.all([
+      ...game.players.map(player => this.playerService.updatePlayer(player.id, { currentGameId: null })),
+      this.pinService.removeGamePin(gameId),
+      gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() })
+    ])
   }
 }

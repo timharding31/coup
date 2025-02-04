@@ -1,12 +1,12 @@
 import { Reference } from 'firebase-admin/database'
 import { Action, CardType, Game, Player } from '~/types'
+import { ACTION_REQUIREMENTS } from '~/utils/action'
 
 export interface IActionService {
-  applyActionEffects(gameId: string, action: Action): Promise<void>
   validateAction(game: Game, action: Action): boolean
+  resolveCoinUpdates(gameId: string, action: Action): Promise<void>
   updatePlayerCoins(gameId: string, playerId: string, amount: number): Promise<void>
-  revealInfluence(gameId: string, playerId: string): Promise<void>
-  isActionBlocked(action: Action, blockingCard: CardType): boolean
+  revealInfluence(gameId: string, playerId: string, cardId: string): Promise<void>
 }
 
 export class ActionService implements IActionService {
@@ -16,92 +16,31 @@ export class ActionService implements IActionService {
     this.gamesRef = gamesRef
   }
 
-  async applyActionEffects(gameId: string, action: Action): Promise<void> {
-    switch (action.type) {
-      case 'INCOME':
-        await this.updatePlayerCoins(gameId, action.playerId, 1)
-        break
-
-      case 'FOREIGN_AID':
-        await this.updatePlayerCoins(gameId, action.playerId, 2)
-        break
-
-      case 'TAX':
-        await this.updatePlayerCoins(gameId, action.playerId, 3)
-        break
-
-      case 'STEAL':
-        if (action.targetPlayerId) {
-          const targetCoins = await this.getPlayerCoins(gameId, action.targetPlayerId)
-          const stealAmount = Math.min(2, targetCoins)
-          await Promise.all([
-            this.updatePlayerCoins(gameId, action.playerId, stealAmount),
-            this.updatePlayerCoins(gameId, action.targetPlayerId, -stealAmount)
-          ])
-        }
-        break
-
-      case 'ASSASSINATE':
-        if (action.targetPlayerId) {
-          await Promise.all([
-            this.updatePlayerCoins(gameId, action.playerId, -3),
-            this.revealInfluence(gameId, action.targetPlayerId)
-          ])
-        }
-        break
-
-      case 'COUP':
-        if (action.targetPlayerId) {
-          await Promise.all([
-            this.updatePlayerCoins(gameId, action.playerId, -7),
-            this.revealInfluence(gameId, action.targetPlayerId)
-          ])
-        }
-        break
-
-      case 'EXCHANGE':
-        // Exchange is handled separately by the TurnService as it requires
-        // player interaction for card selection
-        break
-    }
-  }
-
   validateAction(game: Game, action: Action): boolean {
     const player = game.players.find(p => p.id === action.playerId)
     if (!player) return false
 
-    // Validate based on action type
-    switch (action.type) {
-      case 'INCOME':
-      case 'FOREIGN_AID':
-        return true // Always valid
+    // Force coup at 10+ coins
+    if (player.coins >= 10 && action.type !== 'COUP') return false
 
-      case 'TAX':
-        return !this.isDeadPlayer(player)
+    // Check basic requirements
+    const requirements = ACTION_REQUIREMENTS[action.type]
+    if (!requirements) return false
+    if (player.coins < requirements.coinCost) return false
 
-      case 'STEAL':
-        if (!action.targetPlayerId) return false
-        const targetPlayer = game.players.find(p => p.id === action.targetPlayerId)
-        return (
-          !this.isDeadPlayer(player) && !!targetPlayer && !this.isDeadPlayer(targetPlayer) && targetPlayer.coins > 0
-        )
+    // Check if player is eliminated
+    if (this.isDeadPlayer(player)) return false
 
-      case 'ASSASSINATE':
-        if (!action.targetPlayerId) return false
-        const assassinTarget = game.players.find(p => p.id === action.targetPlayerId)
-        return !this.isDeadPlayer(player) && !!assassinTarget && !this.isDeadPlayer(assassinTarget) && player.coins >= 3
+    // Validate target if required
+    if (action.targetPlayerId) {
+      const targetPlayer = game.players.find(p => p.id === action.targetPlayerId)
+      if (!targetPlayer || this.isDeadPlayer(targetPlayer)) return false
 
-      case 'COUP':
-        if (!action.targetPlayerId) return false
-        const coupTarget = game.players.find(p => p.id === action.targetPlayerId)
-        return !this.isDeadPlayer(player) && !!coupTarget && !this.isDeadPlayer(coupTarget) && player.coins >= 7
-
-      case 'EXCHANGE':
-        return !this.isDeadPlayer(player)
-
-      default:
-        return false
+      // Additional target-specific validation
+      if (action.type === 'STEAL' && targetPlayer.coins === 0) return false
     }
+
+    return true
   }
 
   private isDeadPlayer(player: Player): boolean {
@@ -109,22 +48,68 @@ export class ActionService implements IActionService {
   }
 
   async updatePlayerCoins(gameId: string, playerId: string, amount: number): Promise<void> {
-    const playerRef = this.gamesRef.child(`${gameId}/players`)
+    if (!amount) return
 
-    await playerRef.transaction((players: Player[] | null) => {
-      if (!players) return null
+    const gameRef = this.gamesRef.child(gameId)
+    const result = await gameRef.transaction((game: Game | null) => {
+      if (!game) return game
 
-      return players.map(player => {
-        if (player.id === playerId) {
-          const newAmount = Math.max(0, (player.coins || 0) + amount)
-          return {
-            ...player,
-            coins: newAmount
-          }
-        }
-        return player
-      })
+      const playerIndex = game.players.findIndex(p => p.id === playerId)
+      if (playerIndex === -1) {
+        console.error('Player not found while updating coins')
+        return game
+      }
+
+      const updatedPlayers = game.players.slice()
+      const currentCoins = game.players[playerIndex]!.coins
+      updatedPlayers[playerIndex].coins = Math.max(0, currentCoins + amount)
+
+      return {
+        ...game,
+        players: updatedPlayers,
+        updatedAt: Date.now()
+      }
     })
+
+    if (!result.committed) {
+      throw new Error('Failed to update player coins')
+    }
+  }
+
+  async resolveCoinUpdates(gameId: string, action: Action): Promise<void> {
+    const coinEffects = new Map<string, number>()
+    switch (action.type) {
+      case 'INCOME':
+        coinEffects.set(action.playerId, 1)
+        break
+
+      case 'FOREIGN_AID':
+        coinEffects.set(action.playerId, 2)
+        break
+
+      case 'TAX':
+        coinEffects.set(action.playerId, 3)
+        break
+
+      case 'ASSASSINATE':
+        coinEffects.set(action.playerId, -3)
+        break
+
+      case 'STEAL':
+        const targetCoins = await this.getPlayerCoins(gameId, action.targetPlayerId)
+        const stealAmount = Math.min(2, targetCoins)
+        coinEffects.set(action.targetPlayerId, -stealAmount)
+        coinEffects.set(action.playerId, stealAmount)
+        break
+
+      case 'COUP':
+        coinEffects.set(action.playerId, -7)
+        break
+
+      case 'EXCHANGE':
+        break
+    }
+    await Promise.all(Array.from(coinEffects.entries()).map(entry => this.updatePlayerCoins(gameId, ...entry)))
   }
 
   async getPlayerCoins(gameId: string, playerId: string): Promise<number> {
@@ -134,85 +119,41 @@ export class ActionService implements IActionService {
     return player?.coins || 0
   }
 
-  async revealInfluence(gameId: string, playerId: string): Promise<void> {
-    const playerRef = this.gamesRef.child(`${gameId}/players`)
+  async revealInfluence(gameId: string, playerId: string, cardId: string): Promise<void> {
+    const gameRef = this.gamesRef.child(gameId)
+    const result = await gameRef.transaction((game: Game | null) => {
+      const turn = game?.currentTurn
+      if (!game || !turn) return game
 
-    await playerRef.transaction((players: Player[] | null) => {
-      if (!players) return null
+      const playerIndex = game.players.findIndex(p => p.id === playerId)
+      if (playerIndex === -1) {
+        console.error('Player not found')
+        return game
+      }
 
-      return players.map(player => {
-        if (player.id === playerId) {
-          const influence = [...player.influence]
-          const unrevealed = influence.findIndex(card => !card.isRevealed)
+      const cardIndex = game.players[playerIndex]!.influence.findIndex(c => c.id === cardId)
+      if (cardIndex === -1) {
+        console.error('Card not found')
+        return game
+      }
 
-          if (unrevealed !== -1) {
-            influence[unrevealed] = {
-              ...influence[unrevealed],
-              isRevealed: true
-            }
-          }
+      if (game.players[playerIndex].influence[cardIndex].isRevealed) {
+        console.error('Card already revealed')
+        return game
+      }
 
-          return {
-            ...player,
-            influence
-          }
-        }
-        return player
-      })
+      const updatedPlayers = game.players.slice()
+      updatedPlayers[playerIndex].influence[cardIndex].isRevealed = true
+
+      return {
+        ...game,
+        players: updatedPlayers,
+        updatedAt: Date.now()
+      }
     })
-  }
 
-  isActionBlocked(action: Action, blockingCard: CardType): boolean {
-    switch (action.type) {
-      case 'FOREIGN_AID':
-        return blockingCard === CardType.DUKE
-
-      case 'STEAL':
-        return blockingCard === CardType.AMBASSADOR || blockingCard === CardType.CAPTAIN
-
-      case 'ASSASSINATE':
-        return blockingCard === CardType.CONTESSA
-
-      default:
-        return false
-    }
-  }
-
-  getRequiredCharacterForAction(actionType: Action['type']): CardType | null {
-    switch (actionType) {
-      case 'TAX':
-        return CardType.DUKE
-      case 'ASSASSINATE':
-        return CardType.ASSASSIN
-      case 'STEAL':
-        return CardType.CAPTAIN
-      case 'EXCHANGE':
-        return CardType.AMBASSADOR
-      default:
-        return null
-    }
-  }
-
-  canBeBlocked(actionType: Action['type']): boolean {
-    return ['FOREIGN_AID', 'STEAL', 'ASSASSINATE'].includes(actionType)
-  }
-
-  canBeChallenged(actionType: Action['type']): boolean {
-    return ['TAX', 'ASSASSINATE', 'STEAL', 'EXCHANGE'].includes(actionType)
-  }
-
-  requiresTarget(actionType: Action['type']): boolean {
-    return ['STEAL', 'ASSASSINATE', 'COUP'].includes(actionType)
-  }
-
-  getActionCost(actionType: Action['type']): number {
-    switch (actionType) {
-      case 'ASSASSINATE':
-        return 3
-      case 'COUP':
-        return 7
-      default:
-        return 0
+    if (!result.committed) {
+      throw new Error('Failed to reveal challenge loser card')
     }
   }
 }

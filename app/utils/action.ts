@@ -1,10 +1,40 @@
-import { ActionType, Action, CardType, Game } from '~/types'
+import {
+  ActionType,
+  Action,
+  CardType,
+  Game,
+  TurnState,
+  StateTransition,
+  UntargetedAction,
+  TargetedAction
+} from '~/types'
 
-export function getActionFromType(playerId: string, type: ActionType): Action {
-  return { playerId, type, ...ACTION_REQUIREMENTS[type] }
+export function getActionFromType(
+  playerId: string,
+  type: Extract<ActionType, 'INCOME' | 'FOREIGN_AID' | 'TAX' | 'EXCHANGE'>,
+  targetPlayerId: undefined
+): UntargetedAction
+export function getActionFromType(
+  playerId: string,
+  type: Extract<ActionType, 'STEAL' | 'ASSASSINATE' | 'COUP'>,
+  targetPlayerId: string
+): TargetedAction
+export function getActionFromType(playerId: string, type: ActionType, targetPlayerId?: string): Action {
+  switch (type) {
+    case 'INCOME':
+    case 'FOREIGN_AID':
+    case 'TAX':
+    case 'EXCHANGE':
+      return { playerId, type, ...ACTION_REQUIREMENTS[type] } as UntargetedAction
+
+    case 'STEAL':
+    case 'ASSASSINATE':
+    case 'COUP':
+      return { playerId, type, targetPlayerId, ...ACTION_REQUIREMENTS[type] } as TargetedAction
+  }
 }
 
-const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | 'type'>> = {
+export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | 'type'>> = {
   INCOME: {
     coinCost: 0,
     canBeBlocked: false,
@@ -84,3 +114,69 @@ export function isValidAction(game: Game, action: Action): boolean {
 
   return true
 }
+
+function getAllRespondingPlayers(game: Game, turn: TurnState): string[] {
+  return game.players
+    .filter(p => !p.influence.every(card => card.isRevealed)) // Filter out dead players
+    .filter(p => p.id !== turn.action.playerId) // Filter out active player
+    .map(p => p.id)
+}
+
+export function haveAllPlayersResponded(game: Game, turn: TurnState): boolean {
+  const requiredResponses = getAllRespondingPlayers(game, turn)
+  return requiredResponses.every(id => turn.respondedPlayers.includes(id))
+}
+
+export const VALID_TRANSITIONS: StateTransition[] = [
+  {
+    from: 'ACTION_DECLARED',
+    to: 'CHALLENGE_BLOCK_WINDOW'
+  },
+  {
+    from: 'CHALLENGE_BLOCK_WINDOW',
+    to: 'ACTION_RESOLUTION',
+    condition: (turn, game) => haveAllPlayersResponded(game, turn)
+  },
+  {
+    from: 'CHALLENGE_BLOCK_WINDOW',
+    to: 'CHALLENGE_RESOLUTION'
+  },
+  {
+    from: 'CHALLENGE_BLOCK_WINDOW',
+    to: 'BLOCK_DECLARED'
+  },
+  {
+    from: 'BLOCK_DECLARED',
+    to: 'BLOCK_CHALLENGE_WINDOW'
+  },
+  {
+    from: 'BLOCK_CHALLENGE_WINDOW',
+    to: 'BLOCK_CHALLENGE_RESOLUTION',
+    condition: turn => turn.challengeResult !== null
+  },
+  {
+    from: 'BLOCK_CHALLENGE_RESOLUTION',
+    to: 'ACTION_FAILED',
+    condition: turn => turn.challengeResult?.successful === false
+  },
+  {
+    from: 'BLOCK_CHALLENGE_RESOLUTION',
+    to: 'ACTION_RESOLUTION',
+    condition: turn => turn.challengeResult?.successful === true
+  },
+  {
+    from: 'CHALLENGE_RESOLUTION',
+    to: 'ACTION_FAILED',
+    condition: turn => turn.challengeResult?.successful === true
+  },
+  {
+    from: 'CHALLENGE_RESOLUTION',
+    to: 'ACTION_RESOLUTION',
+    condition: turn => turn.challengeResult?.successful === false
+  },
+  {
+    from: 'ACTION_RESOLUTION',
+    to: 'LOSE_INFLUENCE',
+    condition: turn => ['ASSASSINATE', 'COUP'].includes(turn.action.type)
+  }
+]

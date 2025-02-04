@@ -1,10 +1,10 @@
 import { Reference } from 'firebase-admin/database'
-import { Card, CardType } from '~/types'
+import { Card, CardType, Game } from '~/types'
 
 export interface IDeckService {
   createInitialDeck(): Card[]
   dealCards(deck: Card[], count: number): [Card[], Card[]]
-  returnCardToDeck(gameId: string, card: Card): Promise<void>
+  returnCardToDeck(gameId: string, card: Card): Promise<Card[]>
   drawCard(gameId: string): Promise<Card>
   shuffleDeck(deck: Card[]): Card[]
 }
@@ -43,10 +43,10 @@ export class DeckService implements IDeckService {
     return [dealt, remaining]
   }
 
-  async returnCardToDeck(gameId: string, card: Card): Promise<void> {
+  async returnCardToDeck(gameId: string, card: Card): Promise<Card[]> {
     const gameRef = this.gamesRef.child(gameId)
 
-    await gameRef.transaction(game => {
+    const result = await gameRef.transaction((game: Game | null) => {
       if (!game) return null
 
       // Reset the card state
@@ -55,26 +55,44 @@ export class DeckService implements IDeckService {
         isRevealed: false
       }
 
+      // Remove from player's hand
+      const updatedPlayers = game.players.map(player => {
+        const cardIndex = player.influence.findIndex(c => c.id === card.id)
+        if (cardIndex === -1) return player
+        return {
+          ...player,
+          influence: player.influence.filter(c => c.id !== card.id)
+        }
+      })
+
       // Add card to deck and shuffle
       const updatedDeck = this.shuffleDeck([...game.deck, returnedCard])
 
       return {
         ...game,
         deck: updatedDeck,
+        players: updatedPlayers,
         updatedAt: Date.now()
       }
     })
+
+    if (!result.committed || !result.snapshot.exists()) {
+      throw new Error('Failed to return card to deck')
+    }
+
+    return result.snapshot.val().deck as Card[]
   }
 
   async drawCard(gameId: string): Promise<Card> {
     const gameRef = this.gamesRef.child(gameId)
+    let card: Card | undefined
 
     const result = await gameRef.transaction(game => {
       if (!game || game.deck.length === 0) return null
 
       // Draw the top card
       const [drawnCard, ...remainingDeck] = game.deck
-
+      card = drawnCard
       return {
         ...game,
         deck: remainingDeck,
@@ -82,12 +100,11 @@ export class DeckService implements IDeckService {
       }
     })
 
-    if (!result.committed || !result.snapshot.exists()) {
+    if (!result.committed || !result.snapshot.exists() || !card) {
       throw new Error('Failed to draw card')
     }
 
-    const previousGame = result.snapshot.val()
-    return previousGame.deck[0]
+    return card
   }
 
   shuffleDeck(deck: Card[]): Card[] {
