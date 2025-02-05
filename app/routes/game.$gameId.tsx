@@ -1,9 +1,7 @@
-import { Card, CardType, type AppContext } from '~/types'
-import { redirect, type LoaderFunction } from '@remix-run/node'
-import { useLoaderData } from '@remix-run/react'
-import { GameSocketContext, GameSocketProvider } from '~/context/GameSocket'
-import { GameBoard } from '~/components/GameBoard'
-import { PlayingCard } from '~/components/PlayingCard'
+import type { AppContext, Game } from '~/types'
+import { redirect, LoaderFunction } from '@remix-run/node'
+import { Outlet, useLoaderData } from '@remix-run/react'
+import { GameSocketProvider } from '~/context/GameSocket'
 import { prepareGameForClient } from '~/services/socket.server'
 
 export const loader: LoaderFunction = async ({ request, context, params }) => {
@@ -23,11 +21,18 @@ export const loader: LoaderFunction = async ({ request, context, params }) => {
 }
 
 export default function GameRoute() {
-  const { gameId, playerId, socketUrl, game } = useLoaderData<typeof loader>()
+  const { gameId, playerId, socketUrl, game } = useLoaderData<{
+    gameId: string
+    playerId: string
+    socketUrl: string
+    game: Game
+  }>()
 
   return (
     <GameSocketProvider gameId={gameId} playerId={playerId} socketUrl={socketUrl} game={game}>
-      <GameBoard playerId={playerId} />
+      <div className='fixed top-0 bottom-0 left-[50%] w-full max-w-[480px] translate-x-[-50%] flex flex-col items-stretch justify-between'>
+        <Outlet context={{ playerId, hostId: game.hostId, status: game.status, pin: game.pin }} />
+      </div>
       {/* <GameSocketContext.Consumer>
         {value =>
           value?.game ? (

@@ -21,7 +21,12 @@ export class SessionService {
 
   async getPlayerSession(request: Request) {
     const session = await this.sessionStorage.getSession(request.headers.get('Cookie'))
-    return { playerId: session.get('playerId') as string | null }
+    return { session, playerId: session.get('playerId') as string | null }
+  }
+
+  async destroySession(request: Request) {
+    const { session } = await this.getPlayerSession(request)
+    return this.sessionStorage.destroySession(session)
   }
 
   async requirePlayerSession(request: Request) {

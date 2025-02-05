@@ -28,12 +28,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               transition={{ duration: 0.2 }}
             >
               <div className='flex items-center mb-4'>
-                <Button
-                  variant='neutralOutline'
-                  size='icon'
-                  onClick={() => setTargetedAction(undefined)}
-                  className='mr-2'
-                >
+                <Button variant='primary' size='sm' onClick={() => setTargetedAction(undefined)} className='mr-2'>
                   ←
                 </Button>
                 <h3 className='text-lg font-bold'>
@@ -46,7 +41,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                   <Button
                     key={`target-${target.id}`}
                     size='lg'
-                    variant={targetedAction === 'STEAL' ? 'blue' : targetedAction === 'ASSASSINATE' ? 'black' : 'red'}
+                    variant='secondary'
                     className='w-full'
                     onClick={() => {
                       performTargetedAction(targetedAction, target.id)
@@ -68,7 +63,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 sprite='token-1'
                 disabled={forceCoup}
               >
-                Income
+                INCOME
               </Button>
               <Button
                 size='lg'
@@ -79,7 +74,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 sprite='token-2'
                 disabled={forceCoup}
               >
-                Foreign Aid
+                FOREIGN AID
               </Button>
               <Button
                 size='lg'
@@ -90,7 +85,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 sprite='token-3'
                 disabled={forceCoup}
               >
-                Tax
+                TAX
               </Button>
               <Button
                 size='lg'
@@ -99,7 +94,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 sprite='exchange'
                 disabled={forceCoup}
               >
-                Exchange
+                EXCHANGE
               </Button>
               <Button
                 size='lg'
@@ -108,7 +103,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 sprite='steal'
                 disabled={forceCoup}
               >
-                Steal
+                STEAL
               </Button>
               <Button
                 size='lg'
@@ -117,7 +112,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 sprite='sword'
                 disabled={coins < 3 || forceCoup}
               >
-                Assassinate
+                ASSASSINATE
               </Button>
               <Button
                 size='lg'
@@ -126,7 +121,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 sprite='skull'
                 disabled={coins < 7}
               >
-                Coup
+                COUP
               </Button>
             </div>
           )}

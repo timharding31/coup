@@ -9,20 +9,16 @@ import { CardType, Game, Player, TurnState } from '~/types'
 import { PlayerHand } from './PlayerHand'
 import { OpponentHand } from './OpponentHand'
 import { Button } from './Button'
+import { GameTable } from './GameTable'
 
 interface GameBoardProps {
   playerId: string
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, turn, startGame, sendResponse, selectCard } = useGameSocket()
+  const { game, turn, sendResponse, selectCard } = useGameSocket()
 
   const gameState = useMemo(() => deriveGameState(game, turn, playerId), [game, turn, playerId])
-
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState(gameState.shouldShowActionControls)
-  useEffect(() => {
-    if (gameState.shouldShowActionControls) setIsActionMenuOpen(true)
-  }, [gameState.shouldShowActionControls])
 
   if (!game) return null
 
@@ -31,14 +27,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
   const myself = game.players[myIndex]
   const playerCards = myself?.influence || []
 
-  const opponents = game.players.slice(myIndex + 1).concat(game.players.slice(0, myIndex))
-
   return (
-    <div className='w-screen grid grid-cols-1'>
-      <div>PIN: {game.pin}</div>
-
-      {gameState.canStartGame && <Button onClick={startGame}>Start Game</Button>}
-
+    <GameTable playerId={playerId} status='IN_PROGRESS'>
       {gameState.shouldShowActionControls && (
         <ActionControls targets={game.players.filter(p => p.id !== playerId)} coins={currentPlayer?.coins || 0} />
       )}
@@ -71,16 +61,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
           isDefendingChallenge={gameState.isDefendingChallenge}
         />
       )}
-
-      {turn?.timeoutAt && <GameTimer timeoutAt={turn.timeoutAt} />}
-
-      <div className='grid grid-cols-3'>
-        {opponents.map((player, i) => (
-          <OpponentHand key={`oppo-${i}`} {...player} />
-        ))}
-      </div>
-      {myself != null && <PlayerHand {...myself} />}
-    </div>
+    </GameTable>
   )
 }
 
@@ -148,7 +129,8 @@ function deriveGameState(game: Game<'client'> | null, turn: TurnState | null, pl
     shouldShowResponseControls:
       currentPlayer?.id !== playerId &&
       turn?.phase === 'WAITING_FOR_REACTIONS' &&
-      !turn.respondedPlayers?.includes(playerId),
+      !turn.respondedPlayers?.includes(playerId) &&
+      (!turn.action.targetPlayerId || turn.action.targetPlayerId === playerId),
 
     shouldShowBlockResponseControls:
       currentPlayer?.id === playerId &&

@@ -1,4 +1,4 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '@remix-run/react'
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useMatches } from '@remix-run/react'
 import type { LinksFunction, LoaderFunction } from '@remix-run/node'
 import fonts from './styles/fonts.css'
 import tailwind from './tailwind.css'
@@ -30,6 +30,8 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 export default function App() {
   const { svgContent } = useLoaderData<{ svgContent: string }>()
+  const matches = useMatches()
+  console.log(matches)
 
   return (
     <html lang='en'>

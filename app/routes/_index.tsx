@@ -1,6 +1,10 @@
 import { redirect, type ActionFunction, type LoaderFunction, type MetaFunction } from '@remix-run/node'
 import { Form } from '@remix-run/react'
+import { useState } from 'react'
+import { Button } from '~/components/Button'
+import { PinInput } from '~/components/PinInput'
 import { PlayingCard } from '~/components/PlayingCard'
+import { TextInput } from '~/components/TextInput'
 import { AppContext, Card, CardType } from '~/types'
 
 export const meta: MetaFunction = () => {
@@ -48,18 +52,26 @@ export const action: ActionFunction = async ({ request, context }) => {
 }
 
 export default function Index() {
+  const [pin, setPin] = useState('')
+
   return (
-    <div>
-      <Form method='post'>
+    <div className='flex flex-col items-stretch gap-8 w-full max-w-[800px] p-4 m-auto'>
+      <Form method='post' className='contents'>
         <input type='hidden' name='intent' value='create' />
-        <button type='submit'>Create new game</button>
+        <Button variant='secondary' type='submit'>
+          Create new game
+        </Button>
       </Form>
+
+      <div className='text-nord-6 text-center'>— or —</div>
 
       <Form method='post'>
         <input type='hidden' name='intent' value='join' />
-        <div className='flex gap-2'>
-          <input type='text' name='pin' placeholder='Enter game PIN' required />
-          <button type='submit'>Join game</button>
+        <div className='flex flex-col items-stretch gap-2'>
+          <PinInput name='pin' value={pin} onChange={setPin} required />
+          <Button variant='primary' type='submit'>
+            Join by PIN
+          </Button>
         </div>
       </Form>
     </div>

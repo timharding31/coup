@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, CardType } from '~/types'
+import { Card, CardType, GameStatus } from '~/types'
 
 const colorSchemes: Record<CardType, string> = {
   [CardType.AMBASSADOR]: 'bg-gradient-to-br from-amber-200 to-amber-600',
@@ -25,16 +25,25 @@ const textColors: Record<CardType, string> = {
   [CardType.DUKE]: 'text-purple-900'
 }
 
-interface PlayingCardProps extends Card<'client'> {}
+interface PlayingCardProps extends Card<'client'> {
+  isFaceDown?: boolean
+}
 
-export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isRevealed }) => {
-  if (!character) {
+export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFaceDown, isRevealed }) => {
+  if (!character || isFaceDown) {
     // Server will omit type for face-down cards
     return <FaceDownCard />
   }
 
+  let className = 'card-container'
+  if (isRevealed) {
+    className += ' rotate-180 grayscale-[80%] transform-origin-center'
+  } else {
+    className += ' z-10'
+  }
+
   return (
-    <div className='card-container rounded-xl'>
+    <div className={className}>
       <div className={`rounded-card w-full h-full nord-shadow relative overflow-hidden ${colorSchemes[character]}`}>
         {/* Card corners */}
         <div data-hide-lt-sm className='absolute top-2 left-4 px-[4cqi] flex flex-col items-start z-10'>

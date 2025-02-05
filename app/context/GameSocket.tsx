@@ -83,7 +83,14 @@ export function GameSocketProvider({
     })
 
     socket.on('gameStateChanged', ({ game }) => {
-      setGame(game)
+      setGame(prev => {
+        if (prev?.status !== game.status) {
+          navigate(
+            `/game/${gameId}/${game.status === 'IN_PROGRESS' ? 'in-progress' : game.status === 'WAITING' ? 'waiting' : 'completed'}`
+          )
+        }
+        return game
+      })
       setCurrentTurn(game.currentTurn || null)
     })
 
@@ -100,7 +107,7 @@ export function GameSocketProvider({
     })
 
     socket.on('gameEnded', () => {
-      navigate('/')
+      navigate(`/game/${gameId}/completed`)
     })
 
     setSocket(socket)

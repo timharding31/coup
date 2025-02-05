@@ -24,6 +24,21 @@ export class SocketService {
     this.setupEventHandlers()
   }
 
+  public async startGame(gameId: string, playerId: string) {
+    try {
+      const { game } = await this.gameService.startGame(gameId, playerId)
+      if (game) {
+        game.players.forEach(player => {
+          this.io.to(`player:${player.id}`).emit('gameStateChanged', {
+            game: prepareGameForClient(game, player.id)
+          })
+        })
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   private setupTurnWatcher(gameId: string) {
     // Clean up existing listener if one exists
     this.cleanupTurnWatcher(gameId)
@@ -105,19 +120,7 @@ export class SocketService {
       })
 
       socket.on('startGame', async ({ gameId, playerId }) => {
-        try {
-          const { game } = await this.gameService.startGame(gameId, playerId)
-          if (game) {
-            game.players.forEach(player => {
-              this.io.to(`player:${player.id}`).emit('gameStateChanged', {
-                game: prepareGameForClient(game, player.id)
-              })
-            })
-          }
-        } catch (error) {
-          console.error(error)
-          socket.emit('error', { message: 'Failed to start game' })
-        }
+        await this.gameService.startGame(gameId, playerId)
       })
 
       socket.on('gameAction', async ({ gameId, playerId, action }) => {
