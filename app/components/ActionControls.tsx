@@ -1,45 +1,137 @@
 import React, { useState } from 'react'
 import { useGameSocket } from '~/hooks/socket'
-import type { ActionType, Player, TargetedActionType } from '~/types'
+import type { Player, TargetedActionType } from '~/types'
+import { Button } from './Button'
+import { Drawer, DrawerContent, DrawerTrigger } from './Drawer'
+import { AnimatePresence, motion } from 'framer-motion'
 
 interface ActionControlsProps {
-  targets: Player[]
+  targets: Player<'client'>[]
   coins: number
 }
 
 export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }) => {
   const { performTargetedAction, performUntargetedAction } = useGameSocket()
   const [targetedAction, setTargetedAction] = useState<TargetedActionType>()
-
-  if (targetedAction) {
-    return (
-      <div>
-        <span>
-          {targetedAction}
-          {targetedAction === 'STEAL' ? ' from' : ''} which player?
-        </span>
-        {targets.map(target => (
-          <button key={`target-${target.id}`} onClick={() => performTargetedAction(targetedAction, target.id)}>
-            {target.username} ({target.coins} coins)
-          </button>
-        ))}
-      </div>
-    )
-  }
-
-  // Must coup if player has 10 or more coins
-  if (coins >= 10) {
-    return <button onClick={() => setTargetedAction('COUP')}>Coup (Required)</button>
-  }
+  const forceCoup = coins >= 10
 
   return (
-    <div>
-      <button onClick={() => performUntargetedAction('INCOME')}>Income (+1 coin)</button>
-      <button onClick={() => performUntargetedAction('FOREIGN_AID')}>Foreign Aid (+2 coins)</button>
-      {coins >= 7 && <button onClick={() => setTargetedAction('COUP')}>Coup (-7 coins)</button>}
-      {coins >= 3 && <button onClick={() => setTargetedAction('ASSASSINATE')}>Assassinate (-3 coins)</button>}
-      <button onClick={() => performUntargetedAction('TAX')}>Tax (+3 coins)</button>
-      <button onClick={() => setTargetedAction('STEAL')}>Steal (Take 2 coins)</button>
-    </div>
+    <Drawer defaultOpen>
+      <DrawerContent className='px-4 py-6'>
+        <AnimatePresence mode='wait'>
+          {targetedAction ? (
+            <motion.div
+              key='targets'
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className='flex items-center mb-4'>
+                <Button
+                  variant='neutralOutline'
+                  size='icon'
+                  onClick={() => setTargetedAction(undefined)}
+                  className='mr-2'
+                >
+                  ←
+                </Button>
+                <h3 className='text-lg font-bold'>
+                  {targetedAction}
+                  {targetedAction === 'STEAL' ? ' from' : ''} which player?
+                </h3>
+              </div>
+              <div className='grid gap-4 grid-cols-1'>
+                {targets.map(target => (
+                  <Button
+                    key={`target-${target.id}`}
+                    size='lg'
+                    variant={targetedAction === 'STEAL' ? 'blue' : targetedAction === 'ASSASSINATE' ? 'black' : 'red'}
+                    className='w-full'
+                    onClick={() => {
+                      performTargetedAction(targetedAction, target.id)
+                    }}
+                  >
+                    {target.username} ({target.coins} coins)
+                  </Button>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <div className='grid gap-4 grid-cols-1 sm:grid-cols-2'>
+              <Button
+                size='lg'
+                variant='primary'
+                onClick={() => {
+                  performUntargetedAction('INCOME')
+                }}
+                sprite='token-1'
+                disabled={forceCoup}
+              >
+                Income
+              </Button>
+              <Button
+                size='lg'
+                variant='primary'
+                onClick={() => {
+                  performUntargetedAction('FOREIGN_AID')
+                }}
+                sprite='token-2'
+                disabled={forceCoup}
+              >
+                Foreign Aid
+              </Button>
+              <Button
+                size='lg'
+                variant='primary'
+                onClick={() => {
+                  performUntargetedAction('TAX')
+                }}
+                sprite='token-3'
+                disabled={forceCoup}
+              >
+                Tax
+              </Button>
+              <Button
+                size='lg'
+                variant='primary'
+                onClick={() => performUntargetedAction('EXCHANGE')}
+                sprite='exchange'
+                disabled={forceCoup}
+              >
+                Exchange
+              </Button>
+              <Button
+                size='lg'
+                variant='primary'
+                onClick={() => setTargetedAction('STEAL')}
+                sprite='steal'
+                disabled={forceCoup}
+              >
+                Steal
+              </Button>
+              <Button
+                size='lg'
+                variant='primary'
+                onClick={() => setTargetedAction('ASSASSINATE')}
+                sprite='sword'
+                disabled={coins < 3 || forceCoup}
+              >
+                Assassinate
+              </Button>
+              <Button
+                size='lg'
+                variant='primary'
+                onClick={() => setTargetedAction('COUP')}
+                sprite='skull'
+                disabled={coins < 7}
+              >
+                Coup
+              </Button>
+            </div>
+          )}
+        </AnimatePresence>
+      </DrawerContent>
+    </Drawer>
   )
 }

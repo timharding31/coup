@@ -1,189 +1,182 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useGameSocket } from '~/hooks/socket'
 import { ActionControls } from './ActionControls'
 import { ResponseControls } from './ResponseControls'
 import { LoseInfluenceControls } from './LoseInfluenceControls'
 import { GameTimer } from './GameTimer'
 import { Link } from '@remix-run/react'
-import { CardType, Game, Player } from '~/types'
+import { CardType, Game, Player, TurnState } from '~/types'
+import { PlayerHand } from './PlayerHand'
+import { OpponentHand } from './OpponentHand'
+import { Button } from './Button'
 
 interface GameBoardProps {
   playerId: string
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, startGame, sendResponse, selectCard } = useGameSocket()
+  const { game, turn, startGame, sendResponse, selectCard } = useGameSocket()
 
-  const { canAct, canRespond, canChallengeBlock, availableResponses, mustLoseInfluence, challenge } = useMemo(() => {
-    return getPlayerMenuState(game, playerId)
-  }, [game, playerId])
+  const gameState = useMemo(() => deriveGameState(game, turn, playerId), [game, turn, playerId])
 
-  const currentPlayer = game?.players[game.currentPlayerIndex]
-  const playerCards = game?.players.find(p => p.id === playerId)?.influence || []
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(gameState.shouldShowActionControls)
+  useEffect(() => {
+    if (gameState.shouldShowActionControls) setIsActionMenuOpen(true)
+  }, [gameState.shouldShowActionControls])
+
+  if (!game) return null
+
+  const currentPlayer = game.players[game?.currentPlayerIndex ?? 0]
+  const myIndex = game.players.findIndex(p => p.id === playerId)
+  const myself = game.players[myIndex]
+  const playerCards = myself?.influence || []
+
+  const opponents = game.players.slice(myIndex + 1).concat(game.players.slice(0, myIndex))
 
   return (
-    <div>
-      {/* Game status and player info */}
-      {game && (
-        <>
-          {/* <PlayerList players={game.players} /> */}
+    <div className='w-screen grid grid-cols-1'>
+      <div>PIN: {game.pin}</div>
 
-          {game.hostId === playerId && game.status === 'WAITING' && (
-            <button onClick={() => startGame()}>Start Game</button>
-          )}
+      {gameState.canStartGame && <Button onClick={startGame}>Start Game</Button>}
 
-          {canAct && (
-            <ActionControls
-              targets={game.players.filter((_, i) => i !== game.currentPlayerIndex)}
-              coins={currentPlayer?.coins || 0}
-            />
-          )}
-
-          {(canRespond || canChallengeBlock) && (
-            <ResponseControls
-              onResponse={sendResponse}
-              action={game.currentTurn!.action}
-              availableResponses={availableResponses}
-              targetPlayer={game.players[game.currentPlayerIndex].username}
-            />
-          )}
-
-          {mustLoseInfluence && (
-            <LoseInfluenceControls
-              onSelectCard={selectCard}
-              availableCards={playerCards}
-              // reason={game.currentTurn?.loseInfluenceReason || 'CHALLENGE_LOST'}
-            />
-          )}
-
-          {challenge != null && (
-            <div>
-              <span>{challenge.reason}</span>
-              <div className='mt-2 flex'>
-                {playerCards
-                  .filter(card => !card.isRevealed)
-                  .map(card => (
-                    <button key={card.id} onClick={() => selectCard(card.id)}>
-                      {card.type}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {/* <GameTimer getRemainingTime={getRemainingTime} /> */}
-        </>
+      {gameState.shouldShowActionControls && (
+        <ActionControls targets={game.players.filter(p => p.id !== playerId)} coins={currentPlayer?.coins || 0} />
       )}
-      <pre>{JSON.stringify({ isHost: game?.hostId === playerId, ...game }, null, 2)}</pre>
+
+      {gameState.shouldShowResponseControls && (
+        <ResponseControls
+          onResponse={sendResponse}
+          action={turn!.action}
+          availableResponses={gameState.availableResponses}
+        />
+      )}
+
+      {gameState.shouldShowBlockResponseControls && (
+        <ResponseControls
+          onResponse={sendResponse}
+          action={turn!.action}
+          availableResponses={{
+            canAccept: true,
+            canBlock: false,
+            canChallenge: true
+          }}
+        />
+      )}
+
+      {gameState.shouldShowCardSelection && (
+        <LoseInfluenceControls
+          onSelectCard={selectCard}
+          availableCards={playerCards}
+          reason={gameState.cardSelectionMessage}
+          isDefendingChallenge={gameState.isDefendingChallenge}
+        />
+      )}
+
+      {turn?.timeoutAt && <GameTimer timeoutAt={turn.timeoutAt} />}
+
+      <div className='grid grid-cols-3'>
+        {opponents.map((player, i) => (
+          <OpponentHand key={`oppo-${i}`} {...player} />
+        ))}
+      </div>
+      {myself != null && <PlayerHand {...myself} />}
     </div>
   )
 }
 
-interface MenuState {
-  canAct: boolean // Can take a main action (current player's turn)
-  canRespond: boolean // Can respond to current action (challenge/block)
-  canChallengeBlock: boolean // Can challenge a block
-  mustLoseInfluence: boolean
+interface GameStateConditions {
+  canStartGame: boolean
+  shouldShowActionControls: boolean
+  shouldShowResponseControls: boolean
+  shouldShowBlockResponseControls: boolean
+  shouldShowCardSelection: boolean
   availableResponses: {
     canAccept: boolean
-    canChallenge: boolean
     canBlock: boolean
-    availableBlocks: CardType[] // Cards that can be used to block
+    canChallenge: boolean
   }
-  challenge?: {
-    by: Player
-    reason: string
-  }
+  cardSelectionMessage: string | null
+  isDefendingChallenge: boolean
 }
 
-function getPlayerMenuState(game: Game | null, playerId: string): MenuState {
-  // Default state - no menus
-  const menuState: MenuState = {
-    canAct: false,
-    canRespond: false,
-    canChallengeBlock: false,
-    mustLoseInfluence: false,
-    availableResponses: {
-      canAccept: false,
-      canChallenge: false,
-      canBlock: false,
-      availableBlocks: []
+function deriveGameState(game: Game<'client'> | null, turn: TurnState | null, playerId: string): GameStateConditions {
+  if (!game || game.status !== 'IN_PROGRESS') {
+    return {
+      canStartGame: game?.hostId === playerId && game.status === 'WAITING',
+      shouldShowActionControls: false,
+      shouldShowResponseControls: false,
+      shouldShowBlockResponseControls: false,
+      shouldShowCardSelection: false,
+      availableResponses: { canAccept: false, canBlock: false, canChallenge: false },
+      cardSelectionMessage: null,
+      isDefendingChallenge: false
     }
   }
 
-  if (!game || game.status !== 'IN_PROGRESS') {
-    return menuState
-  }
-
   const currentPlayer = game.players[game.currentPlayerIndex]
-  const isCurrentPlayer = currentPlayer?.id === playerId
-  const turn = game.currentTurn
 
-  // No turn in progress, current player can act
-  if (!turn) {
-    menuState.canAct = isCurrentPlayer
-    return menuState
+  if (!turn || !turn.action || turn.phase === 'WAITING_FOR_ACTION') {
+    return {
+      canStartGame: false,
+      shouldShowActionControls: currentPlayer?.id === playerId,
+      shouldShowResponseControls: false,
+      shouldShowBlockResponseControls: false,
+      shouldShowCardSelection: false,
+      availableResponses: { canAccept: false, canBlock: false, canChallenge: false },
+      cardSelectionMessage: null,
+      isDefendingChallenge: false
+    }
   }
 
-  switch (turn.phase) {
-    case 'CHALLENGE_BLOCK_WINDOW':
-      if (turn.respondedPlayers?.includes(playerId)) {
-        return menuState
-      }
-      menuState.canRespond = true
-      menuState.availableResponses = {
-        canAccept: true,
-        canChallenge: turn.action.canBeChallenged,
-        canBlock: turn.action.canBeBlocked,
-        availableBlocks: turn.action.blockableBy || []
-      }
-      break
+  // Determine if player needs to reveal a card
+  const isDefendingActionChallenge =
+    turn?.phase === 'WAITING_FOR_DEFENSE_REVEAL' && turn.action.playerId === playerId && !turn.blockingPlayer
+  const isDefendingBlockChallenge = turn?.phase === 'WAITING_FOR_DEFENSE_REVEAL' && turn.blockingPlayer === playerId
 
-    case 'CHALLENGE_RESOLUTION':
-      // Only the challenged player can respond
-      const challenger = game.players.find(p => p.id === turn.challengeResult?.challengingPlayer)
-      console.log('challenger', challenger?.id, 'player', playerId)
-      if (turn.challengeResult?.successful == null && challenger && challenger.id !== playerId) {
-        menuState.canRespond = true
-        menuState.challenge = {
-          by: challenger,
-          reason: `${challenger.username} challenged your ${turn.action.type}`
+  const isDefendingChallenge = isDefendingActionChallenge || isDefendingBlockChallenge
+
+  const isFailedChallenger =
+    turn?.phase === 'WAITING_FOR_CHALLENGE_PENALTY' && turn.challengeResult?.challengingPlayer === playerId
+
+  const isTargetedPlayer = turn?.phase === 'WAITING_FOR_TARGET_REVEAL' && turn.action.targetPlayerId === playerId
+
+  return {
+    canStartGame: false,
+
+    shouldShowActionControls: false,
+
+    shouldShowResponseControls:
+      currentPlayer?.id !== playerId &&
+      turn?.phase === 'WAITING_FOR_REACTIONS' &&
+      !turn.respondedPlayers?.includes(playerId),
+
+    shouldShowBlockResponseControls:
+      currentPlayer?.id === playerId &&
+      turn?.phase === 'WAITING_FOR_BLOCK_RESPONSE' &&
+      !turn.respondedPlayers?.includes(playerId),
+
+    shouldShowCardSelection: isDefendingChallenge || isFailedChallenger || isTargetedPlayer,
+
+    isDefendingChallenge,
+
+    cardSelectionMessage: isDefendingChallenge
+      ? `Your ${isDefendingBlockChallenge ? `BLOCK of ${currentPlayer.username}'s ${turn.action.type}` : turn.action.type} has been challenged!`
+      : isFailedChallenger
+        ? 'Your challenge was unsuccessful!'
+        : isTargetedPlayer
+          ? `${currentPlayer.username}'s ${turn.action.type} was successful!`
+          : null,
+
+    availableResponses: turn
+      ? {
+          canAccept: true,
+          canBlock: turn.action.canBeBlocked,
+          canChallenge: turn.action.canBeChallenged
         }
-      } else if (turn.challengeResult?.successful === false && challenger?.id === playerId) {
-        menuState.canRespond = true
-        menuState.mustLoseInfluence = true
-      }
-      break
-
-    case 'BLOCK_CHALLENGE_RESOLUTION':
-      // Only the challenged player can respond
-      const blockChallenger = game.players.find(p => p.id === turn.challengeResult?.challengingPlayer)
-      const blocker = game.players.find(p => p.id === turn.blockingPlayer)
-      if (blockChallenger && blocker?.id === playerId) {
-        menuState.canRespond = true
-        menuState.challenge = {
-          by: blockChallenger,
-          reason: `${blockChallenger.username} challenged your block of ${currentPlayer!.username}'s ${turn.action.type}`
-        }
-      }
-
-    case 'BLOCK_CHALLENGE_WINDOW':
-      // Only the original action player can challenge the block
-      if (turn.action.playerId === playerId) {
-        menuState.canRespond = true
-        menuState.availableResponses = {
-          canAccept: true, // Accept the block
-          canChallenge: true, // Challenge the block
+      : {
+          canAccept: false,
           canBlock: false,
-          availableBlocks: []
+          canChallenge: false
         }
-      }
-      break
-
-    case 'LOSE_INFLUENCE':
-      menuState.mustLoseInfluence = true
-      break
   }
-
-  return menuState
 }

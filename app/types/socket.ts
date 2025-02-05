@@ -1,8 +1,7 @@
 import { Server as SocketServer, Socket as ServerSocket } from 'socket.io'
 import { Socket as ClientSocket } from 'socket.io-client'
+import { Action, TurnState } from './turn'
 import { Game } from './game'
-import { Action } from './turn'
-import { CardType } from './card'
 
 export type GameSocketData<T = {}> = T & {
   gameId: string
@@ -15,12 +14,14 @@ export interface ErrorResponse {
 
 // Server -> Client Events
 export interface ServerToClientEvents {
-  gameStateChanged: (data: { game: Game }) => void
-  gameEnded: () => void
+  gameStateChanged: (data: { game: Game<'client'> }) => void
+  gameEnded: (data: { game: Game }) => void
+  turnStateChanged: (data: { turn: TurnState }) => void
+  turnEnded: () => void
   playerJoined: (data: { playerId: string }) => void
   playerLeft: (data: { playerId: string }) => void
   playerDisconnected: (data: { playerId: string }) => void
-  reconnectSuccess: (data: { game: Game }) => void
+  reconnectSuccess: (data: { game: Game<'client'> }) => void
   turnTimerStarted: (data: { expiresAt: number }) => void
   turnTimerEnded: () => void
   error: (error: ErrorResponse) => void

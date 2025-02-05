@@ -52,7 +52,7 @@ export class ActionService implements IActionService {
 
     const gameRef = this.gamesRef.child(gameId)
     const result = await gameRef.transaction((game: Game | null) => {
-      if (!game) return game
+      if (!game || !game.players) return game
 
       const playerIndex = game.players.findIndex(p => p.id === playerId)
       if (playerIndex === -1) {
@@ -91,10 +91,6 @@ export class ActionService implements IActionService {
         coinEffects.set(action.playerId, 3)
         break
 
-      case 'ASSASSINATE':
-        coinEffects.set(action.playerId, -3)
-        break
-
       case 'STEAL':
         const targetCoins = await this.getPlayerCoins(gameId, action.targetPlayerId)
         const stealAmount = Math.min(2, targetCoins)
@@ -102,11 +98,7 @@ export class ActionService implements IActionService {
         coinEffects.set(action.playerId, stealAmount)
         break
 
-      case 'COUP':
-        coinEffects.set(action.playerId, -7)
-        break
-
-      case 'EXCHANGE':
+      default:
         break
     }
     await Promise.all(Array.from(coinEffects.entries()).map(entry => this.updatePlayerCoins(gameId, ...entry)))
@@ -123,7 +115,7 @@ export class ActionService implements IActionService {
     const gameRef = this.gamesRef.child(gameId)
     const result = await gameRef.transaction((game: Game | null) => {
       const turn = game?.currentTurn
-      if (!game || !turn) return game
+      if (!game || !turn || !game.players) return game
 
       const playerIndex = game.players.findIndex(p => p.id === playerId)
       if (playerIndex === -1) {

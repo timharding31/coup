@@ -1,9 +1,11 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration } from '@remix-run/react'
-import type { LinksFunction } from '@remix-run/node'
-
-import './tailwind.css'
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '@remix-run/react'
+import type { LinksFunction, LoaderFunction } from '@remix-run/node'
+import fonts from './styles/fonts.css'
+import tailwind from './tailwind.css'
 
 export const links: LinksFunction = () => [
+  { rel: 'stylesheet', href: tailwind },
+  { rel: 'stylesheet', href: fonts },
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
   {
     rel: 'preconnect',
@@ -16,7 +18,19 @@ export const links: LinksFunction = () => [
   }
 ]
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export const loader: LoaderFunction = async ({ request }) => {
+  // Fetch the SVG sprite content from our own route
+  const url = new URL(request.url)
+  const spritesUrl = `${url.origin}/sprites.svg`
+  const response = await fetch(spritesUrl)
+  const svgContent = await response.text()
+
+  return { svgContent }
+}
+
+export default function App() {
+  const { svgContent } = useLoaderData<{ svgContent: string }>()
+
   return (
     <html lang='en'>
       <head>
@@ -26,14 +40,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <div style={{ display: 'none' }} aria-hidden='true' dangerouslySetInnerHTML={{ __html: svgContent }} />
+        <Outlet />
         <ScrollRestoration />
         <Scripts />
       </body>
     </html>
   )
-}
-
-export default function App() {
-  return <Outlet />
 }

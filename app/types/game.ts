@@ -1,4 +1,4 @@
-import { Card } from './card'
+import { Card, CardType } from './card'
 import { Player } from './player'
 import { Action, TurnState } from './turn'
 
@@ -9,13 +9,13 @@ export const GameStatus = {
 } as const
 export type GameStatus = (typeof GameStatus)[keyof typeof GameStatus]
 
-export interface Game {
+export interface Game<Context extends 'server' | 'client' = 'server'> {
   id: string
   pin: string
   status: GameStatus
   hostId: string
-  players: Player[]
-  deck: Card[]
+  players: Player<Context>[]
+  deck: Card<Context>[]
   currentPlayerIndex: number // Index of current player
   currentTurn?: TurnState
   winnerId?: string

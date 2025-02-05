@@ -7,8 +7,8 @@ export const CardType = {
 } as const
 export type CardType = (typeof CardType)[keyof typeof CardType]
 
-export interface Card {
+export interface Card<Context extends 'server' | 'client' = 'server'> {
   id: string
-  type: CardType
+  type: Context extends 'server' ? CardType : CardType | null
   isRevealed?: boolean
 }

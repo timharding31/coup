@@ -2,6 +2,9 @@ import React from 'react'
 import type { Action, CardType } from '~/types'
 import { BlockControls } from './BlockControls'
 import { ChallengeControls } from './ChallengeControls'
+import { Drawer, DrawerContent } from './Drawer'
+import { Button } from './Button'
+import { useGameSocket } from '~/hooks/socket'
 
 interface ResponseControlsProps {
   onResponse: (type: 'accept' | 'challenge' | 'block') => void
@@ -10,41 +13,53 @@ interface ResponseControlsProps {
     canAccept: boolean
     canChallenge: boolean
     canBlock: boolean
-    availableBlocks: CardType[]
   }
-  targetPlayer: string
 }
 
-export const ResponseControls: React.FC<ResponseControlsProps> = ({
-  onResponse,
-  action,
-  availableResponses,
-  targetPlayer
-}) => {
-  const [showBlockOptions, setShowBlockOptions] = React.useState(false)
+export const ResponseControls: React.FC<ResponseControlsProps> = ({ onResponse, action, availableResponses }) => {
+  const { turn } = useGameSocket()
 
-  if (showBlockOptions) {
-    return (
-      <BlockControls
-        onResponse={response => {
-          setShowBlockOptions(false)
-          onResponse(response)
-        }}
-        action={action}
-        availableBlocks={availableResponses.availableBlocks}
-      />
-    )
-  }
-
-  if (availableResponses.canChallenge) {
-    return <ChallengeControls onResponse={onResponse} action={action} targetPlayer={targetPlayer} />
-  }
+  const opponentAction = turn?.phase === 'WAITING_FOR_BLOCK_RESPONSE' ? `BLOCK` : action.type.replace('_', ' ')
 
   return (
-    <div className='response-controls'>
-      {availableResponses.canAccept && <button onClick={() => onResponse('accept')}>Accept Action</button>}
-
-      {availableResponses.canBlock && <button onClick={() => setShowBlockOptions(true)}>Block Action</button>}
-    </div>
+    <Drawer defaultOpen>
+      <DrawerContent className='px-4 py-6'>
+        <div className='grid gap-4 grid-cols-1 sm:grid-cols-2'>
+          {availableResponses.canAccept && (
+            <Button
+              size='lg'
+              variant='success'
+              onClick={() => onResponse('accept')}
+              sprite='check'
+              timeoutAt={turn?.timeoutAt}
+            >
+              Accept {opponentAction}
+            </Button>
+          )}
+          {availableResponses.canBlock && (
+            <Button
+              size='lg'
+              variant='warning'
+              onClick={() => onResponse('block')}
+              sprite='shield'
+              timeoutAt={turn?.timeoutAt}
+            >
+              Block {action.type.replace('_', ' ')}
+            </Button>
+          )}
+          {availableResponses.canChallenge && (
+            <Button
+              size='lg'
+              variant='danger'
+              onClick={() => onResponse('challenge')}
+              sprite='challenge'
+              timeoutAt={turn?.timeoutAt}
+            >
+              Challenge {opponentAction}
+            </Button>
+          )}
+        </div>
+      </DrawerContent>
+    </Drawer>
   )
 }

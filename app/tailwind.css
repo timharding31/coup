@@ -2,11 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
+body,
+html {
+  @apply bg-nord-1;
+}
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+.card-container {
+  @apply w-full;
+
+  aspect-ratio: 3 / 4;
+  container-type: inline-size;
+  container-name: card-container;
+}
+
+.rounded-card {
+  @apply ring-1 ring-nord-2;
+  border-radius: clamp(8px, 5%, 24px);
+  border-radius: clamp(8px, 5cqmin, 24px);
+
+  @container (max-width: 120px) {
+    & > [data-hide-lt-sm] {
+      display: none;
+    }
   }
+}
+
+.nord-shadow {
+  box-shadow:
+    rgba(15, 17, 21, 0.25) 0px 4px 6px,
+    rgba(15, 17, 21, 0.1) 0px 5px 7px;
 }

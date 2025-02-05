@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react'
 
 interface GameTimerProps {
-  getRemainingTime: () => number
+  timeoutAt: number
 }
 
-export const GameTimer: React.FC<GameTimerProps> = ({ getRemainingTime }) => {
+export const GameTimer: React.FC<GameTimerProps> = ({ timeoutAt }) => {
   const [timeLeft, setTimeLeft] = useState<number>(0)
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeLeft(Math.round(getRemainingTime() / 1_000))
+      const remainingTime = timeoutAt - Date.now()
+      setTimeLeft(Math.round(remainingTime / 1_000))
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [getRemainingTime])
+  }, [timeoutAt])
 
   if (timeLeft <= 0) return null
 

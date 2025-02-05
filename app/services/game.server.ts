@@ -16,10 +16,20 @@ export interface IGameService {
   getGame(gameId: string): Promise<{ game: Game | null }>
   getGameByPlayerId(playerId: string): Promise<{ game: Game | null }>
   getCurrentTurn(gameId: string): Promise<{ turn: TurnState | null }>
-  startGameTurn(gameId: string, action: Action): Promise<void>
-  handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'challenge' | 'block'): Promise<void>
-  handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge'): Promise<void>
-  handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<void>
+  startGameTurn(gameId: string, action: Action): Promise<{ game: Game | null }>
+  handleActionResponse(
+    gameId: string,
+    playerId: string,
+    response: 'accept' | 'challenge' | 'block'
+  ): Promise<{ game: Game | null }>
+  handleBlockResponse(
+    gameId: string,
+    playerId: string,
+    response: 'accept' | 'challenge'
+  ): Promise<{ game: Game | null }>
+  handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<{ game: Game | null }>
+  setOnGameEnded(listener: (gameId: string) => Promise<void>): void
+  setOnTurnEnded(listener: (gameId: string) => Promise<void>): void
 }
 
 export class GameService implements IGameService {
@@ -38,12 +48,18 @@ export class GameService implements IGameService {
     this.actionService = new ActionService(this.gamesRef)
     this.deckService = new DeckService(this.gamesRef)
     this.challengeService = new ChallengeService(this.gamesRef, this.deckService)
-    this.turnService = new TurnService(
-      this.gamesRef,
-      this.actionService,
-      this.challengeService,
-      this.cleanupGame.bind(this)
-    )
+    this.turnService = new TurnService(this.gamesRef, this.actionService, this.challengeService)
+  }
+
+  setOnGameEnded(listener: (gameId: string) => Promise<void>): void {
+    this.turnService.setOnGameEnded(async (gameId: string, winnerId?: string) => {
+      await listener(gameId)
+      await this.cleanupGame(gameId, winnerId)
+    })
+  }
+
+  setOnTurnEnded(listener: (gameId: string) => Promise<void>) {
+    this.turnService.setOnTurnEnded(listener)
   }
 
   async createGame(hostId: string) {
@@ -105,25 +121,62 @@ export class GameService implements IGameService {
 
     const turn = game.currentTurn
 
-    // Validate card selection based on current phase
+    // Handle card selection based on current waiting phase
     switch (turn.phase) {
-      case 'CHALLENGE_RESOLUTION':
-      case 'BLOCK_CHALLENGE_RESOLUTION':
+      case 'WAITING_FOR_DEFENSE_REVEAL': {
+        // Handle revealing a card to defend against a challenge
         if (!turn.challengeResult) {
           throw new Error('No active challenge')
         }
-        if (turn.challengeResult.successful === false) {
-          return this.turnService.selectFailedChallengerCard(gameId, playerId, cardId)
-        } else {
-          return this.turnService.selectChallengeDefenseCard(gameId, playerId, cardId)
+
+        // If blocking player exists, they must prove their block
+        // Otherwise, the action player must prove their action
+        const expectedDefender = turn.blockingPlayer || turn.action.playerId
+        if (playerId !== expectedDefender) {
+          throw new Error('Not your turn to reveal a card')
         }
 
-      case 'LOSE_INFLUENCE':
-        return this.turnService.selectCardToLose(gameId, playerId, cardId)
+        await this.turnService.selectChallengeDefenseCard(gameId, playerId, cardId)
+        break
+      }
+
+      case 'WAITING_FOR_CHALLENGE_PENALTY': {
+        // Handle revealing a card after failing a challenge
+        if (!turn.challengeResult) {
+          throw new Error('No active challenge')
+        }
+
+        if (playerId !== turn.challengeResult.challengingPlayer) {
+          throw new Error('Not your turn to reveal a card')
+        }
+
+        await this.turnService.selectFailedChallengerCard(gameId, playerId, cardId)
+        break
+      }
+
+      case 'WAITING_FOR_TARGET_REVEAL': {
+        // Handle revealing a card when targeted by assassination or coup
+        if (!turn.action.targetPlayerId) {
+          throw new Error('No target player')
+        }
+
+        if (playerId !== turn.action.targetPlayerId) {
+          throw new Error('Not your turn to reveal a card')
+        }
+
+        if (!['ASSASSINATE', 'COUP'].includes(turn.action.type)) {
+          throw new Error('Invalid action type for losing influence')
+        }
+
+        await this.turnService.selectCardToLose(gameId, playerId, cardId)
+        break
+      }
 
       default:
         throw new Error(`Invalid phase for card selection: ${turn.phase}`)
     }
+
+    return this.getGame(gameId)
   }
 
   startGameTurn(gameId: string, action: Action) {

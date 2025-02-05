@@ -6,34 +6,45 @@ import { VALID_TRANSITIONS, haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
 
 export interface ITurnService {
-  startTurn(gameId: string, action: Action): Promise<void>
-  handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'block' | 'challenge'): Promise<void>
-  handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge'): Promise<void>
+  startTurn(gameId: string, action: Action): Promise<{ game: Game | null }>
+  handleActionResponse(
+    gameId: string,
+    playerId: string,
+    response: 'accept' | 'block' | 'challenge'
+  ): Promise<{ game: Game | null }>
+  handleBlockResponse(
+    gameId: string,
+    playerId: string,
+    response: 'accept' | 'challenge'
+  ): Promise<{ game: Game | null }>
   selectChallengeDefenseCard(gameId: string, playerId: string, cardId: string): Promise<void>
   selectFailedChallengerCard(gameId: string, playerId: string, cardId: string): Promise<void>
-  endTurn(gameId: string): Promise<void>
+  setOnGameEnded(listener: (gameId: string, winnerId?: string) => Promise<void>): void
+  setOnTurnEnded(listener: (gameId: string) => Promise<void>): void
 }
 
 export class TurnService implements ITurnService {
-  private readonly CHALLENGE_TIMEOUT = 20_000 // 20 seconds
-  private readonly RESPONSE_TIMEOUT = 10_000 // 10 seconds
+  private readonly RESPONSE_TIMEOUT = 20_000 // 20 seconds
 
   private gamesRef: Reference
   private actionService: ActionService
   private challengeService: ChallengeService
   private activeTimers = new Map<string, NodeJS.Timeout>()
-  private onGameCompleted: (gameId: string, winnerId?: string) => Promise<void>
+  private onGameEnded: (gameId: string, winnerId?: string) => Promise<void> = Promise.resolve
+  private onTurnEnded: (gameId: string) => Promise<void> = Promise.resolve
 
-  constructor(
-    gamesRef: Reference,
-    actionService: ActionService,
-    challengeService: ChallengeService,
-    onGameCompleted: (gameId: string, winnerId?: string) => Promise<void>
-  ) {
+  constructor(gamesRef: Reference, actionService: ActionService, challengeService: ChallengeService) {
     this.gamesRef = gamesRef
     this.actionService = actionService
     this.challengeService = challengeService
-    this.onGameCompleted = onGameCompleted
+  }
+
+  setOnGameEnded(listener: (gameId: string, winnerId?: string) => Promise<void>) {
+    this.onGameEnded = listener
+  }
+
+  setOnTurnEnded(listener: (gameId: string) => Promise<void>) {
+    this.onTurnEnded = listener
   }
 
   async selectChallengeDefenseCard(gameId: string, playerId: string, cardId: string) {
@@ -45,77 +56,66 @@ export class TurnService implements ITurnService {
       throw new Error('Game not found')
     }
 
+    if (turn.phase !== 'WAITING_FOR_DEFENSE_REVEAL') {
+      throw new Error('Not in defense reveal phase')
+    }
+
     if (!turn.challengeResult) {
-      throw new Error('Not in challenge resolution phase')
+      throw new Error('No active challenge')
     }
 
     const revealedCard = game.players.find(p => p.id === playerId)?.influence.find(c => c.id === cardId)
 
     if (!revealedCard || revealedCard.isRevealed) {
-      throw new Error('Card not found')
+      throw new Error('Card not found or already revealed')
     }
 
     let defenseSuccessful: boolean
 
-    switch (turn.phase) {
-      case 'CHALLENGE_RESOLUTION':
-        // Actor must be defending an opponent's challenge
-        if (turn.action.playerId !== playerId) {
-          throw new Error('Player was not challenged')
-        }
-        // Card must assert the action
-        switch (turn.action.type) {
-          case 'ASSASSINATE':
-            defenseSuccessful = revealedCard.type === 'ASSASSIN'
-            break
+    // Determine if the revealed card matches the required type
+    if (turn.blockingPlayer) {
+      // Blocking player must be defending actor's challenge
+      if (turn.blockingPlayer !== playerId) {
+        throw new Error("Player's block was not challenged")
+      }
 
-          case 'STEAL':
-            defenseSuccessful = revealedCard.type === 'CAPTAIN'
-            break
+      switch (turn.action.type) {
+        case 'FOREIGN_AID':
+          defenseSuccessful = revealedCard.type === 'DUKE'
+          break
+        case 'ASSASSINATE':
+          defenseSuccessful = revealedCard.type === 'CONTESSA'
+          break
+        case 'STEAL':
+          defenseSuccessful = revealedCard.type === 'AMBASSADOR' || revealedCard.type === 'CAPTAIN'
+          break
+        default:
+          throw new Error('Invalid action type')
+      }
+    } else {
+      // Actor must be defending an opponent's challenge
+      if (turn.action.playerId !== playerId) {
+        throw new Error('Player was not challenged')
+      }
 
-          case 'EXCHANGE':
-            defenseSuccessful = revealedCard.type === 'AMBASSADOR'
-            break
-
-          case 'TAX':
-            defenseSuccessful = revealedCard.type === 'DUKE'
-            break
-
-          default:
-            throw new Error('Invalid action type')
-        }
-        break
-
-      case 'BLOCK_CHALLENGE_RESOLUTION':
-        // Blocking player must be defending actor's challenge
-        if (turn.blockingPlayer !== playerId) {
-          throw new Error("Player's block was not challenged")
-        }
-        // Card must assert the action
-        switch (turn.action.type) {
-          case 'FOREIGN_AID':
-            defenseSuccessful = revealedCard.type === 'DUKE'
-            break
-
-          case 'ASSASSINATE':
-            defenseSuccessful = revealedCard.type === 'CONTESSA'
-            break
-
-          case 'STEAL':
-            defenseSuccessful = revealedCard.type === 'AMBASSADOR' || revealedCard.type === 'CAPTAIN'
-            break
-
-          default:
-            throw new Error('Invalid action type')
-        }
-        break
-
-      default:
-        throw new Error('Not in challenge resolution phase')
+      switch (turn.action.type) {
+        case 'ASSASSINATE':
+          defenseSuccessful = revealedCard.type === 'ASSASSIN'
+          break
+        case 'STEAL':
+          defenseSuccessful = revealedCard.type === 'CAPTAIN'
+          break
+        case 'EXCHANGE':
+          defenseSuccessful = revealedCard.type === 'AMBASSADOR'
+          break
+        case 'TAX':
+          defenseSuccessful = revealedCard.type === 'DUKE'
+          break
+        default:
+          throw new Error('Invalid action type')
+      }
     }
 
-    // Update challenge result & perform effects, then move to next phase
-    // Challenger succeeds if revealed card does NOT assert action or block
     const challengeResult = {
       ...turn.challengeResult,
       successful: !defenseSuccessful,
@@ -125,15 +125,13 @@ export class TurnService implements ITurnService {
 
     await gameRef.child('currentTurn/challengeResult').set(challengeResult)
 
-    // If defense was successful, reshuffle the `defendingCardId` into the court deck
-    // Then wait for challenger to select their card to lose
     if (defenseSuccessful) {
-      await this.challengeService.returnAndReplaceCard(gameId, turn.action.playerId, revealedCard)
+      await this.challengeService.returnAndReplaceCard(gameId, playerId, revealedCard)
     } else {
-      // If defense was unsuccessful, reveal loser's card and progress to ACTION_RESOLUTION or ACTION_FAILURE
       await this.actionService.revealInfluence(gameId, playerId, cardId)
-      await this.progressToNextPhase(gameId)
     }
+
+    await this.progressToNextPhase(gameId)
   }
 
   async selectFailedChallengerCard(gameId: string, playerId: string, cardId: string) {
@@ -190,27 +188,43 @@ export class TurnService implements ITurnService {
   async startTurn(gameId: string, action: Action) {
     const gameRef = this.gamesRef.child(gameId)
 
+    let timeoutAt: number | null = null
+
     const result = await gameRef.transaction((game: Game | null) => {
-      // Validate current turn state
       if (!game || (game.currentTurn && !this.isTurnComplete(game.currentTurn))) {
-        return game // Abort if there's an ongoing turn
+        return game
       }
 
-      // Validate the action
       if (!this.actionService.validateAction(game, action)) {
         return game
       }
 
+      let newTurn: TurnState
+
       // Handle auto-resolve actions
       if (action.autoResolve && !action.canBeBlocked && !action.canBeChallenged) {
-        return this.handleAutoResolveAction(game, action)
+        newTurn = {
+          phase: 'ACTION_DECLARED',
+          action,
+          timeoutAt: Date.now(),
+          respondedPlayers: [],
+          challengeResult: null,
+          blockingPlayer: null,
+          lostInfluenceCardId: null
+        }
+        return {
+          ...game,
+          currentTurn: newTurn,
+          updatedAt: Date.now()
+        }
       }
 
-      // Create new turn state
-      const newTurn: TurnState = {
+      // Create new turn state for non-auto-resolve actions
+      timeoutAt = Date.now() + this.RESPONSE_TIMEOUT
+      newTurn = {
         phase: 'ACTION_DECLARED',
         action,
-        timeoutAt: Date.now() + this.CHALLENGE_TIMEOUT,
+        timeoutAt,
         respondedPlayers: [],
         challengeResult: null,
         blockingPlayer: null,
@@ -225,15 +239,22 @@ export class TurnService implements ITurnService {
     })
 
     if (!result.committed) {
-      throw new Error('Failed to start game turn')
+      throw new Error('Failed to start turn')
     }
 
-    // Handle post-turn creation logic
-    if (action.autoResolve) {
-      await this.resolveAction(gameId, action)
-    } else {
-      await this.progressToNextPhase(gameId)
+    const game = result.snapshot.val() as Game | null
+
+    if (timeoutAt && !action.autoResolve) {
+      this.startTimer(gameId, timeoutAt - Date.now())
     }
+
+    if (action.coinCost) {
+      await this.actionService.updatePlayerCoins(gameId, action.playerId, -action.coinCost)
+    }
+
+    await this.progressToNextPhase(gameId)
+
+    return { game }
   }
 
   async handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'block' | 'challenge') {
@@ -244,12 +265,11 @@ export class TurnService implements ITurnService {
       const turn = game.currentTurn
 
       // Validate response is allowed
-      if (turn.phase !== 'CHALLENGE_BLOCK_WINDOW') return game
+      if (turn.phase !== 'WAITING_FOR_REACTIONS') return game
       if (turn.action.playerId === playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
       const respondedPlayers = turn.respondedPlayers?.slice() || []
-
       const updatedTurn = {
         ...turn,
         respondedPlayers: respondedPlayers.concat(playerId)
@@ -258,7 +278,7 @@ export class TurnService implements ITurnService {
       switch (response) {
         case 'accept':
           if (haveAllPlayersResponded(game, updatedTurn)) {
-            updatedTurn.phase = 'ACTION_RESOLUTION'
+            updatedTurn.phase = 'ACTION_RESOLVING'
           }
           break
 
@@ -271,10 +291,10 @@ export class TurnService implements ITurnService {
 
         case 'challenge':
           if (!turn.action.canBeChallenged) return game
-          updatedTurn.phase = 'CHALLENGE_RESOLUTION'
+          updatedTurn.phase = 'WAITING_FOR_DEFENSE_REVEAL'
           updatedTurn.challengeResult = {
             challengingPlayer: playerId,
-            successful: null, // Will be set when turn.action.playerId dis/proves they had the card
+            successful: null,
             defendingCardId: null,
             lostCardId: null
           }
@@ -293,6 +313,8 @@ export class TurnService implements ITurnService {
     }
 
     await this.progressToNextPhase(gameId)
+
+    return { game: result.snapshot.val() as Game | null }
   }
 
   async handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge') {
@@ -303,12 +325,11 @@ export class TurnService implements ITurnService {
       const turn = game.currentTurn
 
       // Validate response is allowed
-      if (turn.phase !== 'BLOCK_CHALLENGE_WINDOW') return game
-      if (playerId !== turn.action.playerId) return game // Only original player can respond
+      if (turn.phase !== 'WAITING_FOR_BLOCK_RESPONSE') return game
+      if (playerId !== turn.action.playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
       const respondedPlayers = turn.respondedPlayers?.slice() || []
-
       const updatedTurn = {
         ...turn,
         respondedPlayers: respondedPlayers.concat(playerId)
@@ -320,10 +341,10 @@ export class TurnService implements ITurnService {
           break
 
         case 'challenge':
-          updatedTurn.phase = 'BLOCK_CHALLENGE_RESOLUTION'
+          updatedTurn.phase = 'WAITING_FOR_DEFENSE_REVEAL'
           updatedTurn.challengeResult = {
             challengingPlayer: playerId,
-            successful: null, // Will be set when blockingPlayer dis/proves they had the card
+            successful: null,
             defendingCardId: null,
             lostCardId: null
           }
@@ -342,6 +363,89 @@ export class TurnService implements ITurnService {
     }
 
     await this.progressToNextPhase(gameId)
+
+    return { game: result.snapshot.val() as Game | null }
+  }
+
+  // Processes all auto-acceptances, to be run on timeout expiration after action/block declared
+  private async handleTimeout(gameId: string) {
+    const gameRef = this.gamesRef.child(gameId)
+
+    const result = await gameRef.transaction((game: Game | null) => {
+      if (!game?.currentTurn) return game
+      const turn = game.currentTurn
+
+      // Only handle timeouts for reaction phases
+      if (turn.phase !== 'WAITING_FOR_REACTIONS' && turn.phase !== 'WAITING_FOR_BLOCK_RESPONSE') {
+        return game
+      }
+
+      // Check if timeout has actually expired
+      if (Date.now() < turn.timeoutAt) {
+        return game
+      }
+
+      const updatedTurn = { ...turn }
+
+      // Get list of players who haven't responded yet
+      const respondedPlayers = turn.respondedPlayers?.slice() || []
+      const nonRespondedPlayers = game.players
+        .map(p => p.id)
+        .filter(playerId => {
+          // Exclude the action player
+          if (playerId === turn.action.playerId) return false
+          // Exclude players who have already responded
+          if (respondedPlayers.includes(playerId)) return false
+          // Exclude eliminated players
+          const player = game.players.find(p => p.id === playerId)
+          if (player && player.influence.every(card => card.isRevealed)) return false
+          return true
+        })
+
+      // Add all non-responded players as implicit accepts
+      updatedTurn.respondedPlayers = respondedPlayers.concat(nonRespondedPlayers)
+
+      // Progress the phase if everyone has now responded
+      if (turn.phase === 'WAITING_FOR_REACTIONS') {
+        if (haveAllPlayersResponded(game, updatedTurn)) {
+          updatedTurn.phase = 'ACTION_RESOLVING'
+        }
+      } else if (turn.phase === 'WAITING_FOR_BLOCK_RESPONSE') {
+        if (haveAllPlayersResponded(game, updatedTurn)) {
+          updatedTurn.phase = 'ACTION_FAILED'
+        }
+      }
+
+      return {
+        ...game,
+        currentTurn: updatedTurn,
+        updatedAt: Date.now()
+      }
+    })
+
+    if (result.committed && result.snapshot.val()) {
+      await this.progressToNextPhase(gameId)
+    }
+  }
+
+  private startTimer(gameId: string, timeoutMs: number) {
+    timeoutMs = Math.max(0, timeoutMs)
+    // Clear any existing timer
+    this.clearTimer(gameId)
+
+    const timer = setTimeout(() => {
+      this.handleTimeout(gameId).then(() => this.activeTimers.delete(gameId))
+    }, timeoutMs)
+
+    this.activeTimers.set(gameId, timer)
+  }
+
+  private clearTimer(gameId: string) {
+    const existingTimer = this.activeTimers.get(gameId)
+    if (existingTimer) {
+      clearTimeout(existingTimer)
+      this.activeTimers.delete(gameId)
+    }
   }
 
   private async transitionState(gameId: string, fromPhase: TurnPhase, toPhase: TurnPhase): Promise<void> {
@@ -363,6 +467,18 @@ export class TurnService implements ITurnService {
     if (transition.onTransition) {
       await transition.onTransition(game.currentTurn, game)
     }
+
+    if (this.isWaitingPhase(fromPhase)) {
+      this.clearTimer(gameId)
+    }
+
+    if (toPhase === 'TURN_COMPLETE') {
+      await this.progressToNextPhase(gameId)
+    }
+  }
+
+  private isWaitingPhase(phase: TurnPhase): boolean {
+    return ['WAITING_FOR_REACTIONS', 'WAITING_FOR_BLOCK_RESPONSE'].includes(phase)
   }
 
   private async progressToNextPhase(gameId: string): Promise<void> {
@@ -371,83 +487,99 @@ export class TurnService implements ITurnService {
 
     const currentPhase = game.currentTurn.phase
 
-    // Handle automatic transitions based on current state
+    if (this.isWaitingPhase(currentPhase)) {
+      const remainingTime = game.currentTurn.timeoutAt - Date.now()
+      this.startTimer(gameId, remainingTime)
+    }
+
     switch (currentPhase) {
       case 'ACTION_DECLARED':
-        await this.transitionState(gameId, currentPhase, 'CHALLENGE_BLOCK_WINDOW')
+        if (game.currentTurn.action.autoResolve) {
+          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
+          await this.resolveAction(gameId, game.currentTurn.action)
+          await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
+        } else if (game.currentTurn.action.canBeBlocked || game.currentTurn.action.canBeChallenged) {
+          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_REACTIONS')
+        } else {
+          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
+          await this.progressToNextPhase(gameId)
+          return
+        }
         break
 
-      case 'CHALLENGE_BLOCK_WINDOW':
-        if (haveAllPlayersResponded(game, game.currentTurn)) {
-          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLUTION')
+      case 'WAITING_FOR_REACTIONS':
+        if (game.currentTurn.blockingPlayer) {
+          await this.transitionState(gameId, currentPhase, 'BLOCK_DECLARED')
+        } else if (game.currentTurn.challengeResult) {
+          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_DEFENSE_REVEAL')
+        } else if (haveAllPlayersResponded(game, game.currentTurn)) {
+          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
+          await this.resolveAction(gameId, game.currentTurn.action)
+          await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
         }
         break
 
       case 'BLOCK_DECLARED':
-        await this.transitionState(gameId, currentPhase, 'BLOCK_CHALLENGE_WINDOW')
+        await this.transitionState(gameId, currentPhase, 'WAITING_FOR_BLOCK_RESPONSE')
         break
 
-      case 'CHALLENGE_RESOLUTION':
-        if (game.currentTurn.challengeResult?.lostCardId) {
-          let shouldProgress = false
-          if (game.currentTurn.challengeResult.successful === true) {
-            // Actor was successfully challenged, the turn fails
-            await this.transitionState(gameId, currentPhase, 'ACTION_FAILED')
-            shouldProgress = true
-          } else if (game.currentTurn.challengeResult.successful === false) {
-            // Actor was unsuccessfully challenged, resolve the action
-            await this.transitionState(gameId, currentPhase, 'ACTION_RESOLUTION')
-            shouldProgress = true
-          }
-          if (shouldProgress) {
-            await this.progressToNextPhase(gameId)
-          }
+      case 'WAITING_FOR_BLOCK_RESPONSE':
+        if (game.currentTurn.challengeResult) {
+          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_DEFENSE_REVEAL')
+        } else if (haveAllPlayersResponded(game, game.currentTurn)) {
+          await this.transitionState(gameId, currentPhase, 'ACTION_FAILED')
+          await this.transitionState(gameId, 'ACTION_FAILED', 'TURN_COMPLETE')
         }
         break
 
-      case 'BLOCK_CHALLENGE_RESOLUTION':
-        if (game.currentTurn.challengeResult?.lostCardId) {
-          let shouldProgress = false
-          if (game.currentTurn.challengeResult.successful === true) {
-            // Actor successfully challenged the block, the turn resolves
-            await this.transitionState(gameId, currentPhase, 'ACTION_RESOLUTION')
-            shouldProgress = true
-          } else if (game.currentTurn.challengeResult.successful === false) {
-            // Actor's block challenge failed, the turn fails
-            await this.transitionState(gameId, currentPhase, 'ACTION_FAILED')
-            shouldProgress = true
-          }
-          if (shouldProgress) {
-            await this.progressToNextPhase(gameId)
-          }
+      case 'WAITING_FOR_DEFENSE_REVEAL':
+        if (!game.currentTurn.challengeResult) break
+
+        if (game.currentTurn.challengeResult.defendingCardId) {
+          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_CHALLENGE_PENALTY')
+        } else if (game.currentTurn.challengeResult.lostCardId) {
+          await this.transitionState(gameId, currentPhase, 'ACTION_FAILED')
+          await this.transitionState(gameId, 'ACTION_FAILED', 'TURN_COMPLETE')
         }
         break
 
-      case 'ACTION_RESOLUTION':
+      case 'WAITING_FOR_CHALLENGE_PENALTY':
+        if (game.currentTurn.challengeResult?.lostCardId) {
+          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
+          await this.resolveAction(gameId, game.currentTurn.action)
+          await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
+        }
+        break
+
+      case 'ACTION_RESOLVING':
         if (['ASSASSINATE', 'COUP'].includes(game.currentTurn.action.type)) {
-          await this.transitionState(gameId, currentPhase, 'LOSE_INFLUENCE')
+          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_TARGET_REVEAL')
         } else {
           await this.resolveAction(gameId, game.currentTurn.action)
+          await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
+        }
+        break
+
+      case 'WAITING_FOR_TARGET_REVEAL':
+        if (game.currentTurn.lostInfluenceCardId) {
+          await this.resolveAction(gameId, game.currentTurn.action)
+          await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
         }
         break
 
       case 'ACTION_FAILED':
-        if (game.currentTurn.action.type === 'ASSASSINATE') {
-          // Actor still needs to pay for failed assassination attempt
-          await this.actionService.updatePlayerCoins(gameId, game.currentTurn.action.playerId, -3)
-        }
-        await this.endTurn(gameId)
+        await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
         break
 
-      case 'LOSE_INFLUENCE':
-        if (game.currentTurn.lostInfluenceCardId) {
-          await this.resolveAction(gameId, game.currentTurn.action)
-        }
+      case 'TURN_COMPLETE':
+        await this.endTurn(gameId)
         break
     }
   }
 
-  async endTurn(gameId: string): Promise<void> {
+  private async endTurn(gameId: string): Promise<void> {
+    this.clearTimer(gameId)
+
     const gameRef = this.gamesRef.child(gameId)
 
     const result = await gameRef.transaction((game: Game | null) => {
@@ -465,6 +597,8 @@ export class TurnService implements ITurnService {
 
     const game = result.committed && (result.snapshot.val() as Game)
     if (game) {
+      // Execute onTurnEnded callback
+      await this.onTurnEnded(gameId)
       // Check game completion
       await this.checkGameStatus(game)
     }
@@ -490,22 +624,6 @@ export class TurnService implements ITurnService {
     return player.influence.every(card => card.isRevealed)
   }
 
-  private handleAutoResolveAction(game: Game, action: Action): Game {
-    return {
-      ...game,
-      currentTurn: {
-        phase: 'ACTION_RESOLUTION',
-        action,
-        timeoutAt: Date.now(),
-        respondedPlayers: [],
-        challengeResult: null,
-        blockingPlayer: null,
-        lostInfluenceCardId: null
-      },
-      updatedAt: Date.now()
-    }
-  }
-
   private async resolveAction(gameId: string, action: Action): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
     const game = (await gameRef.get()).val() as Game | null
@@ -522,74 +640,19 @@ export class TurnService implements ITurnService {
     if (turn.action.targetPlayerId && turn.lostInfluenceCardId) {
       await this.actionService.revealInfluence(gameId, turn.action.targetPlayerId, turn.lostInfluenceCardId)
     }
-    // Then end the turn
-    await this.endTurn(gameId)
   }
 
   private async checkGameStatus(game: Game): Promise<GameStatus> {
     const activePlayers = game.players.filter(p => !this.isPlayerEliminated(p))
     if (activePlayers.length <= 1) {
-      this.clearTurnTimer(game.id)
-      await this.onGameCompleted(game.id, activePlayers[0]?.id)
+      this.clearTimer(game.id)
+      await this.onGameEnded(game.id, activePlayers[0]?.id)
       return GameStatus.COMPLETED
     }
     return GameStatus.IN_PROGRESS
   }
 
   private isTurnComplete(turn: TurnState): boolean {
-    return turn.phase === 'ACTION_RESOLUTION' || turn.phase === 'ACTION_FAILED'
-  }
-
-  private async setTurnTimer(gameId: string, timeoutMs: number): Promise<void> {
-    // Clear any existing timer
-    this.clearTurnTimer(gameId)
-
-    const gameRef = this.gamesRef.child(gameId)
-    const timerExpiry = Date.now() + timeoutMs
-
-    // Set the timer in the database first
-    await gameRef.child('currentTurn/timeoutAt').set(timerExpiry)
-
-    // Set the actual timer
-    const timer = setTimeout(async () => {
-      const result = await gameRef.transaction((game: Game | null) => {
-        if (!game || !game.currentTurn) return game
-
-        // Verify the timer hasn't been modified
-        if (game.currentTurn.timeoutAt !== timerExpiry) return game
-
-        // Auto-accept for all players who haven't responded
-        const responses = game.currentTurn.respondedPlayers || []
-        const remaining = game.players.filter(
-          p => !responses.includes(p.id) && p.id !== game.currentTurn?.action.playerId
-        )
-
-        // Mark all remaining players as accepted
-        return {
-          ...game,
-          currentTurn: {
-            ...game.currentTurn,
-            respondedPlayers: [...responses, ...remaining.map(p => p.id)]
-          },
-          updatedAt: Date.now()
-        }
-      })
-
-      if (result.committed) {
-        await this.progressToNextPhase(gameId)
-      }
-
-      this.activeTimers.delete(gameId)
-    }, timeoutMs)
-
-    this.activeTimers.set(gameId, timer)
-  }
-
-  private clearTurnTimer(gameId: string): void {
-    const existingTimer = this.activeTimers.get(gameId)
-    if (existingTimer) {
-      clearTimeout(existingTimer)
-      this.activeTimers.delete(gameId)
-    }
+    return turn.phase === 'TURN_COMPLETE'
   }
 }

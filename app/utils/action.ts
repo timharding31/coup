@@ -6,7 +6,9 @@ import {
   TurnState,
   StateTransition,
   UntargetedAction,
-  TargetedAction
+  TargetedAction,
+  TurnPhase,
+  WaitingPhase
 } from '~/types'
 
 export function getActionFromType(
@@ -77,7 +79,7 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     coinCost: 7,
     canBeBlocked: false,
     canBeChallenged: false,
-    autoResolve: true,
+    autoResolve: false,
     blockableBy: []
   },
   EXCHANGE: {
@@ -124,59 +126,112 @@ function getAllRespondingPlayers(game: Game, turn: TurnState): string[] {
 
 export function haveAllPlayersResponded(game: Game, turn: TurnState): boolean {
   const requiredResponses = getAllRespondingPlayers(game, turn)
-  return requiredResponses.every(id => turn.respondedPlayers.includes(id))
+  return requiredResponses.every(id => turn.respondedPlayers?.includes(id))
 }
 
 export const VALID_TRANSITIONS: StateTransition[] = [
   {
-    from: 'ACTION_DECLARED',
-    to: 'CHALLENGE_BLOCK_WINDOW'
+    from: 'WAITING_FOR_ACTION',
+    to: 'ACTION_DECLARED',
+    condition: (_turn, _game) => true
   },
   {
-    from: 'CHALLENGE_BLOCK_WINDOW',
-    to: 'ACTION_RESOLUTION',
+    from: 'ACTION_DECLARED',
+    to: 'WAITING_FOR_REACTIONS',
+    condition: (turn, _game) => !turn.action.autoResolve
+  },
+  {
+    from: 'ACTION_DECLARED',
+    to: 'ACTION_RESOLVING',
+    condition: (turn, _game) => !turn.action.canBeBlocked && !turn.action.canBeChallenged
+  },
+  {
+    from: 'WAITING_FOR_REACTIONS',
+    to: 'BLOCK_DECLARED',
+    condition: (turn, _game) => turn.blockingPlayer !== null
+  },
+  {
+    from: 'WAITING_FOR_REACTIONS',
+    to: 'WAITING_FOR_DEFENSE_REVEAL',
+    condition: (turn, _game) => turn.challengeResult !== null
+  },
+  {
+    from: 'WAITING_FOR_REACTIONS',
+    to: 'ACTION_RESOLVING',
     condition: (turn, game) => haveAllPlayersResponded(game, turn)
   },
   {
-    from: 'CHALLENGE_BLOCK_WINDOW',
-    to: 'CHALLENGE_RESOLUTION'
-  },
-  {
-    from: 'CHALLENGE_BLOCK_WINDOW',
-    to: 'BLOCK_DECLARED'
-  },
-  {
     from: 'BLOCK_DECLARED',
-    to: 'BLOCK_CHALLENGE_WINDOW'
+    to: 'WAITING_FOR_BLOCK_RESPONSE',
+    condition: (_turn, _game) => true
   },
   {
-    from: 'BLOCK_CHALLENGE_WINDOW',
-    to: 'BLOCK_CHALLENGE_RESOLUTION',
-    condition: turn => turn.challengeResult !== null
+    from: 'WAITING_FOR_BLOCK_RESPONSE',
+    to: 'WAITING_FOR_DEFENSE_REVEAL',
+    condition: (turn, _game) => turn.challengeResult !== null
   },
   {
-    from: 'BLOCK_CHALLENGE_RESOLUTION',
+    from: 'WAITING_FOR_BLOCK_RESPONSE',
     to: 'ACTION_FAILED',
-    condition: turn => turn.challengeResult?.successful === false
+    condition: (turn, game) => haveAllPlayersResponded(game, turn)
   },
   {
-    from: 'BLOCK_CHALLENGE_RESOLUTION',
-    to: 'ACTION_RESOLUTION',
-    condition: turn => turn.challengeResult?.successful === true
+    from: 'WAITING_FOR_DEFENSE_REVEAL',
+    to: 'WAITING_FOR_CHALLENGE_PENALTY',
+    condition: (turn, _game) =>
+      turn.challengeResult?.defendingCardId !== null && turn.challengeResult?.successful === false
   },
   {
-    from: 'CHALLENGE_RESOLUTION',
+    from: 'WAITING_FOR_DEFENSE_REVEAL',
     to: 'ACTION_FAILED',
-    condition: turn => turn.challengeResult?.successful === true
+    condition: (turn, _game) => turn.challengeResult?.lostCardId !== null && turn.challengeResult?.successful === true
   },
   {
-    from: 'CHALLENGE_RESOLUTION',
-    to: 'ACTION_RESOLUTION',
-    condition: turn => turn.challengeResult?.successful === false
+    from: 'WAITING_FOR_CHALLENGE_PENALTY',
+    to: 'ACTION_RESOLVING',
+    condition: (turn, _game) => turn.challengeResult?.lostCardId !== null
   },
   {
-    from: 'ACTION_RESOLUTION',
-    to: 'LOSE_INFLUENCE',
-    condition: turn => ['ASSASSINATE', 'COUP'].includes(turn.action.type)
+    from: 'ACTION_RESOLVING',
+    to: 'WAITING_FOR_TARGET_REVEAL',
+    condition: (turn, _game) => ['ASSASSINATE', 'COUP'].includes(turn.action.type)
+  },
+  {
+    from: 'ACTION_RESOLVING',
+    to: 'TURN_COMPLETE',
+    condition: (turn, _game) => !['ASSASSINATE', 'COUP'].includes(turn.action.type)
+  },
+  {
+    from: 'WAITING_FOR_TARGET_REVEAL',
+    to: 'TURN_COMPLETE',
+    condition: (turn, _game) => turn.lostInfluenceCardId !== null
+  },
+  {
+    from: 'ACTION_FAILED',
+    to: 'TURN_COMPLETE',
+    condition: (_turn, _game) => true
   }
 ]
+
+export const isWaitingPhase = (phase: TurnPhase): phase is WaitingPhase => {
+  return phase.startsWith('WAITING_FOR_')
+}
+
+export const getRequiredAction = (turn: TurnState): string => {
+  switch (turn.phase) {
+    case 'WAITING_FOR_ACTION':
+      return 'Choose an action'
+    case 'WAITING_FOR_REACTIONS':
+      return 'Accept, challenge, or block the action'
+    case 'WAITING_FOR_BLOCK_RESPONSE':
+      return 'Accept or challenge the block'
+    case 'WAITING_FOR_DEFENSE_REVEAL':
+      return 'Reveal a card to prove your claim'
+    case 'WAITING_FOR_CHALLENGE_PENALTY':
+      return 'Choose a card to lose from failed challenge'
+    case 'WAITING_FOR_TARGET_REVEAL':
+      return 'Choose a card to lose from being targeted'
+    default:
+      return ''
+  }
+}

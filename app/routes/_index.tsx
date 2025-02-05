@@ -1,6 +1,7 @@
 import { redirect, type ActionFunction, type LoaderFunction, type MetaFunction } from '@remix-run/node'
 import { Form } from '@remix-run/react'
-import type { AppContext } from '~/types'
+import { PlayingCard } from '~/components/PlayingCard'
+import { AppContext, Card, CardType } from '~/types'
 
 export const meta: MetaFunction = () => {
   return [{ title: '' }, { name: 'description', content: '' }]

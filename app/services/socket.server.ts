@@ -1,12 +1,15 @@
-import { Server as HTTPServer } from 'http'
 import { Server } from 'socket.io'
-
+import { Server as HTTPServer } from 'http'
+import type { DataSnapshot, Reference } from 'firebase-admin/database'
+import { db } from './firebase.server'
+import type { Game, CoupSocket, TurnState, GameStatus, Card, CardType, Player } from '~/types'
 import type { IGameService } from './game.server'
-import type { Game, CoupSocket, CardType } from '~/types'
 
 export class SocketService {
   private io: CoupSocket.Server
   private gameService: IGameService
+  private gamesRef: Reference
+  private turnWatchers = new Map<string, () => void>()
 
   constructor(httpServer: HTTPServer, gameService: IGameService) {
     this.io = new Server(httpServer, {
@@ -17,10 +20,49 @@ export class SocketService {
     })
 
     this.gameService = gameService
+    this.gamesRef = db.ref('games') // Add Firebase reference
     this.setupEventHandlers()
   }
 
+  private setupTurnWatcher(gameId: string) {
+    // Clean up existing listener if one exists
+    this.cleanupTurnWatcher(gameId)
+
+    // Create new listener
+    const turnRef = this.gamesRef.child(`${gameId}/currentTurn`)
+    const onCurrentTurnSnapshot = (snapshot: DataSnapshot) => {
+      const turn = snapshot.val() as TurnState | null
+      if (turn) {
+        this.io.to(`game:${gameId}`).emit('turnStateChanged', { turn })
+      }
+    }
+    turnRef.on('value', onCurrentTurnSnapshot)
+    this.turnWatchers.set(gameId, () => turnRef.off('value', onCurrentTurnSnapshot))
+  }
+
+  private cleanupTurnWatcher(gameId: string) {
+    const cleanup = this.turnWatchers.get(gameId)
+    if (cleanup) {
+      cleanup()
+      this.turnWatchers.delete(gameId)
+    }
+  }
+
   private setupEventHandlers() {
+    this.gameService.setOnGameEnded(async gameId => {
+      console.log('Game ended')
+    })
+
+    this.gameService.setOnTurnEnded(async gameId => {
+      const { game } = await this.gameService.getGame(gameId)
+      if (game) {
+        game.players.forEach(player => {
+          const playerGameState = prepareGameForClient(game, player.id)
+          this.io.to(`player:${player.id}`).emit('gameStateChanged', { game: playerGameState })
+        })
+      }
+    })
+
     this.io.on('connection', (socket: CoupSocket.Socket) => {
       console.log('Client connected:', socket.id)
 
@@ -31,27 +73,34 @@ export class SocketService {
             socket.data.gameId = game.id
             socket.data.playerId = playerId
             socket.join(`game:${game.id}`)
-            socket.emit('reconnectSuccess', { game })
+            socket.join(`player:${playerId}`)
+            this.setupTurnWatcher(game.id) // Setup watcher on reconnect
+            socket.emit('reconnectSuccess', { game: prepareGameForClient(game, playerId) })
           }
         })
       }
 
       socket.on('joinGameRoom', async ({ gameId, playerId }) => {
         socket.join(`game:${gameId}`)
+        socket.join(`player:${playerId}`)
         socket.data.gameId = gameId
         socket.data.playerId = playerId
+        this.setupTurnWatcher(gameId) // Setup watcher when joining
 
         socket.to(`game:${gameId}`).emit('playerJoined', { playerId })
 
         const { game } = await this.gameService.getGame(gameId)
         if (game) {
-          socket.emit('gameStateChanged', { game })
+          game.players.forEach(player => {
+            socket.to(`player:${player.id}`).emit('gameStateChanged', { game: prepareGameForClient(game, player.id) })
+          })
         }
       })
 
       socket.on('leaveGameRoom', async ({ gameId, playerId }) => {
         await this.gameService.leaveGame(playerId, gameId)
         socket.leave(`game:${gameId}`)
+        this.cleanupTurnWatcher(gameId) // Cleanup watcher when leaving
         this.io.to(`game:${gameId}`).emit('playerLeft', { playerId })
       })
 
@@ -59,9 +108,14 @@ export class SocketService {
         try {
           const { game } = await this.gameService.startGame(gameId, playerId)
           if (game) {
-            this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
+            game.players.forEach(player => {
+              this.io.to(`player:${player.id}`).emit('gameStateChanged', {
+                game: prepareGameForClient(game, player.id)
+              })
+            })
           }
         } catch (error) {
+          console.error(error)
           socket.emit('error', { message: 'Failed to start game' })
         }
       })
@@ -69,20 +123,9 @@ export class SocketService {
       socket.on('gameAction', async ({ gameId, playerId, action }) => {
         try {
           await this.gameService.startGameTurn(gameId, { ...action, playerId })
-          const { game } = await this.gameService.getGame(gameId)
-          if (game) {
-            this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
-          }
-
-          // Start response timer if the action isn't auto-resolved
-          if (!action.autoResolve) {
-            this.startResponseTimer(gameId)
-            // Emit timer started event with expiry
-            this.io.to(`game:${gameId}`).emit('turnTimerStarted', {
-              expiresAt: Date.now() + 20000 // 20 seconds
-            })
-          }
+          // Turn changes will be handled by watcher
         } catch (error) {
+          console.error(error)
           socket.emit('error', { message: 'Invalid action' })
         }
       })
@@ -90,13 +133,21 @@ export class SocketService {
       socket.on('playerResponse', async ({ gameId, playerId, response }) => {
         try {
           const { game } = await this.gameService.getGame(gameId)
-          if (game?.currentTurn?.phase === 'BLOCK_CHALLENGE_WINDOW' && response !== 'block') {
-            await this.gameService.handleBlockResponse(gameId, playerId, response)
-          } else {
-            await this.gameService.handleActionResponse(gameId, playerId, response)
+
+          switch (game?.currentTurn?.phase) {
+            case 'WAITING_FOR_REACTIONS':
+              await this.gameService.handleActionResponse(gameId, playerId, response)
+              break
+            case 'WAITING_FOR_BLOCK_RESPONSE':
+              if (response === 'block') {
+                throw new Error('Invalid response to block')
+              }
+              await this.gameService.handleBlockResponse(gameId, playerId, response)
+              break
           }
-          // TODO: Emit player response to socket
+          // Turn changes will be handled by watcher
         } catch (error) {
+          console.error(error)
           socket.emit('error', { message: 'Invalid response' })
         }
       })
@@ -104,12 +155,9 @@ export class SocketService {
       socket.on('selectCard', async ({ gameId, playerId, cardId }) => {
         try {
           await this.gameService.handleCardSelection(gameId, playerId, cardId)
-          const { game } = await this.gameService.getGame(gameId)
-          if (game) {
-            this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
-          }
+          // Turn changes will be handled by watcher
         } catch (error) {
-          console.log(error)
+          console.error(error)
           socket.emit('error', { message: 'Invalid card selection' })
         }
       })
@@ -122,39 +170,28 @@ export class SocketService {
       })
     })
   }
+}
 
-  private async startResponseTimer(gameId: string) {
-    setTimeout(async () => {
-      const { game } = await this.gameService.getGame(gameId)
-      const turn = game?.currentTurn
-
-      if (game && turn?.timeoutAt && turn.timeoutAt <= Date.now()) {
-        // Auto-accept for all players who haven't responded
-        const responses = turn.respondedPlayers || []
-        const remaining = game.players.filter(p => !responses.includes(p.id) && p.id !== turn.action.playerId)
-
-        // Process automatic accepts
-        await Promise.all(
-          remaining.map(p => {
-            if (turn.phase === 'BLOCK_CHALLENGE_RESOLUTION') {
-              return this.gameService.handleBlockResponse(gameId, p.id, 'accept')
-            } else {
-              return this.gameService.handleActionResponse(gameId, p.id, 'accept')
-            }
-          })
-        )
-
-        const updatedGame = await this.gameService.getGame(gameId)
-        if (updatedGame.game) {
-          this.io.to(`game:${gameId}`).emit('gameStateChanged', { game: updatedGame.game })
-          // Emit timer ended event
-          this.io.to(`game:${gameId}`).emit('turnTimerEnded')
-        }
-      }
-    }, 20_000)
+export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: string): Game<'client'> {
+  const currentPlayer = game.players.find(p => p.id === playerId)
+  if (!currentPlayer) {
+    throw new Error('Player not found')
   }
-
-  public emitGameUpdate(gameId: string, game: Game) {
-    this.io.to(`game:${gameId}`).emit('gameStateChanged', { game })
+  return {
+    ...game,
+    deck: game.deck.map(card => prepareCardForClient(currentPlayer, card)),
+    players: game.players.map(p => ({ ...p, influence: p.influence.map(c => prepareCardForClient(currentPlayer, c)) }))
   }
+}
+
+// The card's `type` should only be sent over the network if it's revealed or belongs to the player
+function prepareCardForClient(player: Player, card: Card<'server' | 'client'>): Card<'client'> {
+  if (card.isRevealed) {
+    return card
+  }
+  const playerCardIds = new Set(player.influence.map(c => c.id))
+  if (playerCardIds.has(card.id)) {
+    return card
+  }
+  return { ...card, type: null }
 }

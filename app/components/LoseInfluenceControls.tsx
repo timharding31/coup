@@ -3,38 +3,30 @@ import type { Card, CardType } from '~/types'
 
 interface LoseInfluenceControlsProps {
   onSelectCard: (cardId: string) => void
-  availableCards: Card[]
-  reason?: 'CHALLENGE_LOST' | 'COUP' | 'ASSASSINATE'
+  availableCards: Card<'client'>[]
+  reason: string | null
+  isDefendingChallenge: boolean
 }
 
 export const LoseInfluenceControls: React.FC<LoseInfluenceControlsProps> = ({
   onSelectCard,
   availableCards,
-  reason
+  reason,
+  isDefendingChallenge
 }) => {
   return (
     <div className='lose-influence-controls'>
-      <h3>Lose Influence {getLoseReason(reason)}</h3>
+      <h3>{reason}</h3>
+      <p>{isDefendingChallenge ? 'Select card to prove challenge or reveal' : 'Select card to reveal'}</p>
       <div className='card-selection'>
-        {availableCards.map(card => (
-          <button key={card.id} onClick={() => onSelectCard(card.id)} className='card-button'>
-            Reveal {card.type}
-          </button>
-        ))}
+        {availableCards
+          .filter(card => !card.isRevealed)
+          .map(card => (
+            <button key={card.id} onClick={() => onSelectCard(card.id)} className='card-button'>
+              {card.type}
+            </button>
+          ))}
       </div>
     </div>
   )
-}
-
-function getLoseReason(reason = ''): string {
-  switch (reason) {
-    case 'CHALLENGE_LOST':
-      return '(Challenge Lost)'
-    case 'COUP':
-      return '(Coup)'
-    case 'ASSASSINATE':
-      return '(Assassinated)'
-    default:
-      return ''
-  }
 }

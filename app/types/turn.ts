@@ -2,17 +2,31 @@ import { CardType } from './card'
 import { Game } from './game'
 
 export const TurnPhase = {
+  WAITING_FOR_ACTION: 'WAITING_FOR_ACTION',
   ACTION_DECLARED: 'ACTION_DECLARED',
-  CHALLENGE_BLOCK_WINDOW: 'CHALLENGE_BLOCK_WINDOW',
-  CHALLENGE_RESOLUTION: 'CHALLENGE_RESOLUTION',
+  WAITING_FOR_REACTIONS: 'WAITING_FOR_REACTIONS',
   BLOCK_DECLARED: 'BLOCK_DECLARED',
-  BLOCK_CHALLENGE_WINDOW: 'BLOCK_CHALLENGE_WINDOW',
-  BLOCK_CHALLENGE_RESOLUTION: 'BLOCK_CHALLENGE_RESOLUTION',
-  ACTION_RESOLUTION: 'ACTION_RESOLUTION',
+  WAITING_FOR_BLOCK_RESPONSE: 'WAITING_FOR_BLOCK_RESPONSE',
+  WAITING_FOR_DEFENSE_REVEAL: 'WAITING_FOR_DEFENSE_REVEAL',
+  WAITING_FOR_CHALLENGE_PENALTY: 'WAITING_FOR_CHALLENGE_PENALTY',
+  WAITING_FOR_TARGET_REVEAL: 'WAITING_FOR_TARGET_REVEAL',
+  ACTION_RESOLVING: 'ACTION_RESOLVING',
   ACTION_FAILED: 'ACTION_FAILED',
-  LOSE_INFLUENCE: 'LOSE_INFLUENCE'
+  TURN_COMPLETE: 'TURN_COMPLETE'
 } as const
+
 export type TurnPhase = (typeof TurnPhase)[keyof typeof TurnPhase]
+
+// Helper type to identify phases requiring user input
+export type WaitingPhase = Extract<
+  TurnPhase,
+  | 'WAITING_FOR_ACTION'
+  | 'WAITING_FOR_REACTIONS'
+  | 'WAITING_FOR_BLOCK_RESPONSE'
+  | 'WAITING_FOR_DEFENSE_REVEAL'
+  | 'WAITING_FOR_CHALLENGE_PENALTY'
+  | 'WAITING_FOR_TARGET_REVEAL'
+>
 
 export interface TurnChallengeResult {
   challengingPlayer: string
@@ -25,7 +39,7 @@ export interface TurnState {
   phase: TurnPhase
   action: Action
   timeoutAt: number // Unix timestamp for timeout
-  respondedPlayers: string[] // Players who have explicitly responded
+  respondedPlayers?: string[] // Players who have explicitly responded
   challengeResult: TurnChallengeResult | null
   blockingPlayer: string | null
   lostInfluenceCardId: string | null

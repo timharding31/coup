@@ -1,11 +1,21 @@
 import { createContext, useContext, useEffect, useCallback, useState, ReactNode } from 'react'
 import { useNavigate } from '@remix-run/react'
 import { io } from 'socket.io-client'
-import type { Game, Action, CoupSocket, ActionType, CardType, TargetedActionType, UntargetedActionType } from '~/types'
+import type {
+  Game,
+  Action,
+  CoupSocket,
+  ActionType,
+  CardType,
+  TargetedActionType,
+  UntargetedActionType,
+  TurnState
+} from '~/types'
 import { getActionFromType } from '~/utils/action'
 
 export interface GameSocketContextType {
-  game: Game | null
+  game: Game<'client'> | null
+  turn: TurnState | null
   error: string | null
   isConnected: boolean
   startGame: () => void
@@ -20,7 +30,7 @@ interface GameSocketProviderProps extends React.PropsWithChildren {
   socketUrl: string
   gameId: string
   playerId: string
-  game: Game | null
+  game: Game<'client'> | null
 }
 
 export const GameSocketContext = createContext<GameSocketContextType | null>(null)
@@ -34,7 +44,8 @@ export function GameSocketProvider({
 }: GameSocketProviderProps) {
   const navigate = useNavigate()
   const [socket, setSocket] = useState<CoupSocket.Client | null>(null)
-  const [game, setGame] = useState<Game | null>(initialGame)
+  const [game, setGame] = useState<Game<'client'> | null>(initialGame)
+  const [currentTurn, setCurrentTurn] = useState<TurnState | null>(initialGame?.currentTurn || null)
   const [error, setError] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [timerExpiresAt, setTimerExpiresAt] = useState<number | null>(null)
@@ -73,6 +84,15 @@ export function GameSocketProvider({
 
     socket.on('gameStateChanged', ({ game }) => {
       setGame(game)
+      setCurrentTurn(game.currentTurn || null)
+    })
+
+    socket.on('turnStateChanged', ({ turn }) => {
+      setCurrentTurn(turn)
+    })
+
+    socket.on('turnEnded', () => {
+      setCurrentTurn(null)
     })
 
     socket.on('error', ({ message }) => {
@@ -140,6 +160,7 @@ export function GameSocketProvider({
     <GameSocketContext.Provider
       value={{
         game,
+        turn: currentTurn,
         error,
         isConnected,
         startGame,
