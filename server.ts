@@ -67,7 +67,7 @@ app.use(express.static('public'))
 // Initialize socket service with the IO instance
 socketService.setupEventHandlers(io)
 
-const remixBuildPath = path.join(process.cwd(), 'build', 'server', 'index.js')
+const remixBuildPath = path.join(process.cwd(), 'build', 'index.js')
 
 const remixHandler = createRequestHandler({
   build: viteDevServer
