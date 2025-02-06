@@ -79,8 +79,8 @@ socketService.setupEventHandlers(io)
 
 const remixHandler = createRequestHandler({
   build: viteDevServer
-    ? () => viteDevServer.ssrLoadModule('virtual:remix/server-build')
-    : await import(path.join(BUILD_DIR, 'server/index.js')),
+    ? () => viteDevServer.ssrLoadModule('virtual:remix/server-build') as Promise<ServerBuild>
+    : ((await import('./build/server/index.js')) as unknown as ServerBuild),
   getLoadContext: () => ({
     gameService,
     socketService,
