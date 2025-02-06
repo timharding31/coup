@@ -4,22 +4,27 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "build": "remix build",
-    "dev": "remix dev --command \"tsx watch server.dev.ts\"",
-    "start": "remix-serve ./build/index.js",
+    "build": "remix vite:build",
+    "dev": "cross-env NODE_ENV=development tsx ./server.ts",
+    "start": "cross-env NODE_ENV=production node ./build/server.js",
     "typecheck": "tsc",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@remix-run/express": "^2.15.3",
     "@remix-run/node": "^2.15.3",
     "@remix-run/react": "^2.15.3",
     "@remix-run/serve": "^2.15.3",
+    "compression": "^1.7.5",
+    "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "firebase-admin": "^13.0.2",
     "framer-motion": "^12.1.0",
     "isbot": "^4.1.0",
+    "morgan": "^1.10.0",
     "motion": "^12.1.0",
     "polished": "^4.3.1",
     "react": "^18.2.0",
@@ -30,6 +35,9 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^2.15.3",
+    "@types/compression": "^1.7.5",
+    "@types/express": "^5.0.0",
+    "@types/morgan": "^1.9.9",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
@@ -49,7 +57,9 @@
     "tailwind-corner-smoothing": "^1.2.0",
     "tailwindcss": "^3.4.4",
     "tsx": "^4.19.2",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "vite": "^6.1.0",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "engines": {
     "node": ">=20.0.0"

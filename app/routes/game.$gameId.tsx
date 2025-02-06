@@ -25,7 +25,7 @@ export default function GameRoute() {
     gameId: string
     playerId: string
     socketUrl: string
-    game: Game
+    game: Game<'client'>
   }>()
 
   return (

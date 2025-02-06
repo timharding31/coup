@@ -1,11 +1,12 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '@remix-run/react'
 import type { LinksFunction, LoaderFunction } from '@remix-run/node'
-import fonts from './styles/fonts.css'
-import tailwind from './tailwind.css'
+import fonts from './styles/fonts.css?url'
+import tailwind from './tailwind.css?url'
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: tailwind },
   { rel: 'stylesheet', href: fonts },
+  // { rel: 'stylesheet', href: '/fonts/fonts.css' },
   { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
   {
     rel: 'preconnect',
