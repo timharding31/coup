@@ -11,5 +11,6 @@
     "types": ["@remix-run/node", "vite/client"]
   },
   "include": ["server.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "noEmit": false
 }

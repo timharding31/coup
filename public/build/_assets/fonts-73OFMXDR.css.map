@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../../../app/styles/fonts.css"],
-  "sourcesContent": ["@font-face {\n  font-family: 'Odachi';\n  src: url('/fonts/Odachi.woff') format('woff');\n  font-weight: normal;\n  font-style: normal;\n  font-display: swap;\n}\n"],
-  "mappings": ";AAAA;AACE;AACA;AACA;AACA;AACA;;",
-  "names": []
-}
