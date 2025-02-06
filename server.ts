@@ -28,8 +28,6 @@ if (!process.env.SOCKET_URL) {
   throw new Error('SOCKET_URL environment variable is not set')
 }
 
-const BUILD_DIR = path.join(process.cwd(), 'build')
-
 const viteDevServer =
   process.env.NODE_ENV === 'production'
     ? undefined
@@ -42,15 +40,7 @@ const viteDevServer =
       )
 
 const app = express()
-
 const httpServer = createServer(app)
-
-const devRouter = express.Router()
-devRouter.get('/ping', (_, res) => {
-  res.type('text/plain').send('pong')
-})
-
-app.use(devRouter)
 
 app.use(compression())
 app.disable('x-powered-by')
