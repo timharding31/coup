@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev --command \"tsx watch server.ts\"",
-    "start": "tsx server.ts",
+    "dev": "remix dev --command \"tsx watch server.dev.ts\"",
+    "start": "remix-serve ./build/index.js",
     "typecheck": "tsc",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "format": "prettier --write .",

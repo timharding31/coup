@@ -6,22 +6,14 @@ import type { Game, CoupSocket, TurnState, GameStatus, Card, CardType, Player } 
 import type { IGameService } from './game.server'
 
 export class SocketService {
-  private io: CoupSocket.Server
+  private io?: CoupSocket.Server
   private gameService: IGameService
   private gamesRef: Reference
   private turnWatchers = new Map<string, () => void>()
 
-  constructor(httpServer: HTTPServer, gameService: IGameService) {
-    this.io = new Server(httpServer, {
-      cors: {
-        origin: process.env.SOCKET_URL,
-        methods: ['GET', 'POST']
-      }
-    })
-
+  constructor(gameService: IGameService) {
     this.gameService = gameService
     this.gamesRef = db.ref('games') // Add Firebase reference
-    this.setupEventHandlers()
   }
 
   public async startGame(gameId: string, playerId: string) {
@@ -29,7 +21,7 @@ export class SocketService {
       const { game } = await this.gameService.startGame(gameId, playerId)
       if (game) {
         game.players.forEach(player => {
-          this.io.to(`player:${player.id}`).emit('gameStateChanged', {
+          this.io?.to(`player:${player.id}`).emit('gameStateChanged', {
             game: prepareGameForClient(game, player.id)
           })
         })
@@ -48,7 +40,7 @@ export class SocketService {
     const onCurrentTurnSnapshot = (snapshot: DataSnapshot) => {
       const turn = snapshot.val() as TurnState | null
       if (turn) {
-        this.io.to(`game:${gameId}`).emit('turnStateChanged', { turn })
+        this.io?.to(`game:${gameId}`).emit('turnStateChanged', { turn })
       }
     }
     turnRef.on('value', onCurrentTurnSnapshot)
@@ -63,7 +55,9 @@ export class SocketService {
     }
   }
 
-  private setupEventHandlers() {
+  public setupEventHandlers(io: CoupSocket.Server) {
+    this.io = io
+
     this.gameService.setOnGameEnded(async gameId => {
       console.log('Game ended')
     })
@@ -73,7 +67,7 @@ export class SocketService {
       if (game) {
         game.players.forEach(player => {
           const playerGameState = prepareGameForClient(game, player.id)
-          this.io.to(`player:${player.id}`).emit('gameStateChanged', { game: playerGameState })
+          this.io?.to(`player:${player.id}`).emit('gameStateChanged', { game: playerGameState })
         })
       }
     })
@@ -116,7 +110,7 @@ export class SocketService {
         await this.gameService.leaveGame(playerId, gameId)
         socket.leave(`game:${gameId}`)
         this.cleanupTurnWatcher(gameId) // Cleanup watcher when leaving
-        this.io.to(`game:${gameId}`).emit('playerLeft', { playerId })
+        this.io?.to(`game:${gameId}`).emit('playerLeft', { playerId })
       })
 
       socket.on('startGame', async ({ gameId, playerId }) => {
@@ -168,7 +162,7 @@ export class SocketService {
       socket.on('disconnect', async () => {
         const { gameId, playerId } = socket.data
         if (gameId && playerId) {
-          this.io.to(`game:${gameId}`).emit('playerDisconnected', { playerId })
+          this.io?.to(`game:${gameId}`).emit('playerDisconnected', { playerId })
         }
       })
     })

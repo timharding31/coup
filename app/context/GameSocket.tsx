@@ -1,16 +1,7 @@
 import { createContext, useContext, useEffect, useCallback, useState, ReactNode } from 'react'
 import { useNavigate } from '@remix-run/react'
 import { io } from 'socket.io-client'
-import type {
-  Game,
-  Action,
-  CoupSocket,
-  ActionType,
-  CardType,
-  TargetedActionType,
-  UntargetedActionType,
-  TurnState
-} from '~/types'
+import type { Game, CoupSocket, TargetedActionType, UntargetedActionType, TurnState } from '~/types'
 import { getActionFromType } from '~/utils/action'
 
 export interface GameSocketContextType {
@@ -51,7 +42,9 @@ export function GameSocketProvider({
   const [timerExpiresAt, setTimerExpiresAt] = useState<number | null>(null)
 
   useEffect(() => {
-    const socket: CoupSocket.Client = io(socketUrl, {
+    const socket: CoupSocket.Client = io({
+      path: '/api/socket',
+      autoConnect: true,
       auth: { playerId },
       reconnection: true,
       reconnectionDelay: 1000,

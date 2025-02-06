@@ -1,15 +1,24 @@
 import { createRequestHandler } from '@remix-run/express'
 import { broadcastDevReady } from '@remix-run/node'
-import { app, gameService, httpServer, playerService, sessionService, socketService } from './app/services/index.server'
-import type { AppContext } from '~/types'
 import express from 'express'
+import { createServer } from 'http'
+import { Server as SocketServer } from 'socket.io'
+import { gameService, playerService, sessionService, socketService } from './app/services/index.server'
+
+const app = express()
+const httpServer = createServer(app)
+const io = new SocketServer(httpServer, {
+  cors: {
+    origin: process.env.SOCKET_URL,
+    methods: ['GET', 'POST']
+  }
+})
 
 app.use(express.static('public'))
 
 const BUILD_PATH = './build/index.js'
 
-// Define context function outside to ensure consistency
-const getLoadContext = (): AppContext => ({
+const getLoadContext = () => ({
   gameService,
   socketService,
   sessionService,
@@ -19,7 +28,9 @@ const getLoadContext = (): AppContext => ({
 const init = async () => {
   const build = await import(BUILD_PATH)
 
-  // Use the context directly in the request handler
+  // Initialize socket service with the IO instance
+  socketService.setupEventHandlers(io)
+
   app.all(
     '*',
     createRequestHandler({

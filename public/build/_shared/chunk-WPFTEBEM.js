@@ -3481,7 +3481,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/context/GameSocket.tsx"
   );
-  import.meta.hot.lastModified = "1738797380026.9453";
+  import.meta.hot.lastModified = "1738799739568.978";
 }
 var GameSocketContext = (0, import_react.createContext)(null);
 function GameSocketProvider({
@@ -3500,7 +3500,9 @@ function GameSocketProvider({
   const [isConnected, setIsConnected] = (0, import_react.useState)(false);
   const [timerExpiresAt, setTimerExpiresAt] = (0, import_react.useState)(null);
   (0, import_react.useEffect)(() => {
-    const socket2 = lookup2(socketUrl, {
+    const socket2 = lookup2({
+      path: "/api/socket",
+      autoConnect: true,
       auth: {
         playerId
       },
@@ -3623,7 +3625,7 @@ function GameSocketProvider({
     exchangeCards
   }, children }, void 0, false, {
     fileName: "app/context/GameSocket.tsx",
-    lineNumber: 160,
+    lineNumber: 162,
     columnNumber: 10
   }, this);
 }
@@ -3640,4 +3642,4 @@ export {
   GameSocketContext,
   GameSocketProvider
 };
-//# sourceMappingURL=/build/_shared/chunk-4M6BCDK4.js.map
+//# sourceMappingURL=/build/_shared/chunk-WPFTEBEM.js.map

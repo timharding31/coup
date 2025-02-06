@@ -4,8 +4,19 @@ import { createReadableStreamFromReadable } from '@remix-run/node'
 import { RemixServer } from '@remix-run/react'
 import { renderToPipeableStream } from 'react-dom/server'
 import { isbot } from 'isbot'
+import { gameService, playerService, sessionService, socketService } from './services/index.server'
+import { AppContext } from './types'
 
 const ABORT_DELAY = 5_000
+
+export function getLoadContext(): AppContext {
+  return {
+    gameService,
+    socketService,
+    sessionService,
+    playerService
+  }
+}
 
 export default function handleRequest(
   request: Request,

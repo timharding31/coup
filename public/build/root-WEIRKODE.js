@@ -4,8 +4,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData,
-  useMatches
+  useLoaderData
 } from "/build/_shared/chunk-5FAD4KYH.js";
 import "/build/_shared/chunk-PLT55Z5M.js";
 import {
@@ -24,7 +23,7 @@ import {
 var fonts_default = "/build/_assets/fonts-XW7ZR4KF.css";
 
 // app/tailwind.css
-var tailwind_default = "/build/_assets/tailwind-FFGHT6LN.css";
+var tailwind_default = "/build/_assets/tailwind-OZ4IUNA3.css";
 
 // app/root.tsx
 var import_jsx_dev_runtime = __toESM(require_jsx_dev_runtime(), 1);
@@ -69,33 +68,31 @@ function App() {
   const {
     svgContent
   } = useLoaderData();
-  const matches = useMatches();
-  console.log(matches);
   return /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)("html", { lang: "en", children: [
     /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)("head", { children: [
       /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)("meta", { charSet: "utf-8" }, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 62,
+        lineNumber: 60,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)("meta", { name: "viewport", content: "width=device-width, initial-scale=1" }, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 63,
+        lineNumber: 61,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)(Meta, {}, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 64,
+        lineNumber: 62,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)(Links, {}, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 65,
+        lineNumber: 63,
         columnNumber: 9
       }, this)
     ] }, void 0, true, {
       fileName: "app/root.tsx",
-      lineNumber: 61,
+      lineNumber: 59,
       columnNumber: 7
     }, this),
     /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)("body", { children: [
@@ -105,37 +102,37 @@ function App() {
         __html: svgContent
       } }, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 68,
+        lineNumber: 66,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)(Outlet, {}, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 73,
+        lineNumber: 71,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)(ScrollRestoration, {}, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 74,
+        lineNumber: 72,
         columnNumber: 9
       }, this),
       /* @__PURE__ */ (0, import_jsx_dev_runtime.jsxDEV)(Scripts, {}, void 0, false, {
         fileName: "app/root.tsx",
-        lineNumber: 75,
+        lineNumber: 73,
         columnNumber: 9
       }, this)
     ] }, void 0, true, {
       fileName: "app/root.tsx",
-      lineNumber: 67,
+      lineNumber: 65,
       columnNumber: 7
     }, this)
   ] }, void 0, true, {
     fileName: "app/root.tsx",
-    lineNumber: 60,
+    lineNumber: 58,
     columnNumber: 10
   }, this);
 }
-_s(App, "7VhdAVODJEsC1Jtxep1UcucJwHU=", false, function() {
-  return [useLoaderData, useMatches];
+_s(App, "raOAZMpSXqkdhjSuShRYx/cot3w=", false, function() {
+  return [useLoaderData];
 });
 _c = App;
 var _c;
@@ -146,4 +143,4 @@ export {
   App as default,
   links
 };
-//# sourceMappingURL=/build/root-STXOMTNR.js.map
+//# sourceMappingURL=/build/root-WEIRKODE.js.map

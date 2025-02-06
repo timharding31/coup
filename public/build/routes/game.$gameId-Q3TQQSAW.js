@@ -1,6 +1,6 @@
 import {
   GameSocketProvider
-} from "/build/_shared/chunk-4M6BCDK4.js";
+} from "/build/_shared/chunk-WPFTEBEM.js";
 import "/build/_shared/chunk-VVVWLK5W.js";
 import {
   Outlet,
@@ -92,4 +92,4 @@ window.$RefreshSig$ = prevRefreshSig;
 export {
   GameRoute as default
 };
-//# sourceMappingURL=/build/routes/game.$gameId-ACQY4GPD.js.map
+//# sourceMappingURL=/build/routes/game.$gameId-Q3TQQSAW.js.map
