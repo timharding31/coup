@@ -1,6 +1,6 @@
 import {
   GameSocketProvider
-} from "/build/_shared/chunk-WPFTEBEM.js";
+} from "/build/_shared/chunk-3SZ4YB37.js";
 import "/build/_shared/chunk-VVVWLK5W.js";
 import {
   Outlet,
@@ -52,7 +52,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/routes/game.$gameId.tsx"
   );
-  import.meta.hot.lastModified = "1738797745888.47";
+  import.meta.hot.lastModified = "1738800611516.835";
 }
 function GameRoute() {
   _s();
@@ -92,4 +92,4 @@ window.$RefreshSig$ = prevRefreshSig;
 export {
   GameRoute as default
 };
-//# sourceMappingURL=/build/routes/game.$gameId-Q3TQQSAW.js.map
+//# sourceMappingURL=/build/routes/game.$gameId-N7KFOX3R.js.map

@@ -3481,7 +3481,7 @@ if (import.meta) {
     //@ts-expect-error
     "app/context/GameSocket.tsx"
   );
-  import.meta.hot.lastModified = "1738799739568.978";
+  import.meta.hot.lastModified = "1738802518288.6855";
 }
 var GameSocketContext = (0, import_react.createContext)(null);
 function GameSocketProvider({
@@ -3642,4 +3642,4 @@ export {
   GameSocketContext,
   GameSocketProvider
 };
-//# sourceMappingURL=/build/_shared/chunk-WPFTEBEM.js.map
+//# sourceMappingURL=/build/_shared/chunk-3SZ4YB37.js.map
