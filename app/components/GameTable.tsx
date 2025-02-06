@@ -39,7 +39,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
         <div className='flex-none relative'>
           <PlayerHand {...myself} />
           {status === 'WAITING' && onStartGame && (
-            <div className='absolute inset-0 flex items-center justify-center'>
+            <div className='absolute inset-0 flex items-center justify-center z-10 rounded-xl bg-nord-4/10'>
               <Button type='button' variant='success' onClick={() => onStartGame()}>
                 Start Game
               </Button>

@@ -1,7 +1,4 @@
-import React from 'react'
 import { LoaderFunction, redirect } from '@remix-run/node'
-import { useLoaderData } from '@remix-run/react'
-import { GameBoard } from '~/components/GameBoard'
 import { AppContext } from '~/types'
 
 export const loader: LoaderFunction = async ({ request, context, params }) => {
@@ -17,11 +14,11 @@ export const loader: LoaderFunction = async ({ request, context, params }) => {
 
   switch (game.status) {
     case 'COMPLETED':
-      throw redirect('completed')
+      return redirect('completed')
     case 'IN_PROGRESS':
-      throw redirect('in-progress')
+      return redirect('in-progress')
     case 'WAITING':
-      throw redirect('waiting')
+      return redirect('waiting')
   }
 }
 
