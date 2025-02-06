@@ -31,4 +31,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start the server using the compiled JavaScript
-CMD ["node", "./build/server/index.js"]
+CMD ["yarn", "run", "start"]
