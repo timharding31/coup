@@ -23,6 +23,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
 
   return (
     <>
+      {children}
       <div className='flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4'>
         {opponents.map((opponent, index) => (
           <div key={opponent.id} className={`col-span-2 ${getOpponentClasses(index, opponents.length)}`}>
@@ -33,7 +34,6 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
       <div className='flex-none'>
         <PlayerHand {...myself} />
       </div>
-      {children}
     </>
   )
 }

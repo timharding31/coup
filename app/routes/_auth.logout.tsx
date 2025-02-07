@@ -38,7 +38,7 @@ export default function Logout() {
   return (
     <div className='flex flex-col items-stretch gap-4 w-full max-w-[800px] py-24 px-4 mx-auto'>
       <Form ref={formRef} method='post' className='contents'>
-        <h1 className='font-bold text-4xl'>Just a moment...</h1>
+        <h1 className='font-robotica text-7xl'>Goodbye</h1>
         <p className='text-xl'>Logging you out</p>
       </Form>
     </div>

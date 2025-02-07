@@ -10,6 +10,7 @@ import { PlayerHand } from './PlayerHand'
 import { OpponentHand } from './OpponentHand'
 import { Button } from './Button'
 import { GameTable } from './GameTable'
+import { Header } from './Header'
 
 interface GameBoardProps {
   playerId: string
@@ -35,13 +36,11 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
 
   return (
     <GameTable playerId={playerId}>
-      {game.status === 'WAITING' && (
-        <div className='absolute top-0 left-0 w-full flex items-center'>PIN: {game.pin}</div>
-      )}
+      <Header />
 
       {game.status === 'WAITING' && myself.id === game.hostId && (
         <div className='absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]'>
-          <Button type='button' variant='success' onClick={() => startGame()}>
+          <Button type='button' variant='success' onClick={startGame} disabled={game.players.length < 2}>
             Start Game
           </Button>
         </div>

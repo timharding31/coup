@@ -1,12 +1,12 @@
 import { redirect, type ActionFunction, type LoaderFunction, type MetaFunction } from '@remix-run/node'
-import { Form } from '@remix-run/react'
+import { Form, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { PinInput } from '~/components/PinInput'
 import { PlayingCard } from '~/components/PlayingCard'
 import { TextInput } from '~/components/TextInput'
-import { gameService, sessionService } from '~/services/index.server'
-import { Card, CardType } from '~/types'
+import { gameService, playerService, sessionService } from '~/services/index.server'
+import { Card, CardType, Player } from '~/types'
 
 export const meta: MetaFunction = () => {
   return [{ title: '' }, { name: 'description', content: '' }]
@@ -14,7 +14,8 @@ export const meta: MetaFunction = () => {
 
 export const loader: LoaderFunction = async ({ request, context }) => {
   const { playerId } = await sessionService.requirePlayerSession(request)
-  return { playerId }
+  const { player } = await playerService.getPlayer(playerId)
+  return { player }
 }
 
 export const action: ActionFunction = async ({ request, context }) => {
@@ -51,28 +52,48 @@ export const action: ActionFunction = async ({ request, context }) => {
 }
 
 export default function Index() {
+  const { player } = useLoaderData<{ player: Player }>()
   const [pin, setPin] = useState('')
 
-  return (
-    <div className='flex flex-col items-stretch gap-8 w-full max-w-[800px] p-4 m-auto'>
-      <Form method='post' className='contents'>
-        <input type='hidden' name='intent' value='create' />
+  /*
+  <div className='pt-16 px-12'>
+      <h1 className='font-robotica text-7xl'>coup</h1>
+      <Form method='post' className='mt-12 flex flex-col items-stretch gap-4 w-full'>
+        <TextInput name='username' placeholder='Enter your username' required />
         <Button variant='secondary' type='submit'>
-          Create new game
+          Continue
         </Button>
       </Form>
+    </div>
+  
+  */
 
-      <div className='text-nord-6 text-center'>— or —</div>
+  return (
+    <div className='pt-16 px-12'>
+      <h1 className='font-robotica text-7xl'>coup</h1>
 
-      <Form method='post'>
-        <input type='hidden' name='intent' value='join' />
-        <div className='flex flex-col items-stretch gap-2'>
-          <PinInput name='pin' value={pin} onChange={setPin} required />
-          <Button variant='primary' type='submit'>
-            Join by PIN
+      <p className='mt-12 text-xl font-medium'>Welcome, {player.username}</p>
+
+      <div className='flex flex-col items-stretch mt-8 gap-4 w-full'>
+        <Form method='post' className='contents'>
+          <input type='hidden' name='intent' value='create' />
+          <Button variant='secondary' type='submit'>
+            Create new game
           </Button>
-        </div>
-      </Form>
+        </Form>
+
+        <div className='text-nord-4 text-center'>— or —</div>
+
+        <Form method='post'>
+          <input type='hidden' name='intent' value='join' />
+          <div className='flex flex-col items-stretch gap-2'>
+            <PinInput name='pin' value={pin} onChange={setPin} required />
+            <Button variant='primary' type='submit'>
+              Join by PIN
+            </Button>
+          </div>
+        </Form>
+      </div>
     </div>
   )
 }

@@ -31,10 +31,10 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 <Button variant='primary' size='sm' onClick={() => setTargetedAction(undefined)} className='mr-2'>
                   ←
                 </Button>
-                <h3 className='text-lg font-bold'>
+                <div className='text-lg font-bold'>
                   {targetedAction}
                   {targetedAction === 'STEAL' ? ' from' : ''} which player?
-                </h3>
+                </div>
               </div>
               <div className='grid gap-4 grid-cols-1'>
                 {targets.map(target => (

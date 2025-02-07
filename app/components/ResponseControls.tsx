@@ -1,7 +1,5 @@
 import React from 'react'
-import type { Action, CardType } from '~/types'
-import { BlockControls } from './BlockControls'
-import { ChallengeControls } from './ChallengeControls'
+import type { Action } from '~/types'
 import { Drawer, DrawerContent } from './Drawer'
 import { Button } from './Button'
 import { useGameSocket } from '~/hooks/socket'

@@ -49,7 +49,7 @@ export default function Login() {
       <Form method='post' className='mt-12 flex flex-col items-stretch gap-4 w-full'>
         <TextInput name='username' placeholder='Enter your username' required />
         <Button variant='secondary' type='submit'>
-          Login
+          Continue
         </Button>
       </Form>
     </div>
