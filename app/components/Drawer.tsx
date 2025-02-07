@@ -30,12 +30,12 @@ const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
-  <DrawerPortal container={getDrawerContainer()}>
+  <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
       className={`
-        absolute inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col 
+        fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col 
         rounded-t-[24px] bg-ui nord-shadow
         animate-in slide-in-from-bottom duration-500
         ${className}`}
