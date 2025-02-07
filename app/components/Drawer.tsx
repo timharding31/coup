@@ -20,7 +20,7 @@ const DrawerOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Overlay
     ref={ref}
-    className={`fixed inset-0 z-50 bg-nord-4/80 animate-in fade-in duration-300 ${className}`}
+    className={`fixed inset-0 z-50 animate-in fade-in duration-300 ${className}`}
     {...props}
   />
 ))
@@ -30,13 +30,13 @@ const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
+  <DrawerPortal container={getDrawerContainer()}>
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
       className={`
-        fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col 
-        rounded-t-[24px] bg-nord-2 nord-shadow
+        absolute inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col 
+        rounded-t-[24px] bg-ui nord-shadow
         animate-in slide-in-from-bottom duration-500
         ${className}`}
       {...props}
@@ -48,3 +48,10 @@ const DrawerContent = React.forwardRef<
 DrawerContent.displayName = DrawerPrimitive.Content.displayName
 
 export { Drawer, DrawerTrigger, DrawerClose, DrawerContent }
+
+function getDrawerContainer() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+  return document.getElementById('root')!
+}

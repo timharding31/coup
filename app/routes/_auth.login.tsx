@@ -2,11 +2,9 @@ import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
 import { Form } from '@remix-run/react'
 import { Button } from '~/components/Button'
 import { TextInput } from '~/components/TextInput'
-
-import type { AppContext } from '~/types/context'
+import { playerService, sessionService } from '~/services/index.server'
 
 export const loader: LoaderFunction = async ({ request, context }) => {
-  const { sessionService } = context as AppContext
   const { playerId } = await sessionService.getPlayerSession(request)
   // Redirect to home if already logged in
   if (playerId) {
@@ -16,8 +14,6 @@ export const loader: LoaderFunction = async ({ request, context }) => {
 }
 
 export const action: ActionFunction = async ({ request, context }) => {
-  const { playerService, sessionService } = context as AppContext
-
   const formData = await request.formData()
   const username = formData.get('username')?.toString()
 
@@ -48,8 +44,9 @@ export const action: ActionFunction = async ({ request, context }) => {
 
 export default function Login() {
   return (
-    <div className='flex flex-col items-stretch gap-2 w-full max-w-[800px] p-4 m-auto'>
-      <Form method='post' className='contents'>
+    <div className='pt-16 px-12'>
+      <h1 className='font-robotica text-7xl'>coup</h1>
+      <Form method='post' className='mt-12 flex flex-col items-stretch gap-4 w-full'>
         <TextInput name='username' placeholder='Enter your username' required />
         <Button variant='secondary' type='submit'>
           Login

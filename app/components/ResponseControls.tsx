@@ -24,7 +24,7 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({ onResponse, 
   return (
     <Drawer defaultOpen>
       <DrawerContent className='px-4 py-6'>
-        <div className='grid gap-4 grid-cols-1 sm:grid-cols-2'>
+        <div className='grid gap-4 grid-cols-1'>
           {availableResponses.canAccept && (
             <Button
               size='lg'

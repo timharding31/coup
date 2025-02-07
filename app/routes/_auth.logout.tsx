@@ -3,12 +3,9 @@ import { Form } from '@remix-run/react'
 import { useEffect, useRef } from 'react'
 import { Button } from '~/components/Button'
 import { TextInput } from '~/components/TextInput'
-
-import type { AppContext } from '~/types/context'
+import { sessionService, playerService } from '~/services/index.server'
 
 export const loader: LoaderFunction = async ({ request, context }) => {
-  const { sessionService, playerService } = context as AppContext
-
   const { playerId } = await sessionService.getPlayerSession(request)
   if (playerId) {
     await playerService.deletePlayer(playerId)
@@ -18,8 +15,6 @@ export const loader: LoaderFunction = async ({ request, context }) => {
 }
 
 export const action: ActionFunction = async ({ request, context }) => {
-  const { sessionService } = context as AppContext
-
   // Remove session cookie on form submit
   const cookie = await sessionService.destroySession(request)
 
@@ -43,8 +38,8 @@ export default function Logout() {
   return (
     <div className='flex flex-col items-stretch gap-4 w-full max-w-[800px] py-24 px-4 mx-auto'>
       <Form ref={formRef} method='post' className='contents'>
-        <h1 className='text-nord-6 font-bold text-4xl'>Just a moment...</h1>
-        <p className='text-nord-6 text-xl'>Logging you out</p>
+        <h1 className='font-bold text-4xl'>Just a moment...</h1>
+        <p className='text-xl'>Logging you out</p>
       </Form>
     </div>
   )

@@ -26,11 +26,16 @@ export const loader: LoaderFunction = async ({ request }) => {
   const response = await fetch(spritesUrl)
   const svgContent = await response.text()
 
-  return { svgContent }
+  return {
+    svgContent,
+    ENV: {
+      FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL
+    }
+  }
 }
 
 export default function App() {
-  const { svgContent } = useLoaderData<{ svgContent: string }>()
+  const { ENV, svgContent } = useLoaderData<{ svgContent: string } & (typeof globalThis)['window']>()
   return (
     <html lang='en'>
       <head>
@@ -40,10 +45,22 @@ export default function App() {
         <Links />
       </head>
       <body>
-        <div style={{ display: 'none' }} aria-hidden='true' dangerouslySetInnerHTML={{ __html: svgContent }} />
-        <Outlet />
+        <div
+          className='hidden'
+          style={{ display: 'none' }}
+          aria-hidden='true'
+          dangerouslySetInnerHTML={{ __html: svgContent }}
+        />
+        <div id='root'>
+          <Outlet />
+        </div>
         <ScrollRestoration />
         <Scripts />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.ENV = ${JSON.stringify(ENV)}`
+          }}
+        />
       </body>
     </html>
   )

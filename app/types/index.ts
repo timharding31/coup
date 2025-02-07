@@ -1,5 +1,4 @@
 export * from './card'
-export * from './context'
 export * from './game'
 export * from './player'
 export * from './socket'

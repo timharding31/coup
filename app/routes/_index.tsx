@@ -5,20 +5,19 @@ import { Button } from '~/components/Button'
 import { PinInput } from '~/components/PinInput'
 import { PlayingCard } from '~/components/PlayingCard'
 import { TextInput } from '~/components/TextInput'
-import { AppContext, Card, CardType } from '~/types'
+import { gameService, sessionService } from '~/services/index.server'
+import { Card, CardType } from '~/types'
 
 export const meta: MetaFunction = () => {
   return [{ title: '' }, { name: 'description', content: '' }]
 }
 
 export const loader: LoaderFunction = async ({ request, context }) => {
-  const { sessionService } = context as AppContext
   const { playerId } = await sessionService.requirePlayerSession(request)
   return { playerId }
 }
 
 export const action: ActionFunction = async ({ request, context }) => {
-  const { sessionService, gameService } = context as AppContext
   const { playerId } = await sessionService.getPlayerSession(request)
 
   if (!playerId) {
@@ -45,7 +44,7 @@ export const action: ActionFunction = async ({ request, context }) => {
   }
 
   if (gameId) {
-    return redirect(`/game/${gameId}`)
+    return redirect(`/games/${gameId}`)
   }
 
   return null

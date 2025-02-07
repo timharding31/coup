@@ -4,11 +4,16 @@
 
 body,
 html {
-  @apply bg-nord-1;
+  @apply bg-nord-0;
 }
 
 body {
-  @apply min-h-screen flex flex-col items-stretch;
+  @apply min-h-screen flex flex-col items-stretch text-nord-6;
+}
+
+#root {
+  @apply relative mx-auto min-h-screen w-full bg-nord-1;
+  max-width: 480px;
 }
 
 .card-container {
@@ -20,7 +25,7 @@ body {
 }
 
 .rounded-card {
-  @apply ring-1 ring-nord-2;
+  @apply ring-nord-0 ring-1;
   border-radius: clamp(8px, 5%, 24px);
   border-radius: clamp(8px, 5cqmin, 24px);
 
@@ -32,7 +37,18 @@ body {
 }
 
 .nord-shadow {
-  box-shadow:
-    rgba(15, 17, 21, 0.25) 0px 4px 6px,
-    rgba(15, 17, 21, 0.1) 0px 5px 7px;
+  --tw-shadow: 0px 4px 6px rgba(15, 17, 21, 0.25), 0px 5px 7px rgba(15, 17, 21, 0.1);
+}
+
+.bg-ui {
+  @apply bg-nord-2;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  @apply font-robotica text-nord-8;
+
+  text-shadow: 0 4px 0 #2e3440;
 }

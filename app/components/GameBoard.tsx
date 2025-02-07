@@ -16,19 +16,37 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, turn, sendResponse, selectCard } = useGameSocket()
+  const { game, turn, startGame, sendResponse, selectCard } = useGameSocket()
 
   const gameState = useMemo(() => deriveGameState(game, turn, playerId), [game, turn, playerId])
 
-  if (!game) return null
+  if (!game) {
+    return null
+  }
 
   const currentPlayer = game.players[game?.currentPlayerIndex ?? 0]
   const myIndex = game.players.findIndex(p => p.id === playerId)
   const myself = game.players[myIndex]
   const playerCards = myself?.influence || []
 
+  if (!myself) {
+    return null
+  }
+
   return (
-    <GameTable playerId={playerId} status='IN_PROGRESS'>
+    <GameTable playerId={playerId}>
+      {game.status === 'WAITING' && (
+        <div className='absolute top-0 left-0 w-full flex items-center'>PIN: {game.pin}</div>
+      )}
+
+      {game.status === 'WAITING' && myself.id === game.hostId && (
+        <div className='absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]'>
+          <Button type='button' variant='success' onClick={() => startGame()}>
+            Start Game
+          </Button>
+        </div>
+      )}
+
       {gameState.shouldShowActionControls && (
         <ActionControls targets={game.players.filter(p => p.id !== playerId)} coins={currentPlayer?.coins || 0} />
       )}

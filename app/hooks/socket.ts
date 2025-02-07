@@ -10,5 +10,5 @@ export function useGameSocket() {
 }
 
 export function useGame() {
-  return useGameSocket().game
+  return useContext(GameSocketContext)?.game || null
 }

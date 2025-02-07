@@ -1,14 +1,16 @@
-import { createContext, useContext, useEffect, useCallback, useState, ReactNode } from 'react'
-import { useNavigate } from '@remix-run/react'
-import { io } from 'socket.io-client'
-import type { Game, CoupSocket, TargetedActionType, UntargetedActionType, TurnState } from '~/types'
+import { createContext, useEffect, useCallback, useState } from 'react'
+import { useLocation, useMatches, useNavigate } from '@remix-run/react'
+import { ref, onValue, off } from 'firebase/database'
+import type { Game, TargetedActionType, UntargetedActionType, TurnState } from '~/types'
 import { getActionFromType } from '~/utils/action'
+import { getFirebaseDatabase } from '~/utils/firebase.client'
+import { prepareGameForClient } from '~/utils/game'
+import { getGameUrl } from '~/utils/url'
 
 export interface GameSocketContextType {
-  game: Game<'client'> | null
+  game: Game<'client'>
   turn: TurnState | null
   error: string | null
-  isConnected: boolean
   startGame: () => void
   performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => void
   performUntargetedAction: (actionType: UntargetedActionType) => void
@@ -21,140 +23,122 @@ interface GameSocketProviderProps extends React.PropsWithChildren {
   socketUrl: string
   gameId: string
   playerId: string
-  game: Game<'client'> | null
+  game: Game<'client'>
 }
 
 export const GameSocketContext = createContext<GameSocketContextType | null>(null)
 
 export function GameSocketProvider({
   children,
-  socketUrl,
   gameId,
   playerId,
   game: initialGame
-}: GameSocketProviderProps) {
+}: Omit<GameSocketProviderProps, 'socketUrl'>) {
   const navigate = useNavigate()
-  const [socket, setSocket] = useState<CoupSocket.Client | null>(null)
-  const [game, setGame] = useState<Game<'client'> | null>(initialGame)
+  const [game, setGame] = useState(initialGame)
   const [currentTurn, setCurrentTurn] = useState<TurnState | null>(initialGame?.currentTurn || null)
   const [error, setError] = useState<string | null>(null)
-  const [isConnected, setIsConnected] = useState(false)
-  const [timerExpiresAt, setTimerExpiresAt] = useState<number | null>(null)
+
+  const pathname = useLocation().pathname
 
   useEffect(() => {
-    const socket: CoupSocket.Client = io({
-      path: '/api/socket',
-      autoConnect: true,
-      auth: { playerId },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+    const db = getFirebaseDatabase()
+    if (!db) return
+
+    const gameRef = ref(db, `games/${gameId}`)
+    const turnRef = ref(db, `games/${gameId}/currentTurn`)
+
+    onValue(gameRef, snapshot => {
+      const game = snapshot.val() as Game<'server'> | null
+      if (game) {
+        console.log('Game updated')
+        setGame(prepareGameForClient(game, playerId))
+      }
     })
 
-    socket.onAny(console.log)
-
-    socket.on('connect', () => {
-      setIsConnected(true)
-      socket.emit('joinGameRoom', { gameId, playerId })
+    onValue(turnRef, snapshot => {
+      const turnData = snapshot.val() as TurnState | null
+      console.log('Turn updated')
+      setCurrentTurn(turnData)
     })
-
-    socket.on('disconnect', () => {
-      setIsConnected(false)
-    })
-
-    socket.on('reconnectSuccess', ({ game }) => {
-      setGame(game)
-      setIsConnected(true)
-    })
-
-    socket.on('turnTimerStarted', ({ expiresAt }) => {
-      setTimerExpiresAt(expiresAt)
-    })
-
-    socket.on('turnTimerEnded', () => {
-      setTimerExpiresAt(null)
-    })
-
-    socket.on('gameStateChanged', ({ game }) => {
-      setGame(prev => {
-        if (prev?.status !== game.status) {
-          navigate(
-            `/game/${gameId}/${game.status === 'IN_PROGRESS' ? 'in-progress' : game.status === 'WAITING' ? 'waiting' : 'completed'}`
-          )
-        }
-        return game
-      })
-      setCurrentTurn(game.currentTurn || null)
-    })
-
-    socket.on('turnStateChanged', ({ turn }) => {
-      setCurrentTurn(turn)
-    })
-
-    socket.on('turnEnded', () => {
-      setCurrentTurn(null)
-    })
-
-    socket.on('error', ({ message }) => {
-      setError(message)
-    })
-
-    socket.on('gameEnded', () => {
-      navigate(`/game/${gameId}/completed`)
-    })
-
-    setSocket(socket)
 
     return () => {
-      socket.emit('leaveGameRoom', { gameId, playerId })
-      socket.disconnect()
+      off(gameRef)
+      off(turnRef)
     }
-  }, [gameId, playerId, navigate, socketUrl])
+  }, [gameId, pathname, navigate])
+
+  const performAction = async (action: any) => {
+    try {
+      const response = await fetch(`/api/games/${gameId}/actions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, playerId })
+      })
+      if (!response.ok) throw new Error('Failed to perform action')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    }
+  }
 
   const performTargetedAction = useCallback(
     (actionType: TargetedActionType, targetPlayerId: string) => {
-      socket?.emit('gameAction', { gameId, playerId, action: getActionFromType(playerId, actionType, targetPlayerId) })
+      performAction(getActionFromType(playerId, actionType, targetPlayerId))
     },
-    [socket, gameId, playerId]
+    [gameId, playerId]
   )
 
   const performUntargetedAction = useCallback(
     (actionType: UntargetedActionType) => {
-      socket?.emit('gameAction', { gameId, playerId, action: getActionFromType(playerId, actionType, undefined) })
+      performAction(getActionFromType(playerId, actionType, undefined))
     },
-    [socket, gameId, playerId]
+    [gameId, playerId]
   )
 
   const sendResponse = useCallback(
-    (response: 'accept' | 'challenge' | 'block') => {
-      socket?.emit('playerResponse', { gameId, playerId, response })
+    async (response: 'accept' | 'challenge' | 'block') => {
+      try {
+        const res = await fetch(`/api/games/${gameId}/responses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ response, playerId })
+        })
+        if (!res.ok) throw new Error('Failed to send response')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      }
     },
-    [socket, gameId, playerId]
+    [gameId, playerId]
   )
 
   const selectCard = useCallback(
-    (cardId: string) => {
-      socket?.emit('selectCard', { gameId, playerId, cardId })
+    async (cardId: string) => {
+      try {
+        const res = await fetch(`/api/games/${gameId}/cards`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cardId, playerId })
+        })
+        if (!res.ok) throw new Error('Failed to select card')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      }
     },
-    [socket, gameId, playerId]
+    [gameId, playerId]
   )
 
-  const exchangeCards = useCallback(
-    (selectedCardIds: string[]) => {
-      socket?.emit('exchangeCards', { gameId, playerId, selectedCardIds })
-    },
-    [socket, gameId, playerId]
-  )
-
-  const startGame = useCallback(() => {
-    socket?.emit('startGame', { gameId, playerId })
-  }, [socket, gameId, playerId])
-
-  // const getRemainingTime = useCallback(() => {
-  //   if (!timerExpiresAt) return 0
-  //   const remaining = timerExpiresAt - Date.now()
-  //   return Math.max(0, remaining)
-  // }, [timerExpiresAt])
+  const startGame = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/games/${gameId}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId })
+      })
+      if (!res.ok) throw new Error('Failed to start game')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    }
+  }, [gameId, playerId])
 
   return (
     <GameSocketContext.Provider
@@ -162,13 +146,12 @@ export function GameSocketProvider({
         game,
         turn: currentTurn,
         error,
-        isConnected,
         startGame,
         performTargetedAction,
         performUntargetedAction,
         sendResponse,
         selectCard,
-        exchangeCards
+        exchangeCards: () => {}
       }}
     >
       {children}

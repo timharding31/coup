@@ -40,7 +40,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
     return (
       <div className='flex flex-col gap-2'>
         {label && (
-          <label className='text-nord-6 font-medium text-sm'>
+          <label className='font-medium text-sm'>
             {label}
             {required && <span className='text-nord-11'> *</span>}
           </label>

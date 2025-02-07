@@ -22,27 +22,9 @@ export default defineConfig({
     }),
     tsconfigPaths()
   ],
-  server: {
-    port: 3000,
-    host: 'localhost'
-  },
   css: {
     postcss: {
       plugins: [tailwindcss]
     }
-  },
-  resolve: {
-    alias: {
-      // Add this alias for the manifest
-      'remix:manifest': './build/manifest.json'
-    }
-  },
-  build: {
-    rollupOptions: {
-      external: [/node:.*/, '@remix-run/node']
-    }
-  },
-  optimizeDeps: {
-    exclude: ['@remix-run/node']
   }
 })
