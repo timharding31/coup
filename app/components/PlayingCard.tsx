@@ -47,7 +47,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFac
       <div className={`rounded-card w-full h-full nord-shadow relative overflow-hidden ${colorSchemes[character]}`}>
         {/* Card corners */}
         <div data-hide-lt-sm className='absolute top-2 left-4 px-[4cqi] flex flex-col items-start z-10'>
-          <span className={`text-[12cqi] font-bold ${textColors[character]} font-odachi`}>{character.slice()}</span>
+          <span className={`text-[8cqi] font-bold ${textColors[character]} font-robotica`}>{character.slice()}</span>
         </div>
 
         {/* Mirrored name for bottom */}
@@ -55,7 +55,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFac
           data-hide-lt-sm
           className='absolute bottom-2 right-4 px-[4cqi] flex flex-col items-end rotate-180 z-10 mix-blend-exclusion'
         >
-          <span className={`text-[12cqi] font-bold ${textColors[character]} font-odachi`}>{character.slice()}</span>
+          <span className={`text-[8cqi] font-bold ${textColors[character]} font-robotica`}>{character.slice()}</span>
         </div>
 
         {/* Decorative border */}

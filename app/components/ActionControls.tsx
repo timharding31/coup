@@ -19,9 +19,10 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
     <Drawer defaultOpen>
       <DrawerContent className='p-4'>
         <AnimatePresence mode='wait'>
-          {targetedAction ? (
+          {targetedAction && (
             <motion.div
               key='targets'
+              className='absolute top-0 left-0 w-full grid gap-4 grid-cols-1 p-4'
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
@@ -56,84 +57,83 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 ))}
               </div>
             </motion.div>
-          ) : (
-            <div className='grid gap-4 grid-cols-1'>
-              <div className='px-2'>
-                <h3 className='text-xl font-bold'>It's your turn</h3>
-                <p className='text-base'>Select an available action:</p>
-              </div>
-
-              <Button
-                size='lg'
-                variant='primary'
-                onClick={() => {
-                  performUntargetedAction('INCOME')
-                }}
-                sprite='token-1'
-                disabled={forceCoup}
-              >
-                INCOME
-              </Button>
-              <Button
-                size='lg'
-                variant='primary'
-                onClick={() => {
-                  performUntargetedAction('FOREIGN_AID')
-                }}
-                sprite='token-2'
-                disabled={forceCoup}
-              >
-                FOREIGN AID
-              </Button>
-              <Button
-                size='lg'
-                variant='primary'
-                onClick={() => {
-                  performUntargetedAction('TAX')
-                }}
-                sprite='token-3'
-                disabled={forceCoup}
-              >
-                TAX
-              </Button>
-              <Button
-                size='lg'
-                variant='primary'
-                onClick={() => performUntargetedAction('EXCHANGE')}
-                sprite='exchange'
-                disabled={forceCoup}
-              >
-                EXCHANGE
-              </Button>
-              <Button
-                size='lg'
-                variant='primary'
-                onClick={() => setTargetedAction('STEAL')}
-                sprite='steal'
-                disabled={forceCoup}
-              >
-                STEAL
-              </Button>
-              <Button
-                size='lg'
-                variant='primary'
-                onClick={() => setTargetedAction('ASSASSINATE')}
-                sprite='sword'
-                disabled={coins < 3 || forceCoup}
-              >
-                ASSASSINATE
-              </Button>
-              <Button
-                size='lg'
-                variant='primary'
-                onClick={() => setTargetedAction('COUP')}
-                sprite='skull'
-                disabled={coins < 7}
-              >
-                COUP
-              </Button>
-            </div>
           )}
+          <div className={`grid gap-4 grid-cols-1 ${targetedAction ? 'invisible' : ''}`}>
+            <div className='px-2'>
+              <h3 className='text-xl font-bold'>It's your turn</h3>
+              <p className='text-base'>Select an available action:</p>
+            </div>
+
+            <Button
+              size='lg'
+              variant='primary'
+              onClick={() => {
+                performUntargetedAction('INCOME')
+              }}
+              sprite='token-1'
+              disabled={forceCoup}
+            >
+              INCOME
+            </Button>
+            <Button
+              size='lg'
+              variant='primary'
+              onClick={() => {
+                performUntargetedAction('FOREIGN_AID')
+              }}
+              sprite='token-2'
+              disabled={forceCoup}
+            >
+              FOREIGN AID
+            </Button>
+            <Button
+              size='lg'
+              variant='primary'
+              onClick={() => {
+                performUntargetedAction('TAX')
+              }}
+              sprite='token-3'
+              disabled={forceCoup}
+            >
+              TAX
+            </Button>
+            <Button
+              size='lg'
+              variant='primary'
+              onClick={() => performUntargetedAction('EXCHANGE')}
+              sprite='exchange'
+              disabled={forceCoup}
+            >
+              EXCHANGE
+            </Button>
+            <Button
+              size='lg'
+              variant='primary'
+              onClick={() => setTargetedAction('STEAL')}
+              sprite='steal'
+              disabled={forceCoup}
+            >
+              STEAL
+            </Button>
+            <Button
+              size='lg'
+              variant='primary'
+              onClick={() => setTargetedAction('ASSASSINATE')}
+              sprite='sword'
+              disabled={coins < 3 || forceCoup}
+            >
+              ASSASSINATE
+            </Button>
+            <Button
+              size='lg'
+              variant='primary'
+              onClick={() => setTargetedAction('COUP')}
+              sprite='skull'
+              disabled={coins < 7}
+            >
+              COUP
+            </Button>
+          </div>
         </AnimatePresence>
       </DrawerContent>
     </Drawer>
