@@ -12,7 +12,7 @@ export const meta: MetaFunction = () => {
   return [{ title: '' }, { name: 'description', content: '' }]
 }
 
-export const loader: LoaderFunction = async ({ request, context }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const { playerId } = await sessionService.requirePlayerSession(request)
   const { player } = await playerService.getPlayer(playerId)
   return { player }
@@ -72,7 +72,7 @@ export default function Index() {
     <div className='pt-16 px-12'>
       <h1 className='font-robotica text-7xl'>coup</h1>
 
-      <p className='mt-12 text-xl font-medium'>Welcome, {player.username}</p>
+      <p className='mt-12 text-xl font-medium'>Welcome, {player?.username}</p>
 
       <div className='flex flex-col items-stretch mt-8 gap-4 w-full'>
         <Form method='post' className='contents'>

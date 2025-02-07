@@ -28,9 +28,13 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               transition={{ duration: 0.2 }}
             >
               <div className='flex items-center mb-4'>
-                <Button variant='primary' size='sm' onClick={() => setTargetedAction(undefined)} className='mr-2'>
-                  ←
-                </Button>
+                <Button
+                  variant='primary'
+                  size='sm'
+                  sprite='arrow-left'
+                  onClick={() => setTargetedAction(undefined)}
+                  className='mr-2'
+                />
                 <div className='text-lg font-bold'>
                   {targetedAction}
                   {targetedAction === 'STEAL' ? ' from' : ''} which player?

@@ -23,15 +23,13 @@ export const action: ActionFunction = async ({ request, context }) => {
 
   // Check if user exists
   const existingUser = await playerService.getPlayerByUsername(username)
-  let playerId: string
 
   if (existingUser.playerId) {
-    playerId = existingUser.playerId
-  } else {
-    // Create new user
-    const newUser = await playerService.createPlayer(username)
-    playerId = newUser.playerId
+    return { error: 'Username already exists' }
   }
+
+  // Create new user
+  const { playerId } = await playerService.createPlayer(username)
 
   // Create session
   const cookie = await sessionService.createUserSession(playerId)
