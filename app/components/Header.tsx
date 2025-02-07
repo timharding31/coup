@@ -11,9 +11,7 @@ export const Header: React.FC<HeaderProps> = () => {
   return (
     <header className='p-2 flex items-center justify-between gap-2 bg-nord-0 nord-shadow'>
       <Link to='/' className='flex items-center'>
-        <Button variant='primary' size='sm'>
-          ←
-        </Button>
+        <Button variant='primary' size='sm' sprite='arrow-left' />
         <h1 className='text-3xl'>coup</h1>
       </Link>
       <div className='ml-2 text-base'>

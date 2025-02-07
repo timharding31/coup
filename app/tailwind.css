@@ -8,11 +8,11 @@ html {
 }
 
 body {
-  @apply min-h-screen flex flex-col items-stretch text-nord-6;
+  @apply fixed inset-0 text-nord-6;
 }
 
 #root {
-  @apply relative mx-auto min-h-screen w-full bg-nord-1;
+  @apply relative mx-auto h-full w-full bg-nord-1;
   max-width: 480px;
 }
 

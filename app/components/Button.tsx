@@ -39,30 +39,10 @@ type SpriteId =
   | 'token-2'
   | 'token-3'
   | 'check'
+  | 'dollar'
+  | 'arrow'
 
-function getSpriteViewBox(sprite: SpriteId) {
-  const DEFAULT_VIEWBOX = '-32 -32 64 64'
-  const ALT_VIEWBOX = '0 0 256 256'
-
-  switch (sprite) {
-    case 'sword':
-    case 'skull':
-    case 'shield':
-    case 'steal':
-    case 'lock':
-    case 'challenge':
-    case 'exchange':
-      return DEFAULT_VIEWBOX
-
-    case 'token-1':
-    case 'token-2':
-    case 'token-3':
-    case 'check':
-      return ALT_VIEWBOX
-  }
-}
-
-const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles }> = props => {
+const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles; dir?: 'right' | 'left' }> = props => {
   const size = props.size === 'lg' ? 32 : 24
 
   let viewBox: string
@@ -75,6 +55,8 @@ const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles }> = pr
     case 'lock':
     case 'challenge':
     case 'exchange':
+    case 'arrow':
+    case 'dollar':
       viewBox = '-32 -32 64 64'
       break
 
@@ -87,7 +69,9 @@ const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles }> = pr
   }
 
   return (
-    <span className='relative flex items-center justify-center h-full w-auto'>
+    <span
+      className={`relative flex items-center justify-center h-full w-auto ${props.dir === 'left' ? 'rotate-180' : ''}`}
+    >
       <svg width={`${size}`} height={`${size}`} viewBox={viewBox}>
         <use href={`#${props.sprite}`}></use>
       </svg>
@@ -99,7 +83,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   variant?: keyof typeof variantStyles
   size?: keyof typeof sizeStyles
   timeoutAt?: number
-  sprite?: SpriteId | null
+  sprite?: SpriteId | 'arrow-left' | null
 }
 
 const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: keyof typeof variantStyles }) => {
@@ -165,7 +149,10 @@ const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: k
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', size = 'default', timeoutAt, sprite = null, ...props }, forwardedRef) => {
+  (
+    { className = '', variant = 'primary', size = 'default', timeoutAt, sprite = null, children = null, ...props },
+    forwardedRef
+  ) => {
     const baseClasses =
       'relative inline-flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl'
     const isOutline = variant.endsWith('Outline')
@@ -178,8 +165,14 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
-        {sprite && <Sprite sprite={props.disabled ? 'lock' : sprite} size={size} />}
-        <span className='relative'>{props.children}</span>
+        {sprite && (
+          <Sprite
+            sprite={props.disabled ? 'lock' : sprite === 'arrow-left' ? 'arrow' : sprite}
+            size={size}
+            dir={sprite == 'arrow-left' ? 'left' : 'right'}
+          />
+        )}
+        {children && <span className='relative'>{children}</span>}
       </button>
     )
   }
