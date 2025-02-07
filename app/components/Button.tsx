@@ -43,7 +43,7 @@ type SpriteId =
   | 'arrow'
 
 export const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles; dir?: 'right' | 'left' }> = props => {
-  const size = props.size === 'lg' ? 32 : 24
+  const size = props.size === 'lg' ? 32 : props.size === 'sm' ? 18 : 24
 
   let viewBox: string
 
