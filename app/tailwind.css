@@ -9,17 +9,17 @@ html {
 
 body {
   @apply text-nord-6;
-  container-type: inline-size;
-  container-name: body;
 }
 
 #root {
   @apply fixed top-0 bottom-0 mx-auto h-full w-full bg-nord-1;
-  max-width: 480px;
   left: 0;
+  right: 0;
 
-  @container (min-width: 480px) {
+  @media (min-width: 480px) {
+    max-width: 480px;
     left: calc(50cqi - 240px);
+    right: auto;
   }
 }
 
