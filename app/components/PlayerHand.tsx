@@ -2,6 +2,7 @@ import React from 'react'
 import { GameStatus, Player } from '~/types'
 import { PlayingCard } from './PlayingCard'
 import { useGame } from '~/hooks/socket'
+import { PlayerNameTag } from './PlayerNameTag'
 
 const GUTTER_SIZE_VW = 3
 
@@ -19,14 +20,20 @@ function getHeightInVw(gutterSizeInVw: number = GUTTER_SIZE_VW) {
   return containerHeight.toFixed(2)
 }
 
-export interface PlayerHandProps extends Player<'client'> {}
+export interface PlayerHandProps extends Player<'client'> {
+  isActionMenuOpen: boolean
+}
 
-export const PlayerHand: React.FC<PlayerHandProps> = ({ influence, coins }) => {
+export const PlayerHand: React.FC<PlayerHandProps> = ({ influence, isActionMenuOpen, ...nameTagProps }) => {
   const game = useGame()
   return (
-    <div className='grid grid-rows-[auto_auto] px-2 pb-2'>
-      <div>Coins: {coins}</div>
-      <div className={`grid grid-cols-${influence.length} gap-2`}>
+    <div className='grid grid-rows-[auto_auto] p-2 gap-2'>
+      <div className='mx-auto'>
+        <PlayerNameTag {...nameTagProps} />
+      </div>
+      <div
+        className={`grid grid-cols-${influence.length} gap-2 ${isActionMenuOpen ? 'translate-y-[-360px]' : ''} transition-transform duration-500`}
+      >
         {influence.map(card => (
           <PlayingCard key={card.id} isFaceDown={!game || game.status === 'WAITING'} {...card} />
         ))}

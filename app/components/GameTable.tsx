@@ -5,9 +5,14 @@ import { PlayerHand } from './PlayerHand'
 
 interface GameTableProps extends React.PropsWithChildren {
   playerId: string
+  isActionMenuOpen: boolean
 }
 
-export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ playerId, children }) => {
+export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
+  playerId,
+  isActionMenuOpen,
+  children
+}) => {
   const game = useGame()
 
   if (!game) return null
@@ -24,15 +29,17 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
   return (
     <>
       {children}
-      <div className='flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4'>
+      <div
+        className={`p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 duration-500 transition-[brightness] ${isActionMenuOpen ? 'brightness-[50%]' : ''}`}
+      >
         {opponents.map((opponent, index) => (
           <div key={opponent.id} className={`col-span-2 ${getOpponentClasses(index, opponents.length)}`}>
             <OpponentHand {...opponent} isCurrentPlayer={currentPlayer.id === opponent.id} />
           </div>
         ))}
       </div>
-      <div className='flex-none'>
-        <PlayerHand {...myself} />
+      <div className='flex-none bg-nord-0'>
+        <PlayerHand {...myself} isActionMenuOpen={isActionMenuOpen} />
       </div>
     </>
   )

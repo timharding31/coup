@@ -17,7 +17,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
 
   return (
     <Drawer defaultOpen>
-      <DrawerContent className='px-4 py-6'>
+      <DrawerContent className='p-4'>
         <AnimatePresence mode='wait'>
           {targetedAction ? (
             <motion.div
@@ -58,6 +58,11 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
             </motion.div>
           ) : (
             <div className='grid gap-4 grid-cols-1'>
+              <div className='px-2'>
+                <h3 className='text-xl font-bold'>It's your turn</h3>
+                <p className='text-base'>Select an available action:</p>
+              </div>
+
               <Button
                 size='lg'
                 variant='primary'

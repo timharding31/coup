@@ -8,13 +8,13 @@ html {
 }
 
 body {
-  @apply fixed inset-0 text-nord-6;
+  @apply text-nord-6;
   container-type: inline-size;
   container-name: body;
 }
 
 #root {
-  @apply absolute top-0 bottom-0 mx-auto h-full w-full bg-nord-1;
+  @apply fixed top-0 bottom-0 mx-auto h-full w-full bg-nord-1;
   max-width: 480px;
   left: 0;
 

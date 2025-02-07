@@ -42,7 +42,7 @@ type SpriteId =
   | 'dollar'
   | 'arrow'
 
-const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles; dir?: 'right' | 'left' }> = props => {
+export const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles; dir?: 'right' | 'left' }> = props => {
   const size = props.size === 'lg' ? 32 : 24
 
   let viewBox: string

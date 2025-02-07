@@ -35,7 +35,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
   }
 
   return (
-    <GameTable playerId={playerId}>
+    <GameTable playerId={playerId} isActionMenuOpen={gameState.shouldShowActionControls}>
       <Header />
 
       {game.status === 'WAITING' && myself.id === game.hostId && (
