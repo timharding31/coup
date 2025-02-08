@@ -536,10 +536,10 @@ export class TurnService implements ITurnService {
 
     const currentPhase = game.currentTurn.phase
 
-    if (this.isWaitingPhase(currentPhase)) {
-      const remainingTime = game.currentTurn.timeoutAt - Date.now()
-      this.startTimer(gameId, remainingTime)
-    }
+    // if (this.isWaitingPhase(currentPhase)) {
+    //   const remainingTime = game.currentTurn.timeoutAt - Date.now()
+    //   this.startTimer(gameId, remainingTime)
+    // }
 
     switch (currentPhase) {
       case 'ACTION_DECLARED':

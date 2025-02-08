@@ -51,20 +51,14 @@ export function GameSocketProvider({
     onValue(gameRef, snapshot => {
       const game = snapshot.val() as Game<'server'> | null
       if (game) {
-        console.table({ msg: 'Game updated', ...game })
         setGame(prepareGameForClient(game, playerId))
-      }
-      if (!game?.currentTurn || game.currentTurn.phase !== currentTurn?.phase) {
-        console.table({ msg: 'Turn updated', ...(game?.currentTurn ? game.currentTurn : { turn: null }) })
-        setCurrentTurn(game?.currentTurn || null)
       }
     })
 
-    // onValue(turnRef, snapshot => {
-    //   const turnData = snapshot.val() as TurnState | null
-    //   console.log('Turn updated')
-    //   setCurrentTurn(turnData)
-    // })
+    onValue(turnRef, snapshot => {
+      const turnData = snapshot.val() as TurnState | null
+      setCurrentTurn(turnData)
+    })
 
     return () => {
       off(gameRef)

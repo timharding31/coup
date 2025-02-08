@@ -41,7 +41,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
       <Header />
 
       {game.status === 'WAITING' && myself.id === game.hostId && (
-        <div className='absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]'>
+        <div className='absolute z-50 top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]'>
           <Button type='button' variant='success' onClick={startGame} disabled={game.players.length < 2}>
             Start Game
           </Button>
@@ -75,7 +75,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
       {gameState.shouldShowCardSelection && (
         <CardSelector
           cards={playerCards}
-          intent='danger'
+          intent={
+            gameState.isDefendingChallenge &&
+            playerCards.some(card => card.type === game.currentTurn?.action.requiredCharacter)
+              ? 'success'
+              : 'danger'
+          }
           onSubmit={([cardId]) => selectCard(cardId)}
           heading={gameState.isDefendingChallenge ? 'You have been challenged' : `Lose Influence`}
           subheading={gameState.isDefendingChallenge ? 'Select card to reveal or lose' : `Select a card to lose`}
