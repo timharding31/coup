@@ -51,16 +51,20 @@ export function GameSocketProvider({
     onValue(gameRef, snapshot => {
       const game = snapshot.val() as Game<'server'> | null
       if (game) {
-        console.log('Game updated')
+        console.table({ msg: 'Game updated', ...game })
         setGame(prepareGameForClient(game, playerId))
+      }
+      if (!game?.currentTurn || game.currentTurn.phase !== currentTurn?.phase) {
+        console.table({ msg: 'Turn updated', ...(game?.currentTurn ? game.currentTurn : { turn: null }) })
+        setCurrentTurn(game?.currentTurn || null)
       }
     })
 
-    onValue(turnRef, snapshot => {
-      const turnData = snapshot.val() as TurnState | null
-      console.log('Turn updated')
-      setCurrentTurn(turnData)
-    })
+    // onValue(turnRef, snapshot => {
+    //   const turnData = snapshot.val() as TurnState | null
+    //   console.log('Turn updated')
+    //   setCurrentTurn(turnData)
+    // })
 
     return () => {
       off(gameRef)
@@ -140,6 +144,22 @@ export function GameSocketProvider({
     }
   }, [gameId, playerId])
 
+  const exchangeCards = useCallback(
+    async (cardIds: string[]) => {
+      try {
+        const res = await fetch(`/api/games/${gameId}/exchange`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId, cardIds })
+        })
+        if (!res.ok) throw new Error('Failed to start game')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      }
+    },
+    [gameId, playerId]
+  )
+
   return (
     <GameSocketContext.Provider
       value={{
@@ -151,7 +171,7 @@ export function GameSocketProvider({
         performUntargetedAction,
         sendResponse,
         selectCard,
-        exchangeCards: () => {}
+        exchangeCards
       }}
     >
       {children}

@@ -4,7 +4,7 @@ import { Card, CardType, Game } from '~/types'
 export interface IDeckService {
   createInitialDeck(): Card[]
   dealCards(deck: Card[], count: number): [Card[], Card[]]
-  returnCardToDeck(gameId: string, card: Card): Promise<Card[]>
+  returnCardsToDeck(gameId: string, card: Card): Promise<Card[]>
   drawCard(gameId: string): Promise<Card>
   shuffleDeck(deck: Card[]): Card[]
 }
@@ -43,30 +43,27 @@ export class DeckService implements IDeckService {
     return [dealt, remaining]
   }
 
-  async returnCardToDeck(gameId: string, card: Card): Promise<Card[]> {
+  async returnCardsToDeck(gameId: string, ...cards: Card[]): Promise<Card[]> {
     const gameRef = this.gamesRef.child(gameId)
+
+    const cardIds = new Set(cards.map(card => card.id))
 
     const result = await gameRef.transaction((game: Game | null) => {
       if (!game) return null
 
       // Reset the card state
-      const returnedCard = {
-        ...card,
-        isRevealed: false
-      }
 
       // Remove from player's hand
       const updatedPlayers = game.players.map(player => {
-        const cardIndex = player.influence.findIndex(c => c.id === card.id)
-        if (cardIndex === -1) return player
+        if (!player.influence.some(c => cardIds.has(c.id))) return player
         return {
           ...player,
-          influence: player.influence.filter(c => c.id !== card.id)
+          influence: player.influence.filter(c => !cardIds.has(c.id))
         }
       })
 
       // Add card to deck and shuffle
-      const updatedDeck = this.shuffleDeck([...game.deck, returnedCard])
+      const updatedDeck = this.shuffleDeck([...game.deck, ...cards.map(c => ({ ...c, isRevealed: true }))])
 
       return {
         ...game,

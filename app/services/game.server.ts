@@ -17,6 +17,7 @@ export interface IGameService {
   getGameByPlayerId(playerId: string): Promise<{ game: Game | null }>
   getCurrentTurn(gameId: string): Promise<{ turn: TurnState | null }>
   startGameTurn(gameId: string, action: Action): Promise<{ game: Game | null }>
+  handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void>
   handleActionResponse(
     gameId: string,
     playerId: string,
@@ -48,7 +49,11 @@ export class GameService implements IGameService {
     this.actionService = new ActionService(this.gamesRef)
     this.deckService = new DeckService(this.gamesRef)
     this.challengeService = new ChallengeService(this.gamesRef, this.deckService)
-    this.turnService = new TurnService(this.gamesRef, this.actionService, this.challengeService)
+    this.turnService = new TurnService(this.gamesRef, this.actionService, this.challengeService, this.deckService)
+  }
+
+  handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]) {
+    return this.turnService.handleExchangeReturn(gameId, playerId, cardIds)
   }
 
   setOnGameEnded(listener: (gameId: string) => Promise<void>): void {

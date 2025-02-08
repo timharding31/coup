@@ -172,7 +172,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             dir={sprite == 'arrow-left' ? 'left' : 'right'}
           />
         )}
-        {children && <span className='relative'>{children}</span>}
+        {children && <span className='relative font-robotica'>{children}</span>}
       </button>
     )
   }

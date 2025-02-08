@@ -21,6 +21,7 @@ export interface ITurnService {
   selectFailedChallengerCard(gameId: string, playerId: string, cardId: string): Promise<void>
   setOnGameEnded(listener: (gameId: string, winnerId?: string) => Promise<void>): void
   setOnTurnEnded(listener: (gameId: string) => Promise<void>): void
+  handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void>
 }
 
 export class TurnService implements ITurnService {
@@ -29,14 +30,21 @@ export class TurnService implements ITurnService {
   private gamesRef: Reference
   private actionService: ActionService
   private challengeService: ChallengeService
+  private deckService: DeckService
   private activeTimers = new Map<string, NodeJS.Timeout>()
   private onGameEnded: (gameId: string, winnerId?: string) => Promise<void> = Promise.resolve
   private onTurnEnded: (gameId: string) => Promise<void> = Promise.resolve
 
-  constructor(gamesRef: Reference, actionService: ActionService, challengeService: ChallengeService) {
+  constructor(
+    gamesRef: Reference,
+    actionService: ActionService,
+    challengeService: ChallengeService,
+    deckService: DeckService
+  ) {
     this.gamesRef = gamesRef
     this.actionService = actionService
     this.challengeService = challengeService
+    this.deckService = deckService
   }
 
   setOnGameEnded(listener: (gameId: string, winnerId?: string) => Promise<void>) {
@@ -130,6 +138,47 @@ export class TurnService implements ITurnService {
     } else {
       await this.actionService.revealInfluence(gameId, playerId, cardId)
     }
+
+    await this.progressToNextPhase(gameId)
+  }
+
+  private async dealExchangeCards(gameId: string, playerId: string) {
+    await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+      if (!game || game.currentTurn?.action.type !== 'EXCHANGE') {
+        return game
+      }
+
+      const [dealt, remainingDeck] = this.deckService.dealCards(game.deck, 2)
+
+      return {
+        ...game,
+        currentTurn: {
+          ...game.currentTurn,
+          timeoutAt: null,
+          respondedPlayers: [],
+          phase: 'WAITING_FOR_EXCHANGE_RETURN'
+        },
+        deck: remainingDeck,
+        players: game.players.map(p => {
+          if (p.id !== playerId) return p
+          return { ...p, influence: p.influence.concat(dealt) }
+        }),
+        updatedAt: Date.now()
+      }
+    })
+  }
+
+  async handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]) {
+    const gameRef = this.gamesRef.child(gameId)
+    const game = (await gameRef.get()).val() as Game
+
+    const cardsToReturn = game.players.find(p => p.id === playerId)?.influence.filter(c => cardIds.includes(c.id))
+
+    if (!cardsToReturn?.length) {
+      throw new Error('No cards to return')
+    }
+
+    await this.deckService.returnCardsToDeck(gameId, ...cardsToReturn)
 
     await this.progressToNextPhase(gameId)
   }
@@ -515,7 +564,9 @@ export class TurnService implements ITurnService {
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
           await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
           await this.resolveAction(gameId, game.currentTurn.action)
-          await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
+          if (game.currentTurn.action.type !== 'EXCHANGE') {
+            await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
+          }
         }
         break
 
@@ -554,6 +605,8 @@ export class TurnService implements ITurnService {
       case 'ACTION_RESOLVING':
         if (['ASSASSINATE', 'COUP'].includes(game.currentTurn.action.type)) {
           await this.transitionState(gameId, currentPhase, 'WAITING_FOR_TARGET_REVEAL')
+        } else if (game.currentTurn.action.type === 'EXCHANGE') {
+          await this.dealExchangeCards(gameId, game.currentTurn.action.playerId)
         } else {
           await this.resolveAction(gameId, game.currentTurn.action)
           await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
@@ -565,6 +618,10 @@ export class TurnService implements ITurnService {
           await this.resolveAction(gameId, game.currentTurn.action)
           await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
         }
+        break
+
+      case 'WAITING_FOR_EXCHANGE_RETURN':
+        await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
         break
 
       case 'ACTION_FAILED':
@@ -639,6 +696,10 @@ export class TurnService implements ITurnService {
     // Apply influence effects if targeted action succeeded
     if (turn.action.targetPlayerId && turn.lostInfluenceCardId) {
       await this.actionService.revealInfluence(gameId, turn.action.targetPlayerId, turn.lostInfluenceCardId)
+    }
+
+    if (action.type === 'EXCHANGE') {
+      await this.dealExchangeCards(gameId, action.playerId)
     }
   }
 

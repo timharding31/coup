@@ -210,6 +210,16 @@ export const VALID_TRANSITIONS: StateTransition[] = [
     from: 'ACTION_FAILED',
     to: 'TURN_COMPLETE',
     condition: (_turn, _game) => true
+  },
+  {
+    from: 'ACTION_RESOLVING',
+    to: 'WAITING_FOR_EXCHANGE_RETURN',
+    condition: (turn, _game) => turn.action.type === 'EXCHANGE'
+  },
+  {
+    from: 'WAITING_FOR_EXCHANGE_RETURN',
+    to: 'TURN_COMPLETE',
+    condition: (turn, _game) => true
   }
 ]
 

@@ -11,13 +11,15 @@ import { OpponentHand } from './OpponentHand'
 import { Button } from './Button'
 import { GameTable } from './GameTable'
 import { Header } from './Header'
+import { ExchangeReturnControls } from './ExchangeReturnControls'
+import { CardSelector } from './CardSelector'
 
 interface GameBoardProps {
   playerId: string
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, turn, startGame, sendResponse, selectCard } = useGameSocket()
+  const { game, turn, startGame, sendResponse, selectCard, exchangeCards } = useGameSocket()
 
   const gameState = useMemo(() => deriveGameState(game, turn, playerId), [game, turn, playerId])
 
@@ -71,11 +73,34 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
       )}
 
       {gameState.shouldShowCardSelection && (
-        <LoseInfluenceControls
-          onSelectCard={selectCard}
-          availableCards={playerCards}
-          reason={gameState.cardSelectionMessage}
-          isDefendingChallenge={gameState.isDefendingChallenge}
+        <>
+          <LoseInfluenceControls
+            onSelectCard={selectCard}
+            availableCards={playerCards}
+            reason={gameState.cardSelectionMessage}
+            isDefendingChallenge={gameState.isDefendingChallenge}
+          />
+          <CardSelector
+            cards={playerCards}
+            intent='danger'
+            onSubmit={([cardId]) => selectCard(cardId)}
+            heading={`Lose Influence`}
+            subheading={`Select a card to lose`}
+            buttonText='Confirm'
+          />
+        </>
+      )}
+
+      {gameState.shouldShowExchangeReturn && (
+        <CardSelector
+          cards={playerCards}
+          intent='primary'
+          heading='Exchange'
+          subheading='Select cards to RETURN to the deck'
+          onSubmit={exchangeCards}
+          minCards={2}
+          maxCards={2}
+          buttonText='Confirm'
         />
       )}
     </GameTable>
@@ -88,6 +113,7 @@ interface GameStateConditions {
   shouldShowResponseControls: boolean
   shouldShowBlockResponseControls: boolean
   shouldShowCardSelection: boolean
+  shouldShowExchangeReturn: boolean
   availableResponses: {
     canAccept: boolean
     canBlock: boolean
@@ -105,6 +131,7 @@ function deriveGameState(game: Game<'client'> | null, turn: TurnState | null, pl
       shouldShowResponseControls: false,
       shouldShowBlockResponseControls: false,
       shouldShowCardSelection: false,
+      shouldShowExchangeReturn: false,
       availableResponses: { canAccept: false, canBlock: false, canChallenge: false },
       cardSelectionMessage: null,
       isDefendingChallenge: false
@@ -120,6 +147,7 @@ function deriveGameState(game: Game<'client'> | null, turn: TurnState | null, pl
       shouldShowResponseControls: false,
       shouldShowBlockResponseControls: false,
       shouldShowCardSelection: false,
+      shouldShowExchangeReturn: false,
       availableResponses: { canAccept: false, canBlock: false, canChallenge: false },
       cardSelectionMessage: null,
       isDefendingChallenge: false
@@ -155,6 +183,8 @@ function deriveGameState(game: Game<'client'> | null, turn: TurnState | null, pl
       !turn.respondedPlayers?.includes(playerId),
 
     shouldShowCardSelection: isDefendingChallenge || isFailedChallenger || isTargetedPlayer,
+
+    shouldShowExchangeReturn: currentPlayer?.id === playerId && turn?.phase === 'WAITING_FOR_EXCHANGE_RETURN',
 
     isDefendingChallenge,
 

@@ -22,7 +22,7 @@ export class ChallengeService implements IChallengeService {
 
   async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<void> {
     // Return card to deck
-    const newDeck = await this.deckService.returnCardToDeck(gameId, card)
+    const newDeck = await this.deckService.returnCardsToDeck(gameId, card)
 
     // Then draw a new card for the player
     const [dealtCards, remainingDeck] = this.deckService.dealCards(newDeck, 1)

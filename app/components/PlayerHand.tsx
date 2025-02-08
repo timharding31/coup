@@ -32,7 +32,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ influence, isActionMenuO
         <PlayerNameTag {...nameTagProps} />
       </div>
       <div
-        className={`grid grid-cols-${influence.length} gap-2 ${isActionMenuOpen ? 'translate-y-[-360px]' : ''} transition-transform duration-500`}
+        className={`grid grid-cols-${influence.length} gap-2 ${isActionMenuOpen ? 'translate-y-[-320px]' : ''} transition-transform duration-500`}
       >
         {influence.map(card => (
           <PlayingCard key={card.id} isFaceDown={!game || game.status === 'WAITING'} {...card} />
