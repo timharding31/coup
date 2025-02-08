@@ -73,22 +73,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
       )}
 
       {gameState.shouldShowCardSelection && (
-        <>
-          <LoseInfluenceControls
-            onSelectCard={selectCard}
-            availableCards={playerCards}
-            reason={gameState.cardSelectionMessage}
-            isDefendingChallenge={gameState.isDefendingChallenge}
-          />
-          <CardSelector
-            cards={playerCards}
-            intent='danger'
-            onSubmit={([cardId]) => selectCard(cardId)}
-            heading={`Lose Influence`}
-            subheading={`Select a card to lose`}
-            buttonText='Confirm'
-          />
-        </>
+        <CardSelector
+          cards={playerCards}
+          intent='danger'
+          onSubmit={([cardId]) => selectCard(cardId)}
+          heading={gameState.isDefendingChallenge ? 'You have been challenged' : `Lose Influence`}
+          subheading={gameState.isDefendingChallenge ? 'Select card to reveal or lose' : `Select a card to lose`}
+          buttonText='Confirm'
+        />
       )}
 
       {gameState.shouldShowExchangeReturn && (
