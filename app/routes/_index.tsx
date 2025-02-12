@@ -66,7 +66,7 @@ export default function Index() {
         <Form method='post' className='contents'>
           <input type='hidden' name='intent' value='create' />
           <Button variant='secondary' type='submit' size='lg'>
-            Create new game
+            Create New Game
           </Button>
         </Form>
 

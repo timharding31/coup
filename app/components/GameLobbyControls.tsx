@@ -50,11 +50,11 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
 
           <div className='flex flex-col items-stretch gap-2 my-6'>
             <Button variant='secondary' onClick={handleShare} sprite='arrow'>
-              Share game link
+              Share Game Link
             </Button>
             {isHost && (
               <Button variant='success' onClick={startGame} disabled={!canStart} sprite='check'>
-                Start game
+                Start Game
               </Button>
             )}
           </div>

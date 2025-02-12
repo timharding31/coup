@@ -59,3 +59,18 @@ h4 {
 
   text-shadow: 0 4px 0 #2e3440;
 }
+
+.tooltip-content {
+  background: var(--accent-color);
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--accent-color);
+}

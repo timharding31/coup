@@ -55,7 +55,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
               {subheading && <p className='text-base'>{subheading}</p>}
             </div>
 
-            <div className='flex justify-center gap-4 px-4'>
+            <div className='flex justify-center gap-2'>
               {cards.map(card => {
                 if (card.isRevealed) {
                   return null
@@ -74,7 +74,9 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
                       <div
                         className={`absolute inset-0 ${intent === 'primary' ? 'bg-nord-6' : intent === 'danger' ? 'bg-nord-11' : 'bg-nord-13'} rounded-lg flex items-center justify-center bg-opacity-50`}
                       >
-                        <div className='w-8 h-8 rounded-full bg-white/90 flex items-center justify-center'>✓</div>
+                        <div className='w-8 h-8 rounded-full bg-white/90 flex items-center justify-center font-bold text-nord-0'>
+                          ✓
+                        </div>
                       </div>
                     )}
                   </div>

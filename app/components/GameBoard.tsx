@@ -51,6 +51,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
     <GameTable
       playerId={playerId}
       isActionMenuOpen={isActionMenuOpen}
+      actor={actor}
+      blocker={blocker}
+      challenger={challenger}
+      target={target}
       dialogNode={<GameLobbyControls game={game} playerId={playerId} startGame={startGame} />}
     >
       <Header />
