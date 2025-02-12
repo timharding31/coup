@@ -10,7 +10,6 @@ interface CardSelectorProps {
   subheading?: string
   cards: Card<'client'>[]
   onSubmit: (cardIds: string[]) => void
-  buttonText: string
   intent?: Extract<ButtonProps['variant'], 'danger' | 'success' | 'primary'>
   minCards?: number
   maxCards?: number
@@ -21,7 +20,6 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
   subheading,
   cards,
   onSubmit,
-  buttonText,
   intent = 'primary',
   minCards = 1,
   maxCards = 1
@@ -91,7 +89,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
               disabled={!canSubmit}
               className='w-full mt-4'
             >
-              {buttonText}
+              Confirm
             </Button>
           </motion.div>
         </AnimatePresence>

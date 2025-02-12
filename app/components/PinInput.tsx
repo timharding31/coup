@@ -6,11 +6,11 @@ interface PinInputProps {
   onChange: (value: string) => void
   name?: string
   required?: boolean
-  error?: boolean
+  errorMessage?: string
   label?: string
 }
 
-export const PinInput: React.FC<PinInputProps> = ({ value, onChange, error, label, ...inputProps }) => {
+export const PinInput: React.FC<PinInputProps> = ({ value, onChange, errorMessage, label, ...inputProps }) => {
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -38,7 +38,7 @@ export const PinInput: React.FC<PinInputProps> = ({ value, onChange, error, labe
         pattern='[A-Z0-9]*'
         autoComplete='off'
         spellCheck={false}
-        error={error}
+        errorMessage={errorMessage}
         label={label}
         size='lg'
         {...inputProps}

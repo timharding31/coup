@@ -2,6 +2,7 @@ import React from 'react'
 import { useGame } from '~/hooks/socket'
 import { OpponentHand } from './OpponentHand'
 import { PlayerHand } from './PlayerHand'
+import useMeasure from 'react-use-measure'
 
 interface GameTableProps extends React.PropsWithChildren {
   playerId: string
@@ -22,6 +23,9 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
   const currentPlayer = game.players[game.currentPlayerIndex]
   const opponents = game.players.slice(myIndex + 1).concat(game.players.slice(0, myIndex))
 
+  const [playerHandRef, { height = 0 }] = useMeasure({ debounce: 50, scroll: false })
+  const playerHandStyle = { transform: `translateY(${isActionMenuOpen ? `${(height - 660).toFixed(2)}px` : '0px'})` }
+
   if (!myself) {
     return null
   }
@@ -38,8 +42,12 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
           </div>
         ))}
       </div>
-      <div className='flex-none bg-nord-0'>
-        <PlayerHand {...myself} isActionMenuOpen={isActionMenuOpen} />
+      <div
+        ref={playerHandRef}
+        className='transition-transform duration-200 ease-in-out flex-none bg-nord-0'
+        style={playerHandStyle}
+      >
+        <PlayerHand {...myself} />
       </div>
     </>
   )

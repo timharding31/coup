@@ -18,47 +18,45 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
   return (
     <Drawer defaultOpen>
       <DrawerContent className='p-4'>
-        <AnimatePresence mode='wait'>
-          {targetedAction && (
-            <motion.div
-              key='targets'
-              className='absolute top-0 left-0 w-full grid gap-4 grid-cols-1 p-4'
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className='flex items-center mb-4'>
+        <div className='relative overflow-x-hidden'>
+          <div
+            className={`transition-transform duration-200 ease-in-out absolute top-0 left-0 w-full grid gap-4 grid-cols-1 ${targetedAction ? 'translate-x-0' : 'translate-x-[100%]'}`}
+          >
+            <div className='flex items-center mb-4'>
+              <Button
+                variant='primary'
+                size='sm'
+                sprite='arrow-left'
+                onClick={() => setTargetedAction(undefined)}
+                className='mr-2'
+              />
+              <div className='text-lg font-bold'>
+                {targetedAction}
+                {targetedAction === 'STEAL' ? ' from' : ''} which player?
+              </div>
+            </div>
+            <div className='grid gap-4 grid-cols-1'>
+              {targets.map(target => (
                 <Button
-                  variant='primary'
-                  size='sm'
-                  sprite='arrow-left'
-                  onClick={() => setTargetedAction(undefined)}
-                  className='mr-2'
-                />
-                <div className='text-lg font-bold'>
-                  {targetedAction}
-                  {targetedAction === 'STEAL' ? ' from' : ''} which player?
-                </div>
-              </div>
-              <div className='grid gap-4 grid-cols-1'>
-                {targets.map(target => (
-                  <Button
-                    key={`target-${target.id}`}
-                    size='lg'
-                    variant='secondary'
-                    className='w-full'
-                    onClick={() => {
+                  key={`target-${target.id}`}
+                  size='lg'
+                  variant='secondary'
+                  className='w-full'
+                  onClick={() => {
+                    if (targetedAction) {
                       performTargetedAction(targetedAction, target.id)
-                    }}
-                  >
-                    {target.username} ({target.coins} coins)
-                  </Button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-          <div className={`grid gap-4 grid-cols-1 ${targetedAction ? 'invisible' : ''}`}>
+                    }
+                  }}
+                >
+                  {target.username} ({target.coins} coins)
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div
+            className={`transition-transform duration-200 ease-in-out grid gap-4 grid-cols-1 ${targetedAction ? 'translate-x-[-100%]' : 'translate-x-0'}`}
+          >
             <div className='px-2'>
               <h3 className='text-xl font-bold'>It's your turn</h3>
               <p className='text-base'>Select an available action:</p>
@@ -134,7 +132,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               COUP
             </Button>
           </div>
-        </AnimatePresence>
+        </div>
       </DrawerContent>
     </Drawer>
   )

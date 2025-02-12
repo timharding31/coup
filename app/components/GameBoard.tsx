@@ -19,7 +19,7 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, turn, startGame, sendResponse, selectCard, exchangeCards } = useGameSocket()
+  const { game, startGame, sendResponse, selectCard, exchangeCards } = useGameSocket()
 
   const {
     myself,
@@ -38,49 +38,44 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
     isExchangeReturnMenuOpen,
     isChallengeDefenseSuccessful,
     actionResponseLabel
-  } = useMemo(() => deriveGameState(game, turn, playerId), [game, turn, playerId])
+  } = useMemo(() => deriveGameState(game, playerId), [game, playerId])
 
   if (!game || !myself) {
     return null
   }
 
+  const turn = game.currentTurn
+
   return (
     <GameTable playerId={playerId} isActionMenuOpen={isActionMenuOpen}>
       <Header />
-
-      {isStartGameButtonVisible && (
+      {isStartGameButtonVisible ? (
         <div className='absolute z-50 top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]'>
           <Button type='button' variant='success' onClick={startGame} disabled={game.players.length < 2}>
             Start Game
           </Button>
         </div>
-      )}
-
-      {isActionMenuOpen && (
-        <ActionControls targets={game.players.filter(p => p.id !== playerId)} coins={myself.coins || 0} />
-      )}
-
-      {turn && isResponseMenuOpen && (
+      ) : isActionMenuOpen ? (
+        <ActionControls targets={game.players.filter(p => p.id !== playerId)} coins={myself.coins} />
+      ) : isResponseMenuOpen ? (
         <ResponseControls
           onResponse={sendResponse}
-          heading={`${actor?.username} has chosen to ${turn.action.type}${turn.action.type === 'STEAL' ? ' from' : ''} ${target?.id === playerId ? 'you' : target ? target.username : ''}`}
+          heading={`${actor?.username} chose to ${turn!.action.type}${turn!.action.type === 'STEAL' ? ' from' : ''}${target?.id === playerId ? ' you' : target ? ` ${target.username}` : ''}`}
           subheading='How will you respond?'
-          timeoutAt={turn.timeoutAt}
+          timeoutAt={turn!.timeoutAt}
           availableResponses={{
             canAccept: true,
-            canBlock: turn.action.canBeBlocked,
-            canChallenge: turn.action.canBeChallenged
+            canBlock: turn!.action.canBeBlocked,
+            canChallenge: turn!.action.canBeChallenged
           }}
           label={actionResponseLabel}
         />
-      )}
-
-      {turn && isBlockResponseMenuOpen && (
+      ) : isBlockResponseMenuOpen ? (
         <ResponseControls
           onResponse={sendResponse}
-          heading={`${blocker?.username} BLOCKED your attempt to ${turn.action.type}`}
+          heading={`${blocker?.username} BLOCKED your attempt to ${turn!.action.type}`}
           subheading='How will you respond?'
-          timeoutAt={turn.timeoutAt}
+          timeoutAt={turn!.timeoutAt}
           availableResponses={{
             canAccept: true,
             canBlock: false,
@@ -88,64 +83,49 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
           }}
           label={actionResponseLabel}
         />
-      )}
-
-      {turn && isChallengeDefenseMenuOpen && (
+      ) : isChallengeDefenseMenuOpen ? (
         <CardSelector
-          heading={`Your ${turn.action.type} was CHALLENGED by ${challenger?.username}`}
+          heading={`Your ${turn!.action.type} was CHALLENGED by ${challenger?.username}`}
           subheading={`Select a card to ${isChallengeDefenseSuccessful ? 'reveal and replace' : 'lose'}`}
           cards={myself.influence || []}
           intent={isChallengeDefenseSuccessful ? 'success' : 'danger'}
           onSubmit={([cardId]) => selectCard(cardId)}
-          buttonText='Confirm'
         />
-      )}
-
-      {turn && isBlockChallengeDefenseMenuOpen && (
+      ) : isBlockChallengeDefenseMenuOpen ? (
         <CardSelector
           heading={`Your BLOCK was CHALLENGED by ${actor?.username}`}
           subheading={`Select a card to ${isChallengeDefenseSuccessful ? 'reveal and replace' : 'lose'}`}
           cards={myself.influence || []}
           intent={isChallengeDefenseSuccessful ? 'success' : 'danger'}
           onSubmit={([cardId]) => selectCard(cardId)}
-          buttonText='Confirm'
         />
-      )}
-
-      {turn && isChallengePenaltyMenuOpen && (
+      ) : isChallengePenaltyMenuOpen ? (
         <CardSelector
-          heading={`Your CHALLENGE was unsuccessful`}
-          subheading={`Select a card to lose`}
-          cards={myself.influence || []}
-          intent='danger'
-          onSubmit={([cardId]) => selectCard(cardId)}
-          buttonText='Confirm'
-        />
-      )}
-
-      {turn && isTargetSelectionMenuOpen && (
-        <CardSelector
-          heading={`You have been ${turn.action.type}${turn.action.type === 'ASSASSINATE' ? 'D' : 'ED'} by ${actor?.username}`}
+          heading='Your CHALLENGE was unsuccessful'
           subheading='Select a card to lose'
           cards={myself.influence || []}
           intent='danger'
           onSubmit={([cardId]) => selectCard(cardId)}
-          buttonText='Confirm'
         />
-      )}
-
-      {turn && isExchangeReturnMenuOpen && (
+      ) : isTargetSelectionMenuOpen ? (
         <CardSelector
+          heading={`You have been ${turn!.action.type}${turn!.action.type === 'ASSASSINATE' ? 'D' : 'ED'} by ${actor?.username}`}
+          subheading='Select a card to lose'
+          cards={myself.influence || []}
+          intent='danger'
+          onSubmit={([cardId]) => selectCard(cardId)}
+        />
+      ) : isExchangeReturnMenuOpen ? (
+        <CardSelector
+          subheading='Select two cards to RETURN to the deck'
+          heading='EXCHANGE'
           cards={myself.influence || []}
           intent='primary'
-          heading='EXCHANGE'
-          subheading='Select two cards to RETURN to the deck'
           onSubmit={exchangeCards}
           minCards={2}
           maxCards={2}
-          buttonText='Confirm'
         />
-      )}
+      ) : null}
     </GameTable>
   )
 }
@@ -169,7 +149,9 @@ interface GameState {
   actionResponseLabel: string
 }
 
-function deriveGameState(game: Game<'client'>, turn: TurnState | null, playerId: string): GameState {
+function deriveGameState(game: Game<'client'>, playerId: string): GameState {
+  const turn = game.currentTurn
+
   const actor = game.players[game.currentPlayerIndex]
   const target = game.players.find(p => p.id === turn?.action.targetPlayerId)
   const blocker = game.players.find(p => p.id === turn?.opponentResponses?.block)
@@ -185,7 +167,8 @@ function deriveGameState(game: Game<'client'>, turn: TurnState | null, playerId:
 
   const isStartGameButtonVisible = game.status === 'WAITING' && myself?.id === game.hostId
   const isActionMenuOpen = isActor && game.status === 'IN_PROGRESS' && (!turn || !turn.action)
-  const isResponseMenuOpen = !isActor && turn?.phase === 'AWAITING_OPPONENT_RESPONSES'
+  const isResponseMenuOpen =
+    !isActor && turn?.phase === 'AWAITING_OPPONENT_RESPONSES' && !turn.respondedPlayers?.includes(myself?.id || '')
   const isBlockResponseMenuOpen = isActor && turn?.phase === 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK'
   const isChallengeDefenseMenuOpen = isActor && turn?.phase === 'AWAITING_ACTOR_DEFENSE'
   const isBlockChallengeDefenseMenuOpen = isBlocker && turn?.phase === 'AWAITING_BLOCKER_DEFENSE'

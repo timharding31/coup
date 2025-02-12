@@ -1,9 +1,9 @@
 import React from 'react'
 
 const sizeStyles = {
-  default: 'h-10 px-4 py-2',
+  default: 'h-10 px-4',
   sm: 'h-9 px-3',
-  lg: 'h-11 px-8'
+  lg: 'h-11 px-6'
 }
 
 const variantStyles = {
@@ -15,7 +15,7 @@ const variantStyles = {
 export interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   variant?: keyof typeof variantStyles
   size?: keyof typeof sizeStyles
-  error?: boolean
+  errorMessage?: string
   label?: string
 }
 
@@ -25,7 +25,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
       className = 'font-medium',
       variant = 'primary',
       size = 'default',
-      error,
+      errorMessage = null,
       label,
       type = 'text',
       required,
@@ -35,7 +35,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
   ) => {
     const baseClasses = 'w-full transition-all duration-200 focus:outline-none rounded-xl'
 
-    const errorClasses = error ? 'border-nord-11 focus:border-nord-11' : ''
+    const errorClasses = errorMessage ? 'border-nord-11 focus:border-nord-11' : ''
 
     return (
       <div className='flex flex-col gap-2'>
@@ -58,9 +58,9 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
           required={required}
           {...props}
         />
-        {error && props.id && (
-          <span className='text-nord-11 text-sm' id={`${props.id}-error`}>
-            {error}
+        {errorMessage && (
+          <span className='text-nord-11 text-base px-2' id={`${props.id || props.name}-error`}>
+            {errorMessage}
           </span>
         )}
       </div>

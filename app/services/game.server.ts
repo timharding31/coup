@@ -282,7 +282,7 @@ export class GameService implements IGameService {
       throw new Error('Failed to start game')
     }
 
-    return { game: result.snapshot.val() }
+    return { game: result.snapshot.val() as Game | null }
   }
 
   async getGame(gameId?: string | null) {

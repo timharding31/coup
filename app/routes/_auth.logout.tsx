@@ -1,20 +1,17 @@
-import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
-import { Form } from '@remix-run/react'
 import { useEffect, useRef } from 'react'
-import { Button } from '~/components/Button'
-import { TextInput } from '~/components/TextInput'
+import { Form } from '@remix-run/react'
+import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
 import { sessionService, playerService } from '~/services/index.server'
 
-export const loader: LoaderFunction = async ({ request, context }) => {
+export const loader: LoaderFunction = async ({ request }) => {
   const { playerId } = await sessionService.getPlayerSession(request)
   if (playerId) {
     await playerService.deletePlayer(playerId)
   }
-
-  return null
+  return { success: true }
 }
 
-export const action: ActionFunction = async ({ request, context }) => {
+export const action: ActionFunction = async ({ request }) => {
   // Remove session cookie on form submit
   const cookie = await sessionService.destroySession(request)
 
@@ -36,10 +33,10 @@ export default function Logout() {
   }, [])
 
   return (
-    <div className='flex flex-col items-stretch gap-4 w-full max-w-[800px] py-24 px-4 mx-auto'>
+    <div className='flex flex-col pt-16 pb-8 px-12 h-full gap-12'>
       <Form ref={formRef} method='post' className='contents'>
-        <h1 className='font-robotica text-7xl'>Goodbye</h1>
-        <p className='text-xl'>Logging you out</p>
+        <h1 className='font-robotica text-7xl'>goodbye</h1>
+        <p className='text-xl font-medium'>Logging you out...</p>
       </Form>
     </div>
   )

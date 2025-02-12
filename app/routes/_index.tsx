@@ -1,5 +1,5 @@
 import { redirect, type ActionFunction, type LoaderFunction, type MetaFunction } from '@remix-run/node'
-import { Form, Link, useLoaderData } from '@remix-run/react'
+import { Form, Link, useActionData, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { PinInput } from '~/components/PinInput'
@@ -7,10 +7,6 @@ import { PlayingCard } from '~/components/PlayingCard'
 import { TextInput } from '~/components/TextInput'
 import { gameService, playerService, sessionService } from '~/services/index.server'
 import { Card, CardType, Player } from '~/types'
-
-export const meta: MetaFunction = () => {
-  return [{ title: '' }, { name: 'description', content: '' }]
-}
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { playerId } = await sessionService.requirePlayerSession(request)
@@ -21,16 +17,18 @@ export const loader: LoaderFunction = async ({ request }) => {
   return { player }
 }
 
-export const action: ActionFunction = async ({ request, context }) => {
+export const action: ActionFunction = async ({ request }) => {
   const { playerId } = await sessionService.getPlayerSession(request)
 
   if (!playerId) {
-    return null
+    return { error: 'Player not found' }
   }
 
   const formData = await request.formData()
-  const intent = formData.get('intent')
-  let pin = ''
+
+  const intent = formData.get('intent')?.toString()
+  const pin = formData.get('pin')?.toString()
+
   let gameId: string | null = null
 
   switch (intent) {
@@ -39,7 +37,6 @@ export const action: ActionFunction = async ({ request, context }) => {
       break
 
     case 'join':
-      pin = formData.get('pin')?.toString() || ''
       if (!pin) {
         return { error: 'PIN is required' }
       }
@@ -51,11 +48,12 @@ export const action: ActionFunction = async ({ request, context }) => {
     return redirect(`/games/${gameId}`)
   }
 
-  return null
+  return { error: 'Something went wrong, please try again' }
 }
 
 export default function Index() {
   const { player } = useLoaderData<{ player: Player }>()
+  const { error: errorMessage } = useActionData<{ error?: string }>() || {}
   const [pin, setPin] = useState('')
 
   return (
@@ -64,10 +62,10 @@ export default function Index() {
 
       <p className='mt-12 text-xl font-medium'>Welcome, {player?.username}</p>
 
-      <div className='flex flex-col items-stretch mt-8 gap-4 w-full'>
+      <div className='flex flex-col items-stretch mt-12 gap-4 w-full'>
         <Form method='post' className='contents'>
           <input type='hidden' name='intent' value='create' />
-          <Button variant='secondary' type='submit'>
+          <Button variant='secondary' type='submit' size='lg'>
             Create new game
           </Button>
         </Form>
@@ -77,15 +75,15 @@ export default function Index() {
         <Form method='post'>
           <input type='hidden' name='intent' value='join' />
           <div className='flex flex-col items-stretch gap-2'>
-            <PinInput name='pin' value={pin} onChange={setPin} required />
-            <Button variant='primary' type='submit'>
+            <PinInput name='pin' value={pin} onChange={setPin} required errorMessage={errorMessage} />
+            <Button variant='primary' type='submit' size='lg'>
               Join by PIN
             </Button>
           </div>
         </Form>
       </div>
 
-      <Link to='/logout' className='mt-auto underline text-lg'>
+      <Link to='/logout' className='mt-auto underline text-base'>
         Logout
       </Link>
     </div>

@@ -9,7 +9,6 @@ import { getGameUrl } from '~/utils/url'
 
 export interface GameSocketContextType {
   game: Game<'client'>
-  turn: TurnState | null
   error: string | null
   startGame: () => void
   performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => void
@@ -35,7 +34,6 @@ export function GameSocketProvider({
   game: initialGame
 }: Omit<GameSocketProviderProps, 'socketUrl'>) {
   const [game, setGame] = useState(initialGame)
-  const [currentTurn, setCurrentTurn] = useState<TurnState | null>(initialGame?.currentTurn || null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -48,7 +46,6 @@ export function GameSocketProvider({
       const game = snapshot.val() as Game<'server'> | null
       if (game) {
         setGame(prepareGameForClient(game, playerId))
-        setCurrentTurn(game.currentTurn)
       }
     })
 
@@ -151,7 +148,6 @@ export function GameSocketProvider({
     <GameSocketContext.Provider
       value={{
         game,
-        turn: currentTurn,
         error,
         startGame,
         performTargetedAction,

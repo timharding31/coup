@@ -1,5 +1,6 @@
 import type { ActionFunction } from '@remix-run/node'
 import { gameService } from '~/services/index.server'
+import { prepareGameForClient } from '~/utils/game'
 
 export const action: ActionFunction = async ({ request, params }) => {
   if (request.method !== 'POST') {
@@ -14,7 +15,11 @@ export const action: ActionFunction = async ({ request, params }) => {
       return { error: 'Missing required fields' }
     }
 
-    return gameService.startGame(gameId, hostId)
+    const { game } = await gameService.startGame(gameId, hostId)
+
+    return {
+      game: game ? prepareGameForClient(game, hostId) : null
+    }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error' }
   }

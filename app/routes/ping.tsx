@@ -5,7 +5,3 @@ export const loader = () => {
 export const action = () => {
   return new Response('pong')
 }
-
-export default function Ping() {
-  return null
-}

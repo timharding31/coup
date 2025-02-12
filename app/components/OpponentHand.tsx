@@ -13,7 +13,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({ isCurrentPlayer = fa
 
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-2 rounded-xl transition-[scale] duration-500 ${isCurrentPlayer ? 'scale-105 outline-2 outline-offset-4 outline-nord-14 outline' : ''}`}
+      className={`flex flex-col items-center justify-center gap-2 rounded-xl duration-500 ${isCurrentPlayer ? 'outline-2 outline-offset-4 outline-nord-14 outline' : ''}`}
     >
       <PlayerNameTag {...nameTagProps} />
       <div className={`flex-auto w-full grid grid-cols-${influence.length} gap-2`}>
