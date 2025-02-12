@@ -1,6 +1,6 @@
-import { darken, lighten } from 'polished'
 import React, { useState, useEffect, useRef } from 'react'
 import { useMergedRefs } from '~/hooks/useMergedRefs'
+import cn from 'classnames'
 
 export const variantStyles = {
   // Nord
@@ -172,7 +172,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             dir={sprite == 'arrow-left' ? 'left' : 'right'}
           />
         )}
-        {children && <span className='relative font-robotica'>{children}</span>}
+        {children && (
+          <span
+            className={cn('relative font-robotica', {
+              'leading-[2.25rem]': size === 'sm',
+              'leading-[2.5rem]': size === 'default',
+              'leading-[2.75rem]': size === 'lg'
+            })}
+          >
+            {children}
+          </span>
+        )}
       </button>
     )
   }

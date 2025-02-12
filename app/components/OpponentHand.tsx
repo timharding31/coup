@@ -20,7 +20,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 }) => {
   const game = useGame()
 
-  const isPopoverOpen = isActor || isBlocker || isChallenger
+  const isPopoverOpen = game?.status === 'IN_PROGRESS' && (isActor || isBlocker || isChallenger)
   const accentColor = isActor ? 'nord-14' : isBlocker ? 'nord-13' : isChallenger ? 'nord-11' : ''
   const popoverTextColor = isChallenger ? 'nord-5' : 'nord-0'
 

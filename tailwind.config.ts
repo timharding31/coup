@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import { PluginAPI } from 'tailwindcss/types/config'
 
 const config: Config = {
   content: ['./app/**/*.{js,jsx,ts,tsx}'],
@@ -75,7 +76,7 @@ const config: Config = {
   },
   plugins: [
     require('tailwind-corner-smoothing'),
-    function ({ addBase }) {
+    function ({ addBase }: PluginAPI) {
       addBase({
         ':root': {
           '--nord-0': '#2E3440',
