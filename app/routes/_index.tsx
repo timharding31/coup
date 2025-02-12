@@ -57,7 +57,7 @@ export default function Index() {
   const [pin, setPin] = useState('')
 
   return (
-    <div className='pt-16 pb-8 px-12 flex flex-col h-full'>
+    <div className='pt-16 pb-8 px-6 flex flex-col h-full'>
       <h1 className='font-robotica text-7xl'>coup</h1>
 
       <p className='mt-12 text-xl font-medium'>Welcome, {player?.username}</p>

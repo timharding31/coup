@@ -160,7 +160,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <button
-        className={`${baseClasses} ${variantStyles[variant]} ${sizeStyles[size]} ${timeoutAt ? 'overflow-hidden' : ''} ${className} ${sprite ? 'justify-start gap-4' : 'justify-center'}`}
+        className={cn(baseClasses, variantStyles[variant], sizeStyles[size], className, {
+          'overflow-hidden': timeoutAt,
+          'justify-start gap-4': sprite,
+          'justify-center': !sprite
+        })}
         ref={useMergedRefs(forwardedRef, innerRef)}
         {...props}
       >
