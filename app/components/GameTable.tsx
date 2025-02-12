@@ -7,12 +7,14 @@ import useMeasure from 'react-use-measure'
 interface GameTableProps extends React.PropsWithChildren {
   playerId: string
   isActionMenuOpen: boolean
+  dialogNode?: React.ReactNode
 }
 
 export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
   playerId,
   isActionMenuOpen,
-  children
+  children,
+  dialogNode = null
 }) => {
   const game = useGame()
 
@@ -34,13 +36,14 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
     <>
       {children}
       <div
-        className={`p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 duration-500 transition-[brightness] ${isActionMenuOpen ? 'brightness-[50%]' : ''}`}
+        className={`relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 duration-500 transition-[brightness] ${isActionMenuOpen ? 'brightness-[50%]' : ''}`}
       >
         {opponents.map((opponent, index) => (
           <div key={opponent.id} className={`col-span-2 ${getOpponentClasses(index, opponents.length)}`}>
             <OpponentHand {...opponent} isCurrentPlayer={currentPlayer.id === opponent.id} />
           </div>
         ))}
+        {dialogNode}
       </div>
       <div
         ref={playerHandRef}

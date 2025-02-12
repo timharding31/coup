@@ -33,9 +33,9 @@ export default function Logout() {
   }, [])
 
   return (
-    <div className='flex flex-col pt-16 pb-8 px-12 h-full gap-12'>
+    <div className='flex flex-col pt-16 pb-8 px-6 h-full gap-12'>
       <Form ref={formRef} method='post' className='contents'>
-        <h1 className='font-robotica text-7xl'>goodbye</h1>
+        <h1 className='font-robotica text-7xl'>See ya</h1>
         <p className='text-xl font-medium'>Logging you out...</p>
       </Form>
     </div>

@@ -14,9 +14,6 @@ export const Header: React.FC<HeaderProps> = () => {
         <Button variant='primary' size='sm' sprite='arrow-left' />
         <h1 className='text-3xl'>coup</h1>
       </Link>
-      <div className='ml-2 text-base'>
-        pin: <strong>{game?.pin}</strong>
-      </div>
     </header>
   )
 }

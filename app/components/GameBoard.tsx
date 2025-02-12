@@ -13,6 +13,7 @@ import { GameTable } from './GameTable'
 import { Header } from './Header'
 import { ExchangeReturnControls } from './ExchangeReturnControls'
 import { CardSelector } from './CardSelector'
+import { GameLobbyControls } from './GameLobbyControls'
 
 interface GameBoardProps {
   playerId: string
@@ -47,15 +48,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
   const turn = game.currentTurn
 
   return (
-    <GameTable playerId={playerId} isActionMenuOpen={isActionMenuOpen}>
+    <GameTable
+      playerId={playerId}
+      isActionMenuOpen={isActionMenuOpen}
+      dialogNode={<GameLobbyControls game={game} playerId={playerId} startGame={startGame} />}
+    >
       <Header />
-      {isStartGameButtonVisible ? (
-        <div className='absolute z-50 top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]'>
-          <Button type='button' variant='success' onClick={startGame} disabled={game.players.length < 2}>
-            Start Game
-          </Button>
-        </div>
-      ) : isActionMenuOpen ? (
+      {isActionMenuOpen ? (
         <ActionControls targets={game.players.filter(p => p.id !== playerId)} coins={myself.coins} />
       ) : isResponseMenuOpen ? (
         <ResponseControls
