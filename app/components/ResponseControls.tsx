@@ -6,22 +6,32 @@ import { useGameSocket } from '~/hooks/socket'
 
 interface ResponseControlsProps {
   onResponse: (type: 'accept' | 'challenge' | 'block') => void
-  action: Action
+  timeoutAt: number
+  heading: string
+  subheading?: string
   availableResponses: {
     canAccept: boolean
     canChallenge: boolean
     canBlock: boolean
   }
+  label: string
 }
 
-export const ResponseControls: React.FC<ResponseControlsProps> = ({ onResponse, action, availableResponses }) => {
-  const { turn } = useGameSocket()
-
-  const opponentAction = turn?.phase === 'WAITING_FOR_BLOCK_RESPONSE' ? `BLOCK` : action.type.replace('_', ' ')
-
+export const ResponseControls: React.FC<ResponseControlsProps> = ({
+  onResponse,
+  timeoutAt,
+  heading,
+  subheading,
+  availableResponses,
+  label
+}) => {
   return (
     <Drawer defaultOpen>
-      <DrawerContent className='px-4 py-6'>
+      <DrawerContent className='p-4'>
+        <div className='px-2 mb-4'>
+          <h3 className='text-xl font-bold'>{heading}</h3>
+          {subheading && <p className='text-base'>{subheading}</p>}
+        </div>
         <div className='grid gap-4 grid-cols-1'>
           {availableResponses.canAccept && (
             <Button
@@ -29,9 +39,9 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({ onResponse, 
               variant='success'
               onClick={() => onResponse('accept')}
               sprite='check'
-              timeoutAt={turn?.timeoutAt}
+              timeoutAt={timeoutAt}
             >
-              Accept {opponentAction}
+              Accept {label}
             </Button>
           )}
           {availableResponses.canBlock && (
@@ -40,9 +50,9 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({ onResponse, 
               variant='warning'
               onClick={() => onResponse('block')}
               sprite='shield'
-              timeoutAt={turn?.timeoutAt}
+              timeoutAt={timeoutAt}
             >
-              Block {action.type.replace('_', ' ')}
+              Block {label}
             </Button>
           )}
           {availableResponses.canChallenge && (
@@ -51,9 +61,9 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({ onResponse, 
               variant='danger'
               onClick={() => onResponse('challenge')}
               sprite='challenge'
-              timeoutAt={turn?.timeoutAt}
+              timeoutAt={timeoutAt}
             >
-              Challenge {opponentAction}
+              Challenge {label}
             </Button>
           )}
         </div>

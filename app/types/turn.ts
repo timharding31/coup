@@ -1,49 +1,83 @@
 import { CardType } from './card'
 import { Game } from './game'
 
+/**
+ * Turn Phases:
+ * - ACTION_DECLARED: The active player has submitted an action.
+ * - AWAITING_OPPONENT_RESPONSES: Waiting for opponents to respond (block/challenge).
+ * - AWAITING_ACTIVE_RESPONSE_TO_BLOCK: A block was declared and the active player must decide to accept or challenge.
+ * - AWAITING_ACTOR_DEFENSE: The active player defends a direct challenge.
+ * - AWAITING_BLOCKER_DEFENSE: A blocker defends against a challenge to their block.
+ * - ACTION_EXECUTION: The action is being executed after successful defenses (or if no challenge/block occurs).
+ * - AWAITING_TARGET_SELECTION: For targeted actions—waiting for the target to choose a card to lose.
+ * - AWAITING_EXCHANGE_RETURN: For exchange actions—waiting for the active player to select which cards to return.
+ * - ACTION_FAILED: The action failed (e.g. because a block was accepted).
+ * - TURN_COMPLETE: Final state indicating end of turn.
+ */
 export const TurnPhase = {
-  WAITING_FOR_ACTION: 'WAITING_FOR_ACTION',
   ACTION_DECLARED: 'ACTION_DECLARED',
-  WAITING_FOR_REACTIONS: 'WAITING_FOR_REACTIONS',
-  BLOCK_DECLARED: 'BLOCK_DECLARED',
-  WAITING_FOR_BLOCK_RESPONSE: 'WAITING_FOR_BLOCK_RESPONSE',
-  WAITING_FOR_DEFENSE_REVEAL: 'WAITING_FOR_DEFENSE_REVEAL',
-  WAITING_FOR_CHALLENGE_PENALTY: 'WAITING_FOR_CHALLENGE_PENALTY',
-  WAITING_FOR_TARGET_REVEAL: 'WAITING_FOR_TARGET_REVEAL',
-  WAITING_FOR_EXCHANGE_RETURN: 'WAITING_FOR_EXCHANGE_RETURN',
-  ACTION_RESOLVING: 'ACTION_RESOLVING',
+  AWAITING_OPPONENT_RESPONSES: 'AWAITING_OPPONENT_RESPONSES',
+  AWAITING_ACTIVE_RESPONSE_TO_BLOCK: 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
+  AWAITING_ACTOR_DEFENSE: 'AWAITING_ACTOR_DEFENSE',
+  AWAITING_BLOCKER_DEFENSE: 'AWAITING_BLOCKER_DEFENSE',
+  AWAITING_CHALLENGE_PENALTY_SELECTION: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
+  ACTION_EXECUTION: 'ACTION_EXECUTION',
+  AWAITING_TARGET_SELECTION: 'AWAITING_TARGET_SELECTION',
+  AWAITING_EXCHANGE_RETURN: 'AWAITING_EXCHANGE_RETURN',
   ACTION_FAILED: 'ACTION_FAILED',
   TURN_COMPLETE: 'TURN_COMPLETE'
 } as const
 
 export type TurnPhase = (typeof TurnPhase)[keyof typeof TurnPhase]
 
-// Helper type to identify phases requiring user input
+// Helper type for phases that require user input.
 export type WaitingPhase = Extract<
   TurnPhase,
-  | 'WAITING_FOR_ACTION'
-  | 'WAITING_FOR_REACTIONS'
-  | 'WAITING_FOR_BLOCK_RESPONSE'
-  | 'WAITING_FOR_DEFENSE_REVEAL'
-  | 'WAITING_FOR_CHALLENGE_PENALTY'
-  | 'WAITING_FOR_TARGET_REVEAL'
+  | 'AWAITING_OPPONENT_RESPONSES'
+  | 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK'
+  | 'AWAITING_ACTOR_DEFENSE'
+  | 'AWAITING_BLOCKER_DEFENSE'
+  | 'AWAITING_CHALLENGE_PENALTY_SELECTION'
+  | 'AWAITING_TARGET_SELECTION'
+  | 'AWAITING_EXCHANGE_RETURN'
 >
 
-export interface TurnChallengeResult {
-  challengingPlayer: string
-  successful: boolean | null
-  defendingCardId: string | null // Used when challenge is unsuccessful
-  lostCardId: string | null // Used when challenge is successful
+export interface OpponentChallengeResponse {
+  block?: never
+  challenge: string
 }
 
+export interface OpponentBlockResponse {
+  block: string
+  challenge?: never
+}
+
+// Represents the result of a challenge defense.
+export interface TurnChallengeResult {
+  challengerId: string
+  defenseSuccessful: boolean | null
+  defendingCardId: string | null // Card used for defense if successful, otherwise null.
+  lostCardId: string | null
+}
+
+// Revised TurnState with improved structure:
 export interface TurnState {
   phase: TurnPhase
   action: Action
-  timeoutAt: number // Unix timestamp for timeout
-  respondedPlayers?: string[] // Players who have explicitly responded
+  timeoutAt: number // timestamp for timeout.
+  respondedPlayers?: string[] // IDs of players who have explicitly responded.
+
+  // Opponent responses (e.g., a block or a direct challenge).
+  opponentResponses: OpponentChallengeResponse | OpponentBlockResponse | null
+
+  // For challenge defenses.
   challengeResult: TurnChallengeResult | null
-  blockingPlayer: string | null
-  lostInfluenceCardId: string | null
+
+  // For targeted actions: the target's chosen card to lose.
+  targetSelection: { lostCardId: string } | null
+
+  // For exchange actions: the set of card IDs the active player chooses to return.
+  exchange: { returnCards: string[] } | null
 }
 
 export const ActionType = {
@@ -55,6 +89,7 @@ export const ActionType = {
   ASSASSINATE: 'ASSASSINATE',
   EXCHANGE: 'EXCHANGE' // Ambassador
 } as const
+
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
 interface BaseAction {
@@ -69,14 +104,15 @@ interface BaseAction {
 export type TargetedActionType = Extract<ActionType, 'STEAL' | 'ASSASSINATE' | 'COUP'>
 
 export interface TargetedAction extends BaseAction {
-  type: Extract<ActionType, 'STEAL' | 'ASSASSINATE' | 'COUP'>
+  type: TargetedActionType
   targetPlayerId: string
   autoResolve: false
 }
 
 export type UntargetedActionType = Extract<ActionType, 'INCOME' | 'FOREIGN_AID' | 'TAX' | 'EXCHANGE'>
+
 export interface UntargetedAction extends BaseAction {
-  type: Extract<ActionType, 'INCOME' | 'FOREIGN_AID' | 'TAX' | 'EXCHANGE'>
+  type: UntargetedActionType
   targetPlayerId?: never
   autoResolve: boolean
 }

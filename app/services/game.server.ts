@@ -5,7 +5,6 @@ import { PinService } from './pin.server'
 import { db } from './firebase.server'
 import { ActionService } from './action.server'
 import { DeckService } from './deck.server'
-import { ChallengeService } from './challenge.server'
 import { TurnService } from './turn.server'
 
 export interface IGameService {
@@ -17,27 +16,23 @@ export interface IGameService {
   getGameByPlayerId(playerId: string): Promise<{ game: Game | null }>
   getCurrentTurn(gameId: string): Promise<{ turn: TurnState | null }>
   startGameTurn(gameId: string, action: Action): Promise<{ game: Game | null }>
-  handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void>
-  handleActionResponse(
+  handleExchangeReturn(
+    gameId: string,
+    playerId: string,
+    exchangedCardIds: Array<string>
+  ): Promise<{ game: Game | null }>
+  handleResponse(
     gameId: string,
     playerId: string,
     response: 'accept' | 'challenge' | 'block'
   ): Promise<{ game: Game | null }>
-  handleBlockResponse(
-    gameId: string,
-    playerId: string,
-    response: 'accept' | 'challenge'
-  ): Promise<{ game: Game | null }>
   handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<{ game: Game | null }>
-  setOnGameEnded(listener: (gameId: string) => Promise<void>): void
-  setOnTurnEnded(listener: (gameId: string) => Promise<void>): void
 }
 
 export class GameService implements IGameService {
   private gamesRef: Reference = db.ref('games')
 
   private actionService: ActionService
-  private challengeService: ChallengeService
   private deckService: DeckService
   private pinService: PinService
   private playerService: PlayerService
@@ -48,23 +43,7 @@ export class GameService implements IGameService {
     this.pinService = new PinService()
     this.actionService = new ActionService(this.gamesRef)
     this.deckService = new DeckService(this.gamesRef)
-    this.challengeService = new ChallengeService(this.gamesRef, this.deckService)
-    this.turnService = new TurnService(this.gamesRef, this.actionService, this.challengeService, this.deckService)
-  }
-
-  handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]) {
-    return this.turnService.handleExchangeReturn(gameId, playerId, cardIds)
-  }
-
-  setOnGameEnded(listener: (gameId: string) => Promise<void>): void {
-    this.turnService.setOnGameEnded(async (gameId: string, winnerId?: string) => {
-      await listener(gameId)
-      await this.cleanupGame(gameId, winnerId)
-    })
-  }
-
-  setOnTurnEnded(listener: (gameId: string) => Promise<void>) {
-    this.turnService.setOnTurnEnded(listener)
+    this.turnService = new TurnService(this.gamesRef, this.actionService, this.deckService, this.cleanupGame.bind(this))
   }
 
   async createGame(hostId: string) {
@@ -93,6 +72,7 @@ export class GameService implements IGameService {
           coins: 2
         }
       ],
+      currentTurn: null,
       deck: remainingDeck,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -108,12 +88,32 @@ export class GameService implements IGameService {
     return { gameId, pin }
   }
 
-  handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'challenge' | 'block') {
-    return this.turnService.handleActionResponse(gameId, playerId, response)
-  }
+  async handleResponse(gameId: string, playerId: string, response: 'accept' | 'challenge' | 'block') {
+    const gameRef = this.gamesRef.child(gameId)
+    const game = (await gameRef.get()).val() as Game
 
-  handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge') {
-    return this.turnService.handleBlockResponse(gameId, playerId, response)
+    if (!game?.currentTurn) {
+      throw new Error('No active turn')
+    }
+
+    const turn = game.currentTurn
+
+    switch (turn.phase) {
+      case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+        if (playerId !== turn.action.playerId) {
+          throw new Error('Not your turn to respond')
+        }
+        if (response === 'block') {
+          throw new Error('Invalid response. You cannot block a block')
+        }
+        return this.turnService.handleBlockResponse(gameId, playerId, response)
+
+      case 'AWAITING_OPPONENT_RESPONSES':
+        return this.turnService.handleActionResponse(gameId, playerId, response)
+
+      default:
+        throw new Error(`Invalid phase for response: ${turn.phase}`)
+    }
   }
 
   async handleCardSelection(gameId: string, playerId: string, cardId: string) {
@@ -128,38 +128,33 @@ export class GameService implements IGameService {
 
     // Handle card selection based on current waiting phase
     switch (turn.phase) {
-      case 'WAITING_FOR_DEFENSE_REVEAL': {
-        // Handle revealing a card to defend against a challenge
-        if (!turn.challengeResult) {
-          throw new Error('No active challenge')
-        }
-
+      case 'AWAITING_ACTOR_DEFENSE': {
         // If blocking player exists, they must prove their block
         // Otherwise, the action player must prove their action
-        const expectedDefender = turn.blockingPlayer || turn.action.playerId
-        if (playerId !== expectedDefender) {
+        if (playerId !== turn.action.playerId) {
           throw new Error('Not your turn to reveal a card')
         }
-
-        await this.turnService.selectChallengeDefenseCard(gameId, playerId, cardId)
+        await this.turnService.handleChallengeDefenseCard(gameId, playerId, cardId)
         break
       }
 
-      case 'WAITING_FOR_CHALLENGE_PENALTY': {
-        // Handle revealing a card after failing a challenge
-        if (!turn.challengeResult) {
-          throw new Error('No active challenge')
-        }
-
-        if (playerId !== turn.challengeResult.challengingPlayer) {
+      case 'AWAITING_BLOCKER_DEFENSE': {
+        if (playerId !== turn.opponentResponses?.block) {
           throw new Error('Not your turn to reveal a card')
         }
-
-        await this.turnService.selectFailedChallengerCard(gameId, playerId, cardId)
+        await this.turnService.handleChallengeDefenseCard(gameId, playerId, cardId)
         break
       }
 
-      case 'WAITING_FOR_TARGET_REVEAL': {
+      case 'AWAITING_CHALLENGE_PENALTY_SELECTION': {
+        if (playerId !== turn.challengeResult?.challengerId) {
+          throw new Error('Not your turn to reveal a card')
+        }
+        await this.turnService.handleFailedChallengerCard(gameId, playerId, cardId)
+        break
+      }
+
+      case 'AWAITING_TARGET_SELECTION': {
         // Handle revealing a card when targeted by assassination or coup
         if (!turn.action.targetPlayerId) {
           throw new Error('No target player')
@@ -184,6 +179,11 @@ export class GameService implements IGameService {
     return this.getGame(gameId)
   }
 
+  async handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]) {
+    await this.turnService.handleExchangeReturn(gameId, playerId, cardIds)
+    return this.getGame(gameId)
+  }
+
   startGameTurn(gameId: string, action: Action) {
     return this.turnService.startTurn(gameId, action)
   }
@@ -205,7 +205,7 @@ export class GameService implements IGameService {
       throw new Error('Player not found')
     }
 
-    const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
       if (!game) return null
       if (game.status !== GameStatus.WAITING) return game
       if (game.players.length >= 6) return game
@@ -231,7 +231,7 @@ export class GameService implements IGameService {
   }
 
   async leaveGame(playerId: string, gameId: string) {
-    const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
       if (!game || game.status !== GameStatus.WAITING) return game
 
       const playerIndex = game.players.findIndex(p => p.id === playerId)
@@ -262,7 +262,7 @@ export class GameService implements IGameService {
   }
 
   async startGame(gameId: string, hostId: string) {
-    const result = await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
       if (!game) return null
       if (game.status !== GameStatus.WAITING) return game
       if (game.hostId !== hostId) return game

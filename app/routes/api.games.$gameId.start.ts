@@ -14,9 +14,7 @@ export const action: ActionFunction = async ({ request, params }) => {
       return { error: 'Missing required fields' }
     }
 
-    const result = await gameService.startGame(gameId, hostId)
-
-    return result
+    return gameService.startGame(gameId, hostId)
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error' }
   }

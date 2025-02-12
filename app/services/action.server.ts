@@ -1,5 +1,5 @@
 import { Reference } from 'firebase-admin/database'
-import { Action, CardType, Game, Player } from '~/types'
+import { Action, Game, Player } from '~/types'
 import { ACTION_REQUIREMENTS } from '~/utils/action'
 
 export interface IActionService {
@@ -7,6 +7,7 @@ export interface IActionService {
   resolveCoinUpdates(gameId: string, action: Action): Promise<void>
   updatePlayerCoins(gameId: string, playerId: string, amount: number): Promise<void>
   revealInfluence(gameId: string, playerId: string, cardId: string): Promise<void>
+  withRevealedInfluence(game: Game, playerId: string, revealedCardId: string): Game
 }
 
 export class ActionService implements IActionService {
@@ -51,7 +52,7 @@ export class ActionService implements IActionService {
     if (!amount) return
 
     const gameRef = this.gamesRef.child(gameId)
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game || !game.players) return game
 
       const playerIndex = game.players.findIndex(p => p.id === playerId)
@@ -111,9 +112,37 @@ export class ActionService implements IActionService {
     return player?.coins || 0
   }
 
+  withRevealedInfluence(game: Game, playerId: string, revealedCardId: string): Game {
+    const playerIndex = game.players.findIndex(p => p.id === playerId)
+    if (playerIndex === -1) {
+      console.error('Player not found')
+      return game
+    }
+
+    const cardIndex = game.players[playerIndex]!.influence.findIndex(c => c.id === revealedCardId)
+    if (cardIndex === -1) {
+      console.error('Card not found')
+      return game
+    }
+
+    if (game.players[playerIndex].influence[cardIndex].isRevealed) {
+      console.error('Card already revealed')
+      return game
+    }
+
+    const updatedPlayers = game.players.slice()
+    updatedPlayers[playerIndex].influence[cardIndex].isRevealed = true
+
+    return {
+      ...game,
+      players: updatedPlayers,
+      updatedAt: Date.now()
+    }
+  }
+
   async revealInfluence(gameId: string, playerId: string, cardId: string): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       const turn = game?.currentTurn
       if (!game || !turn || !game.players) return game
 

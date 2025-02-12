@@ -37,7 +37,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 export default function App() {
   const { ENV, svgContent } = useLoaderData<{ svgContent: string } & (typeof globalThis)['window']>()
   return (
-    <html lang='en'>
+    <html lang='en' translate='no'>
       <head>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />

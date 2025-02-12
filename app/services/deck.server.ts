@@ -48,7 +48,7 @@ export class DeckService implements IDeckService {
 
     const cardIds = new Set(cards.map(card => card.id))
 
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game) return null
 
       // Reset the card state
@@ -63,7 +63,7 @@ export class DeckService implements IDeckService {
       })
 
       // Add card to deck and shuffle
-      const updatedDeck = this.shuffleDeck([...game.deck, ...cards.map(c => ({ ...c, isRevealed: true }))])
+      const updatedDeck = this.shuffleDeck([...game.deck, ...cards.map(c => ({ ...c, isRevealed: false }))])
 
       return {
         ...game,

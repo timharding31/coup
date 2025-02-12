@@ -1,5 +1,5 @@
 import { redirect, type ActionFunction, type LoaderFunction, type MetaFunction } from '@remix-run/node'
-import { Form, useLoaderData } from '@remix-run/react'
+import { Form, Link, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { PinInput } from '~/components/PinInput'
@@ -15,6 +15,9 @@ export const meta: MetaFunction = () => {
 export const loader: LoaderFunction = async ({ request }) => {
   const { playerId } = await sessionService.requirePlayerSession(request)
   const { player } = await playerService.getPlayer(playerId)
+  if (!player?.username) {
+    throw redirect('/logout')
+  }
   return { player }
 }
 
@@ -55,21 +58,8 @@ export default function Index() {
   const { player } = useLoaderData<{ player: Player }>()
   const [pin, setPin] = useState('')
 
-  /*
-  <div className='pt-16 px-12'>
-      <h1 className='font-robotica text-7xl'>coup</h1>
-      <Form method='post' className='mt-12 flex flex-col items-stretch gap-4 w-full'>
-        <TextInput name='username' placeholder='Enter your username' required />
-        <Button variant='secondary' type='submit'>
-          Continue
-        </Button>
-      </Form>
-    </div>
-  
-  */
-
   return (
-    <div className='pt-16 px-12'>
+    <div className='pt-16 pb-8 px-12 flex flex-col h-full'>
       <h1 className='font-robotica text-7xl'>coup</h1>
 
       <p className='mt-12 text-xl font-medium'>Welcome, {player?.username}</p>
@@ -82,7 +72,7 @@ export default function Index() {
           </Button>
         </Form>
 
-        <div className='text-nord-4 text-center'>— or —</div>
+        <div className='text-nord-4 text-center text-base'>— or —</div>
 
         <Form method='post'>
           <input type='hidden' name='intent' value='join' />
@@ -94,6 +84,10 @@ export default function Index() {
           </div>
         </Form>
       </div>
+
+      <Link to='/logout' className='mt-auto underline text-lg'>
+        Logout
+      </Link>
     </div>
   )
 }

@@ -17,9 +17,9 @@ export interface Game<Context extends 'server' | 'client' = 'server'> {
   players: Player<Context>[]
   deck: Card<Context>[]
   currentPlayerIndex: number // Index of current player
-  currentTurn?: TurnState
+  currentTurn: TurnState | null
   winnerId?: string
-  createdAt: number // Unix timestamp
-  updatedAt: number // Unix timestamp
+  createdAt: number
+  updatedAt: number
   completedAt?: number
 }

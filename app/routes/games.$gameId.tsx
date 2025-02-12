@@ -30,16 +30,6 @@ export default function GameRoute() {
       <div className='h-full w-full flex flex-col items-stretch justify-between'>
         <GameBoard playerId={playerId} />
       </div>
-      {/* <GameSocketContext.Consumer>
-        {value =>
-          value?.game ? (
-            <div>
-              Game:
-              <pre>{JSON.stringify(value.game, null, 2)}</pre>
-            </div>
-          ) : null
-        }
-      </GameSocketContext.Consumer> */}
     </GameSocketProvider>
   )
 }

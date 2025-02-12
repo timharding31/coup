@@ -58,25 +58,30 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
             </div>
 
             <div className='flex justify-center gap-4 px-4'>
-              {cards.map(card => (
-                <div
-                  key={card.id}
-                  className={`relative cursor-pointer transition-transform ${
-                    selectedCardIds.includes(card.id) ? 'scale-95' : ''
-                  }`}
-                  style={{ width: `${100 / Math.min(4, cards.length)}%`, maxWidth: '180px' }}
-                  onClick={() => toggleCard(card.id)}
-                >
-                  <PlayingCard {...card} />
-                  {selectedCardIds.includes(card.id) && (
-                    <div
-                      className={`absolute inset-0 ${intent === 'primary' ? 'bg-nord-6' : intent === 'danger' ? 'bg-nord-11' : 'bg-nord-13'} rounded-lg flex items-center justify-center bg-opacity-50`}
-                    >
-                      <div className='w-8 h-8 rounded-full bg-white/90 flex items-center justify-center'>✓</div>
-                    </div>
-                  )}
-                </div>
-              ))}
+              {cards.map(card => {
+                if (card.isRevealed) {
+                  return null
+                }
+                return (
+                  <div
+                    key={card.id}
+                    className={`relative cursor-pointer transition-transform ${
+                      selectedCardIds.includes(card.id) ? 'scale-95' : ''
+                    }`}
+                    style={{ width: `${100 / Math.min(4, cards.length)}%`, maxWidth: '180px' }}
+                    onClick={() => toggleCard(card.id)}
+                  >
+                    <PlayingCard {...card} />
+                    {selectedCardIds.includes(card.id) && (
+                      <div
+                        className={`absolute inset-0 ${intent === 'primary' ? 'bg-nord-6' : intent === 'danger' ? 'bg-nord-11' : 'bg-nord-13'} rounded-lg flex items-center justify-center bg-opacity-50`}
+                      >
+                        <div className='w-8 h-8 rounded-full bg-white/90 flex items-center justify-center'>✓</div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             <Button

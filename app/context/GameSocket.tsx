@@ -34,37 +34,28 @@ export function GameSocketProvider({
   playerId,
   game: initialGame
 }: Omit<GameSocketProviderProps, 'socketUrl'>) {
-  const navigate = useNavigate()
   const [game, setGame] = useState(initialGame)
   const [currentTurn, setCurrentTurn] = useState<TurnState | null>(initialGame?.currentTurn || null)
   const [error, setError] = useState<string | null>(null)
-
-  const pathname = useLocation().pathname
 
   useEffect(() => {
     const db = getFirebaseDatabase()
     if (!db) return
 
     const gameRef = ref(db, `games/${gameId}`)
-    const turnRef = ref(db, `games/${gameId}/currentTurn`)
 
-    onValue(gameRef, snapshot => {
+    const unsubscribe = onValue(gameRef, snapshot => {
       const game = snapshot.val() as Game<'server'> | null
       if (game) {
         setGame(prepareGameForClient(game, playerId))
+        setCurrentTurn(game.currentTurn)
       }
     })
 
-    onValue(turnRef, snapshot => {
-      const turnData = snapshot.val() as TurnState | null
-      setCurrentTurn(turnData)
-    })
-
     return () => {
-      off(gameRef)
-      off(turnRef)
+      unsubscribe()
     }
-  }, [gameId, pathname, navigate])
+  }, [gameId])
 
   const performAction = async (action: any) => {
     try {
@@ -81,14 +72,16 @@ export function GameSocketProvider({
 
   const performTargetedAction = useCallback(
     (actionType: TargetedActionType, targetPlayerId: string) => {
-      performAction(getActionFromType(playerId, actionType, targetPlayerId))
+      const targetedAction = getActionFromType(playerId, actionType, targetPlayerId)
+      performAction(targetedAction)
     },
     [gameId, playerId]
   )
 
   const performUntargetedAction = useCallback(
     (actionType: UntargetedActionType) => {
-      performAction(getActionFromType(playerId, actionType, undefined))
+      const untargetedAction = getActionFromType(playerId, actionType)
+      performAction(untargetedAction)
     },
     [gameId, playerId]
   )

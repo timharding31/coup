@@ -1,7 +1,6 @@
 import { Reference } from 'firebase-admin/database'
-import { Action, CardType, Game, GameStatus, Player, TurnChallengeResult, TurnPhase, TurnState } from '~/types'
+import { Action, Card, Game, GameStatus, Player, TurnChallengeResult, TurnPhase, TurnState } from '~/types'
 import { ActionService } from './action.server'
-import { ChallengeService } from './challenge.server'
 import { VALID_TRANSITIONS, haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
 
@@ -17,10 +16,8 @@ export interface ITurnService {
     playerId: string,
     response: 'accept' | 'challenge'
   ): Promise<{ game: Game | null }>
-  selectChallengeDefenseCard(gameId: string, playerId: string, cardId: string): Promise<void>
-  selectFailedChallengerCard(gameId: string, playerId: string, cardId: string): Promise<void>
-  setOnGameEnded(listener: (gameId: string, winnerId?: string) => Promise<void>): void
-  setOnTurnEnded(listener: (gameId: string) => Promise<void>): void
+  handleChallengeDefenseCard(gameId: string, defenderId: string, cardId: string): Promise<void>
+  handleFailedChallengerCard(gameId: string, challengerId: string, cardId: string): Promise<void>
   handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void>
 }
 
@@ -29,121 +26,175 @@ export class TurnService implements ITurnService {
 
   private gamesRef: Reference
   private actionService: ActionService
-  private challengeService: ChallengeService
   private deckService: DeckService
   private activeTimers = new Map<string, NodeJS.Timeout>()
-  private onGameEnded: (gameId: string, winnerId?: string) => Promise<void> = Promise.resolve
-  private onTurnEnded: (gameId: string) => Promise<void> = Promise.resolve
+  private onGameEnded: (gameId: string, winnerId?: string) => Promise<void>
 
   constructor(
     gamesRef: Reference,
     actionService: ActionService,
-    challengeService: ChallengeService,
-    deckService: DeckService
+    deckService: DeckService,
+    onGameEnded: (gameId: string, winnerId?: string) => Promise<void>
   ) {
     this.gamesRef = gamesRef
     this.actionService = actionService
-    this.challengeService = challengeService
     this.deckService = deckService
+    this.onGameEnded = onGameEnded
   }
 
-  setOnGameEnded(listener: (gameId: string, winnerId?: string) => Promise<void>) {
-    this.onGameEnded = listener
-  }
-
-  setOnTurnEnded(listener: (gameId: string) => Promise<void>) {
-    this.onTurnEnded = listener
-  }
-
-  async selectChallengeDefenseCard(gameId: string, playerId: string, cardId: string) {
+  async handleChallengeDefenseCard(gameId: string, defenderId: string, cardId: string) {
     const gameRef = this.gamesRef.child(gameId)
-    const game = (await gameRef.get()).val() as Game
-    const turn = game.currentTurn
+    const gameSnapshot = await gameRef.get()
+    const game = gameSnapshot.val() as Game
+    const turn = game?.currentTurn
 
-    if (!game || !turn) {
-      throw new Error('Game not found')
-    }
+    let defenseSuccessful: boolean | null = null,
+      revealedCard: Card | null = null
 
-    if (turn.phase !== 'WAITING_FOR_DEFENSE_REVEAL') {
-      throw new Error('Not in defense reveal phase')
-    }
-
-    if (!turn.challengeResult) {
-      throw new Error('No active challenge')
-    }
-
-    const revealedCard = game.players.find(p => p.id === playerId)?.influence.find(c => c.id === cardId)
-
-    if (!revealedCard || revealedCard.isRevealed) {
-      throw new Error('Card not found or already revealed')
-    }
-
-    let defenseSuccessful: boolean
-
-    // Determine if the revealed card matches the required type
-    if (turn.blockingPlayer) {
-      // Blocking player must be defending actor's challenge
-      if (turn.blockingPlayer !== playerId) {
-        throw new Error("Player's block was not challenged")
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
+      if (!game || !game.currentTurn) {
+        console.error('Game not found')
+        return game
       }
 
-      switch (turn.action.type) {
-        case 'FOREIGN_AID':
-          defenseSuccessful = revealedCard.type === 'DUKE'
-          break
-        case 'ASSASSINATE':
-          defenseSuccessful = revealedCard.type === 'CONTESSA'
-          break
-        case 'STEAL':
-          defenseSuccessful = revealedCard.type === 'AMBASSADOR' || revealedCard.type === 'CAPTAIN'
-          break
-        default:
-          throw new Error('Invalid action type')
-      }
-    } else {
-      // Actor must be defending an opponent's challenge
-      if (turn.action.playerId !== playerId) {
-        throw new Error('Player was not challenged')
+      const turn = game.currentTurn
+
+      // Only allow this method when waiting for a defense reveal.
+      if (turn.phase !== 'AWAITING_ACTOR_DEFENSE' && turn.phase !== 'AWAITING_BLOCKER_DEFENSE') {
+        console.error('Not in defense reveal phase')
+        return game
       }
 
-      switch (turn.action.type) {
-        case 'ASSASSINATE':
-          defenseSuccessful = revealedCard.type === 'ASSASSIN'
-          break
-        case 'STEAL':
-          defenseSuccessful = revealedCard.type === 'CAPTAIN'
-          break
-        case 'EXCHANGE':
-          defenseSuccessful = revealedCard.type === 'AMBASSADOR'
-          break
-        case 'TAX':
-          defenseSuccessful = revealedCard.type === 'DUKE'
-          break
-        default:
-          throw new Error('Invalid action type')
+      // Ensure the proper defender is responding.
+      if (turn.phase === 'AWAITING_BLOCKER_DEFENSE' && turn.opponentResponses?.block !== defenderId) {
+        console.error("Player's block was not challenged or not the defender")
+        return game
       }
+      if (turn.phase === 'AWAITING_ACTOR_DEFENSE' && turn.action.playerId !== defenderId) {
+        console.error('Player was not challenged')
+        return game
+      }
+
+      const player = game.players.find(p => p.id === defenderId)
+      if (!player) {
+        console.error('Defender not found')
+        return game
+      }
+
+      revealedCard = player.influence.find(c => c.id === cardId) || null
+      if (!revealedCard || revealedCard.isRevealed) {
+        console.error('Card not found or already revealed')
+        return game
+      }
+
+      if (!turn.challengeResult) {
+        console.error('Challenger not recorded')
+        return game
+      }
+
+      let nextPhase: TurnPhase
+
+      // Determine what card type constitutes a successful defense.
+      if (turn.phase === 'AWAITING_BLOCKER_DEFENSE') {
+        // When defending a block challenge, compare against the card types allowed to block.
+        switch (turn.action.type) {
+          case 'FOREIGN_AID':
+            defenseSuccessful = revealedCard.type === 'DUKE'
+            break
+          case 'ASSASSINATE':
+            defenseSuccessful = revealedCard.type === 'CONTESSA'
+            break
+          case 'STEAL':
+            defenseSuccessful = revealedCard.type === 'AMBASSADOR' || revealedCard.type === 'CAPTAIN'
+            break
+          default:
+            throw new Error('Invalid action type for block defense')
+        }
+        nextPhase = defenseSuccessful ? 'AWAITING_CHALLENGE_PENALTY_SELECTION' : 'ACTION_EXECUTION'
+      } else {
+        // AWAITING_ACTOR_DEFENSE: the actor defends against a direct challenge.
+        switch (turn.action.type) {
+          case 'ASSASSINATE':
+            defenseSuccessful = revealedCard.type === 'ASSASSIN'
+            break
+          case 'STEAL':
+            defenseSuccessful = revealedCard.type === 'CAPTAIN'
+            break
+          case 'EXCHANGE':
+            defenseSuccessful = revealedCard.type === 'AMBASSADOR'
+            break
+          case 'TAX':
+            defenseSuccessful = revealedCard.type === 'DUKE'
+            break
+          default:
+            throw new Error('Invalid action type for actor defense')
+        }
+        nextPhase = defenseSuccessful ? 'AWAITING_CHALLENGE_PENALTY_SELECTION' : 'ACTION_FAILED'
+      }
+
+      const updatedPlayers = defenseSuccessful
+        ? game.players.slice()
+        : this.actionService.withRevealedInfluence(game, defenderId, cardId).players
+
+      return {
+        ...game,
+        currentTurn: {
+          ...game.currentTurn,
+          phase: nextPhase,
+          challengeResult: {
+            ...turn.challengeResult,
+            defenseSuccessful: defenseSuccessful,
+            defendingCardId: defenseSuccessful ? revealedCard.id : null,
+            lostCardId: defenseSuccessful ? null : revealedCard.id
+          }
+        },
+        players: updatedPlayers,
+        updatedAt: Date.now()
+      }
+    })
+
+    if (result.committed) {
+      if (defenseSuccessful && revealedCard) {
+        // Replace the revealed card.
+        await this.returnAndReplaceCard(gameId, defenderId, revealedCard)
+      }
+      await this.progressToNextPhase(gameId)
     }
+  }
 
-    const challengeResult = {
-      ...turn.challengeResult,
-      successful: !defenseSuccessful,
-      defendingCardId: defenseSuccessful ? revealedCard.id : null,
-      lostCardId: defenseSuccessful ? null : revealedCard.id
+  async handleFailedChallengerCard(gameId: string, challengerId: string, cardId: string) {
+    const gameRef = this.gamesRef.child(gameId)
+
+    // Update the challengeResult to record the card chosen as the penalty.
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
+      if (!game || !game.currentTurn?.challengeResult) {
+        return game
+      }
+      const turn = game.currentTurn
+      const nextPhase: TurnPhase = challengerId === turn.action.playerId ? 'ACTION_FAILED' : 'ACTION_EXECUTION'
+      const updatedPlayers = this.actionService.withRevealedInfluence(game, challengerId, cardId).players
+      return {
+        ...game,
+        currentTurn: {
+          ...game.currentTurn,
+          phase: nextPhase,
+          challengeResult: {
+            ...game.currentTurn.challengeResult,
+            lostCardId: cardId
+          }
+        },
+        players: updatedPlayers,
+        updatedAt: Date.now()
+      }
+    })
+
+    if (result.committed) {
+      await this.progressToNextPhase(gameId)
     }
-
-    await gameRef.child('currentTurn/challengeResult').set(challengeResult)
-
-    if (defenseSuccessful) {
-      await this.challengeService.returnAndReplaceCard(gameId, playerId, revealedCard)
-    } else {
-      await this.actionService.revealInfluence(gameId, playerId, cardId)
-    }
-
-    await this.progressToNextPhase(gameId)
   }
 
   private async dealExchangeCards(gameId: string, playerId: string) {
-    await this.gamesRef.child(gameId).transaction((game: Game | null) => {
+    await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
       if (!game || game.currentTurn?.action.type !== 'EXCHANGE') {
         return game
       }
@@ -154,9 +205,9 @@ export class TurnService implements ITurnService {
         ...game,
         currentTurn: {
           ...game.currentTurn,
-          timeoutAt: null,
+          timeoutAt: Date.now(),
           respondedPlayers: [],
-          phase: 'WAITING_FOR_EXCHANGE_RETURN'
+          phase: 'AWAITING_EXCHANGE_RETURN'
         },
         deck: remainingDeck,
         players: game.players.map(p => {
@@ -168,51 +219,52 @@ export class TurnService implements ITurnService {
     })
   }
 
-  async handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]) {
+  async handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
-    const game = (await gameRef.get()).val() as Game
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
+      if (!game || !game.currentTurn || game.currentTurn.action.type !== 'EXCHANGE') return game
 
-    const cardsToReturn = game.players.find(p => p.id === playerId)?.influence.filter(c => cardIds.includes(c.id))
+      const player = game.players.find(p => p.id === playerId)
+      const exchangedCards = player?.influence.filter(c => cardIds.includes(c.id)) || []
 
-    if (!cardsToReturn?.length) {
-      throw new Error('No cards to return')
-    }
+      if (exchangedCards.length !== 2) return game
 
-    await this.deckService.returnCardsToDeck(gameId, ...cardsToReturn)
+      // Update player's cards and return selected cards to deck
+      const updatedPlayers = game.players.map(p => {
+        if (p.id !== playerId) return p
+        return {
+          ...p,
+          influence: p.influence.filter(c => !cardIds.includes(c.id))
+        }
+      })
 
-    await this.progressToNextPhase(gameId)
-  }
-
-  async selectFailedChallengerCard(gameId: string, playerId: string, cardId: string) {
-    // First, ensure the lostCardId is tracked
-    const gameRef = this.gamesRef.child(gameId)
-    await gameRef.transaction((game: Game | null) => {
-      if (!game || !game.currentTurn?.challengeResult) return game
       return {
         ...game,
+        players: updatedPlayers,
+        deck: game.deck.concat(exchangedCards.map(c => ({ ...c, isRevealed: false }))),
         currentTurn: {
           ...game.currentTurn,
-          challengeResult: {
-            ...game.currentTurn.challengeResult,
-            lostCardId: cardId
-          }
-        }
+          phase: 'TURN_COMPLETE',
+          exchange: { returnCards: cardIds }
+        },
+        updatedAt: Date.now()
       }
     })
-    // Then reveal the lostCardId and progress to next phase
-    await this.actionService.revealInfluence(gameId, playerId, cardId)
-    await this.progressToNextPhase(gameId)
+
+    if (result.committed) {
+      await this.progressToNextPhase(gameId)
+    }
   }
 
   async selectCardToLose(gameId: string, playerId: string, cardId: string): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
 
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game || !game.currentTurn) return game
 
-      // Validate the card belongs to the player
+      const turn = game.currentTurn
       const player = game.players.find(p => p.id === playerId)
-      if (!player) return game
+      if (!player || turn.action.targetPlayerId !== playerId) return game
 
       const card = player.influence.find(c => c.id === cardId)
       if (!card || card.isRevealed) return game
@@ -220,18 +272,32 @@ export class TurnService implements ITurnService {
       return {
         ...game,
         currentTurn: {
-          ...game.currentTurn,
-          lostInfluenceCardId: cardId
+          ...turn,
+          phase: 'TURN_COMPLETE',
+          targetSelection: {
+            lostCardId: cardId
+          }
         },
+        players: game.players.map(p => {
+          if (p.id !== playerId) return p
+          return {
+            ...p,
+            influence: p.influence.map(c => {
+              if (c.id !== cardId) return c
+              return {
+                ...c,
+                isRevealed: true
+              }
+            })
+          }
+        }),
         updatedAt: Date.now()
       }
     })
 
-    if (!result.committed) {
-      throw new Error('Failed to select card to lose')
+    if (result.committed) {
+      await this.progressToNextPhase(gameId)
     }
-
-    await this.progressToNextPhase(gameId)
   }
 
   async startTurn(gameId: string, action: Action) {
@@ -239,7 +305,7 @@ export class TurnService implements ITurnService {
 
     let timeoutAt: number | null = null
 
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game || (game.currentTurn && !this.isTurnComplete(game.currentTurn))) {
         return game
       }
@@ -257,9 +323,10 @@ export class TurnService implements ITurnService {
           action,
           timeoutAt: Date.now(),
           respondedPlayers: [],
+          opponentResponses: null,
           challengeResult: null,
-          blockingPlayer: null,
-          lostInfluenceCardId: null
+          targetSelection: null,
+          exchange: null
         }
         return {
           ...game,
@@ -275,9 +342,10 @@ export class TurnService implements ITurnService {
         action,
         timeoutAt,
         respondedPlayers: [],
+        opponentResponses: null,
         challengeResult: null,
-        blockingPlayer: null,
-        lostInfluenceCardId: null
+        targetSelection: null,
+        exchange: null
       }
 
       return {
@@ -309,45 +377,27 @@ export class TurnService implements ITurnService {
   async handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'block' | 'challenge') {
     const gameRef = this.gamesRef.child(gameId)
 
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game?.currentTurn) return game
       const turn = game.currentTurn
 
-      // Validate response is allowed
-      if (turn.phase !== 'WAITING_FOR_REACTIONS') return game
+      if (turn.phase !== 'AWAITING_OPPONENT_RESPONSES') return game
       if (turn.action.playerId === playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
-      const respondedPlayers = turn.respondedPlayers?.slice() || []
-      const updatedTurn = {
-        ...turn,
-        respondedPlayers: respondedPlayers.concat(playerId)
-      }
+      const updatedTurn = { ...turn, respondedPlayers: (turn.respondedPlayers || []).concat(playerId) }
 
-      switch (response) {
-        case 'accept':
-          if (haveAllPlayersResponded(game, updatedTurn)) {
-            updatedTurn.phase = 'ACTION_RESOLVING'
-          }
-          break
-
-        case 'block':
-          if (!turn.action.canBeBlocked) return game
-          updatedTurn.phase = 'BLOCK_DECLARED'
-          updatedTurn.blockingPlayer = playerId
-          updatedTurn.respondedPlayers = [] // Reset for new phase
-          break
-
-        case 'challenge':
-          if (!turn.action.canBeChallenged) return game
-          updatedTurn.phase = 'WAITING_FOR_DEFENSE_REVEAL'
-          updatedTurn.challengeResult = {
-            challengingPlayer: playerId,
-            successful: null,
-            defendingCardId: null,
-            lostCardId: null
-          }
-          break
+      // Record opponent response.
+      if (response === 'block') {
+        updatedTurn.opponentResponses = { block: playerId }
+      } else if (response === 'challenge') {
+        updatedTurn.opponentResponses = { challenge: playerId }
+        updatedTurn.challengeResult = {
+          challengerId: playerId,
+          defenseSuccessful: null,
+          defendingCardId: null,
+          lostCardId: null
+        }
       }
 
       return {
@@ -361,6 +411,9 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle action response')
     }
 
+    // Progress phase based on responses.
+    // If a block is recorded, transition to AWAITING_ACTIVE_RESPONSE_TO_BLOCK.
+    // If a challenge is recorded, transition to AWAITING_ACTOR_DEFENSE.
     await this.progressToNextPhase(gameId)
 
     return { game: result.snapshot.val() as Game | null }
@@ -369,35 +422,32 @@ export class TurnService implements ITurnService {
   async handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge') {
     const gameRef = this.gamesRef.child(gameId)
 
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game?.currentTurn) return game
       const turn = game.currentTurn
 
-      // Validate response is allowed
-      if (turn.phase !== 'WAITING_FOR_BLOCK_RESPONSE') return game
+      // Only allow active player's response when waiting for their decision.
+      if (turn.phase !== 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK') return game
       if (playerId !== turn.action.playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
-      const respondedPlayers = turn.respondedPlayers?.slice() || []
       const updatedTurn = {
         ...turn,
-        respondedPlayers: respondedPlayers.concat(playerId)
+        respondedPlayers: (turn.respondedPlayers || []).concat(playerId)
       }
 
-      switch (response) {
-        case 'accept':
-          updatedTurn.phase = 'ACTION_FAILED'
-          break
-
-        case 'challenge':
-          updatedTurn.phase = 'WAITING_FOR_DEFENSE_REVEAL'
-          updatedTurn.challengeResult = {
-            challengingPlayer: playerId,
-            successful: null,
-            defendingCardId: null,
-            lostCardId: null
-          }
-          break
+      if (response === 'accept') {
+        // Accepting the block: action fails.
+        updatedTurn.phase = 'ACTION_FAILED'
+      } else if (response === 'challenge') {
+        // Challenging the block sets the phase so that the blocker must now defend.
+        updatedTurn.phase = 'AWAITING_BLOCKER_DEFENSE'
+        updatedTurn.challengeResult = {
+          challengerId: playerId,
+          defenseSuccessful: null,
+          defendingCardId: null,
+          lostCardId: null
+        }
       }
 
       return {
@@ -420,12 +470,12 @@ export class TurnService implements ITurnService {
   private async handleTimeout(gameId: string) {
     const gameRef = this.gamesRef.child(gameId)
 
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game?.currentTurn) return game
       const turn = game.currentTurn
 
       // Only handle timeouts for reaction phases
-      if (turn.phase !== 'WAITING_FOR_REACTIONS' && turn.phase !== 'WAITING_FOR_BLOCK_RESPONSE') {
+      if (turn.phase !== 'AWAITING_OPPONENT_RESPONSES' && turn.phase !== 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK') {
         return game
       }
 
@@ -455,14 +505,10 @@ export class TurnService implements ITurnService {
       updatedTurn.respondedPlayers = respondedPlayers.concat(nonRespondedPlayers)
 
       // Progress the phase if everyone has now responded
-      if (turn.phase === 'WAITING_FOR_REACTIONS') {
-        if (haveAllPlayersResponded(game, updatedTurn)) {
-          updatedTurn.phase = 'ACTION_RESOLVING'
-        }
-      } else if (turn.phase === 'WAITING_FOR_BLOCK_RESPONSE') {
-        if (haveAllPlayersResponded(game, updatedTurn)) {
-          updatedTurn.phase = 'ACTION_FAILED'
-        }
+      if (turn.phase === 'AWAITING_OPPONENT_RESPONSES' && haveAllPlayersResponded(game, updatedTurn)) {
+        updatedTurn.phase = 'ACTION_EXECUTION'
+      } else if (turn.phase === 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK') {
+        updatedTurn.phase = 'ACTION_FAILED'
       }
 
       return {
@@ -531,97 +577,59 @@ export class TurnService implements ITurnService {
   }
 
   private async progressToNextPhase(gameId: string): Promise<void> {
-    const game = (await this.gamesRef.child(gameId).get()).val() as Game
-    if (!game?.currentTurn) return
-
+    const gameSnapshot = await this.gamesRef.child(gameId).get()
+    const game = gameSnapshot.val() as Game
+    if (!game?.currentTurn) {
+      return
+    }
     const currentPhase = game.currentTurn.phase
-
-    // if (this.isWaitingPhase(currentPhase)) {
-    //   const remainingTime = game.currentTurn.timeoutAt - Date.now()
-    //   this.startTimer(gameId, remainingTime)
-    // }
 
     switch (currentPhase) {
       case 'ACTION_DECLARED':
-        if (game.currentTurn.action.autoResolve) {
-          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
-          await this.resolveAction(gameId, game.currentTurn.action)
-          await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
-        } else if (game.currentTurn.action.canBeBlocked || game.currentTurn.action.canBeChallenged) {
-          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_REACTIONS')
+        if (game.currentTurn.action.canBeBlocked || game.currentTurn.action.canBeChallenged) {
+          await this.transitionState(gameId, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
         } else {
-          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
-          await this.progressToNextPhase(gameId)
-          return
+          await this.transitionState(gameId, currentPhase, 'ACTION_EXECUTION')
+          await this.resolveAction(gameId, game.currentTurn.action)
         }
         break
 
-      case 'WAITING_FOR_REACTIONS':
-        if (game.currentTurn.blockingPlayer) {
-          await this.transitionState(gameId, currentPhase, 'BLOCK_DECLARED')
-        } else if (game.currentTurn.challengeResult) {
-          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_DEFENSE_REVEAL')
+      case 'AWAITING_OPPONENT_RESPONSES':
+        // If a block was recorded, let the active player decide how to respond.
+        if (game.currentTurn.opponentResponses?.block) {
+          await this.transitionState(gameId, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
+        } else if (game.currentTurn.opponentResponses?.challenge) {
+          // A direct challenge: actor must defend.
+          await this.transitionState(gameId, currentPhase, 'AWAITING_ACTOR_DEFENSE')
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
-          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
+          await this.transitionState(gameId, currentPhase, 'ACTION_EXECUTION')
           await this.resolveAction(gameId, game.currentTurn.action)
-          if (game.currentTurn.action.type !== 'EXCHANGE') {
-            await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
-          }
         }
         break
 
-      case 'BLOCK_DECLARED':
-        await this.transitionState(gameId, currentPhase, 'WAITING_FOR_BLOCK_RESPONSE')
+      case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+        // Waiting for the active player's decision via handleBlockResponse.
         break
 
-      case 'WAITING_FOR_BLOCK_RESPONSE':
-        if (game.currentTurn.challengeResult) {
-          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_DEFENSE_REVEAL')
-        } else if (haveAllPlayersResponded(game, game.currentTurn)) {
-          await this.transitionState(gameId, currentPhase, 'ACTION_FAILED')
-          await this.transitionState(gameId, 'ACTION_FAILED', 'TURN_COMPLETE')
-        }
+      case 'AWAITING_ACTOR_DEFENSE':
+      case 'AWAITING_BLOCKER_DEFENSE':
+        // Waiting for the defender to select and reveal a card.
         break
 
-      case 'WAITING_FOR_DEFENSE_REVEAL':
-        if (!game.currentTurn.challengeResult) break
-
-        if (game.currentTurn.challengeResult.defendingCardId) {
-          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_CHALLENGE_PENALTY')
-        } else if (game.currentTurn.challengeResult.lostCardId) {
-          await this.transitionState(gameId, currentPhase, 'ACTION_FAILED')
-          await this.transitionState(gameId, 'ACTION_FAILED', 'TURN_COMPLETE')
-        }
+      case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
+        // Waiting for failed challenger to select card.
         break
 
-      case 'WAITING_FOR_CHALLENGE_PENALTY':
-        if (game.currentTurn.challengeResult?.lostCardId) {
-          await this.transitionState(gameId, currentPhase, 'ACTION_RESOLVING')
-          await this.resolveAction(gameId, game.currentTurn.action)
-          await this.transitionState(gameId, 'ACTION_RESOLVING', 'TURN_COMPLETE')
-        }
+      case 'ACTION_EXECUTION':
+        await this.resolveAction(gameId, game.currentTurn.action)
         break
 
-      case 'ACTION_RESOLVING':
-        if (['ASSASSINATE', 'COUP'].includes(game.currentTurn.action.type)) {
-          await this.transitionState(gameId, currentPhase, 'WAITING_FOR_TARGET_REVEAL')
-        } else if (game.currentTurn.action.type === 'EXCHANGE') {
-          await this.dealExchangeCards(gameId, game.currentTurn.action.playerId)
-        } else {
-          await this.resolveAction(gameId, game.currentTurn.action)
-          await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
-        }
+      case 'AWAITING_TARGET_SELECTION':
+        // Waiting for the target to select a card to lose (handled via selectCardToLose).
         break
 
-      case 'WAITING_FOR_TARGET_REVEAL':
-        if (game.currentTurn.lostInfluenceCardId) {
-          await this.resolveAction(gameId, game.currentTurn.action)
-          await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
-        }
-        break
-
-      case 'WAITING_FOR_EXCHANGE_RETURN':
-        await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
+      case 'AWAITING_EXCHANGE_RETURN':
+        // Waiting for the active player to select cards to return (handled via handleExchangeReturn).
         break
 
       case 'ACTION_FAILED':
@@ -639,7 +647,7 @@ export class TurnService implements ITurnService {
 
     const gameRef = this.gamesRef.child(gameId)
 
-    const result = await gameRef.transaction((game: Game | null) => {
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game) return null
 
       const nextPlayerIndex = this.getNextPlayerIndex(game)
@@ -654,8 +662,6 @@ export class TurnService implements ITurnService {
 
     const game = result.committed && (result.snapshot.val() as Game)
     if (game) {
-      // Execute onTurnEnded callback
-      await this.onTurnEnded(gameId)
       // Check game completion
       await this.checkGameStatus(game)
     }
@@ -693,13 +699,20 @@ export class TurnService implements ITurnService {
     // Apply coin effects
     await this.actionService.resolveCoinUpdates(gameId, action)
 
-    // Apply influence effects if targeted action succeeded
-    if (turn.action.targetPlayerId && turn.lostInfluenceCardId) {
-      await this.actionService.revealInfluence(gameId, turn.action.targetPlayerId, turn.lostInfluenceCardId)
-    }
+    switch (action.type) {
+      case 'EXCHANGE':
+        await this.dealExchangeCards(gameId, action.playerId)
+        await this.transitionState(gameId, turn.phase, 'AWAITING_EXCHANGE_RETURN')
+        break
 
-    if (action.type === 'EXCHANGE') {
-      await this.dealExchangeCards(gameId, action.playerId)
+      case 'COUP':
+      case 'ASSASSINATE':
+        await this.transitionState(gameId, turn.phase, 'AWAITING_TARGET_SELECTION')
+        break
+
+      default:
+        await this.transitionState(gameId, turn.phase, 'TURN_COMPLETE')
+        break
     }
   }
 
@@ -715,5 +728,48 @@ export class TurnService implements ITurnService {
 
   private isTurnComplete(turn: TurnState): boolean {
     return turn.phase === 'TURN_COMPLETE'
+  }
+
+  async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<void> {
+    // Return card to deck
+    const newDeck = await this.deckService.returnCardsToDeck(gameId, card)
+
+    // Then draw a new card for the player
+    const [dealtCards, remainingDeck] = this.deckService.dealCards(newDeck, 1)
+
+    // Update the game state
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
+      if (!game || !game.currentTurn) return game
+
+      const updatedPlayers = game.players.map(p => {
+        if (p.id !== playerId) return p
+        return {
+          ...p,
+          influence: p.influence.concat(dealtCards)
+        }
+      })
+
+      return {
+        ...game,
+        deck: remainingDeck,
+        players: updatedPlayers,
+        updatedAt: Date.now()
+      }
+    })
+
+    if (!result.committed) {
+      throw new Error('Failed to return and replace card')
+    }
+  }
+
+  private async updateGameState(gameId: string, updateFn: (game: Game) => Partial<Game>) {
+    return this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
+      if (!game) return game
+      return {
+        ...game,
+        ...updateFn(game),
+        updatedAt: Date.now()
+      }
+    })
   }
 }
