@@ -13,6 +13,7 @@ interface CardSelectorProps {
   intent?: Extract<ButtonProps['variant'], 'danger' | 'success' | 'primary'>
   minCards?: number
   maxCards?: number
+  selectedCardIds?: string[]
 }
 
 export const CardSelector: React.FC<CardSelectorProps> = ({
@@ -22,9 +23,10 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
   onSubmit,
   intent = 'primary',
   minCards = 1,
-  maxCards = 1
+  maxCards = 1,
+  selectedCardIds: initialSelectedCardIds = []
 }) => {
-  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([])
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>(initialSelectedCardIds)
 
   const toggleCard = (cardId: string) => {
     setSelectedCardIds(prev => {
@@ -32,9 +34,9 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
         return prev.filter(id => id !== cardId)
       }
       if (prev.length >= maxCards) {
-        return prev
+        return prev.concat(cardId).slice(1)
       }
-      return [...prev, cardId]
+      return prev.concat(cardId)
     })
   }
 

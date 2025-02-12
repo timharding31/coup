@@ -12,3 +12,8 @@ export function useGameSocket() {
 export function useGame() {
   return useContext(GameSocketContext)?.game || null
 }
+
+export function usePlayers() {
+  const { myself, actor, target, blocker, challenger } = useContext(GameSocketContext) || {}
+  return { myself, actor, target, blocker, challenger }
+}

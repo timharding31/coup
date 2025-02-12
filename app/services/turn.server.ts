@@ -377,6 +377,8 @@ export class TurnService implements ITurnService {
   async handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'block' | 'challenge') {
     const gameRef = this.gamesRef.child(gameId)
 
+    let timeoutAt: number | null = null
+
     const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game?.currentTurn) return game
       const turn = game.currentTurn
@@ -385,11 +387,17 @@ export class TurnService implements ITurnService {
       if (turn.action.playerId === playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
-      const updatedTurn = { ...turn, respondedPlayers: (turn.respondedPlayers || []).concat(playerId) }
+      const updatedTurn: TurnState = {
+        ...turn,
+        timeoutAt: Date.now(),
+        respondedPlayers: (turn.respondedPlayers || []).concat(playerId)
+      }
 
       // Record opponent response.
       if (response === 'block') {
         updatedTurn.opponentResponses = { block: playerId }
+        timeoutAt = Date.now() + this.RESPONSE_TIMEOUT
+        updatedTurn.timeoutAt = timeoutAt
       } else if (response === 'challenge') {
         updatedTurn.opponentResponses = { challenge: playerId }
         updatedTurn.challengeResult = {
@@ -409,6 +417,10 @@ export class TurnService implements ITurnService {
 
     if (!result.committed) {
       throw new Error('Failed to handle action response')
+    }
+
+    if (timeoutAt && timeoutAt > Date.now()) {
+      this.startTimer(gameId, timeoutAt - Date.now())
     }
 
     // Progress phase based on responses.
@@ -431,7 +443,7 @@ export class TurnService implements ITurnService {
       if (playerId !== turn.action.playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
-      const updatedTurn = {
+      const updatedTurn: TurnState = {
         ...turn,
         respondedPlayers: (turn.respondedPlayers || []).concat(playerId)
       }
@@ -573,7 +585,7 @@ export class TurnService implements ITurnService {
   }
 
   private isWaitingPhase(phase: TurnPhase): boolean {
-    return ['WAITING_FOR_REACTIONS', 'WAITING_FOR_BLOCK_RESPONSE'].includes(phase)
+    return ['AWAITING_OPPONENT_RESPONSES', 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK'].includes(phase)
   }
 
   private async progressToNextPhase(gameId: string): Promise<void> {

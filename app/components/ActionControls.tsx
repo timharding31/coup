@@ -2,8 +2,10 @@ import React, { useState } from 'react'
 import { useGameSocket } from '~/hooks/socket'
 import type { Player, TargetedActionType } from '~/types'
 import { Button } from './Button'
-import { Drawer, DrawerContent, DrawerTrigger } from './Drawer'
-import { AnimatePresence, motion } from 'framer-motion'
+import { Drawer, DrawerContent } from './Drawer'
+import cn from 'classnames'
+
+const SHARED_STYLES = 'transition-transform duration-200 ease-in-out w-full grid gap-4 grid-cols-1'
 
 interface ActionControlsProps {
   targets: Player<'client'>[]
@@ -20,45 +22,12 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
       <DrawerContent className='p-4'>
         <div className='relative overflow-x-hidden'>
           <div
-            className={`transition-transform duration-200 ease-in-out absolute top-0 left-0 w-full grid gap-4 grid-cols-1 ${targetedAction ? 'translate-x-0' : 'translate-x-[100%]'}`}
-          >
-            <div className='flex items-center mb-4'>
-              <Button
-                variant='primary'
-                size='sm'
-                sprite='arrow-left'
-                onClick={() => setTargetedAction(undefined)}
-                className='mr-2'
-              />
-              <div className='text-lg font-bold'>
-                {targetedAction}
-                {targetedAction === 'STEAL' ? ' from' : ''} which player?
-              </div>
-            </div>
-            <div className='grid gap-4 grid-cols-1'>
-              {targets.map(target => (
-                <Button
-                  key={`target-${target.id}`}
-                  size='lg'
-                  variant='secondary'
-                  className='w-full'
-                  onClick={() => {
-                    if (targetedAction) {
-                      performTargetedAction(targetedAction, target.id)
-                    }
-                  }}
-                >
-                  {target.username} ({target.coins} coins)
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div
-            className={`transition-transform duration-200 ease-in-out grid gap-4 grid-cols-1 ${targetedAction ? 'translate-x-[-100%]' : 'translate-x-0'}`}
+            className={cn(SHARED_STYLES, {
+              'translate-x-[-100%]': targetedAction
+            })}
           >
             <div className='px-2'>
-              <h3 className='text-xl font-bold'>It's your turn</h3>
+              <h3 className='text-xl'>It's your turn</h3>
               <p className='text-base'>Select an available action:</p>
             </div>
 
@@ -131,6 +100,43 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
             >
               COUP
             </Button>
+          </div>
+
+          <div
+            className={cn(SHARED_STYLES, 'absolute top-0 left-0 right-0', {
+              'translate-x-[100%]': !targetedAction
+            })}
+          >
+            <div className='flex items-center mb-4'>
+              <Button
+                variant='primary'
+                size='sm'
+                sprite='arrow-left'
+                onClick={() => setTargetedAction(undefined)}
+                className='mr-2'
+              />
+              <h3 className='text-xl'>
+                {targetedAction}
+                {targetedAction === 'STEAL' ? ' from' : ''} which player?
+              </h3>
+            </div>
+            <div className='grid gap-4 grid-cols-1'>
+              {targets.map(target => (
+                <Button
+                  key={`target-${target.id}`}
+                  size='lg'
+                  variant='secondary'
+                  className='w-full'
+                  onClick={() => {
+                    if (targetedAction) {
+                      performTargetedAction(targetedAction, target.id)
+                    }
+                  }}
+                >
+                  {target.username} ({target.coins} coins)
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
       </DrawerContent>

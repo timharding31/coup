@@ -1,11 +1,10 @@
-import { createContext, useEffect, useCallback, useState } from 'react'
-import { useLocation, useMatches, useNavigate } from '@remix-run/react'
-import { ref, onValue, off } from 'firebase/database'
-import type { Game, TargetedActionType, UntargetedActionType, TurnState } from '~/types'
+import { createContext, useEffect, useCallback, useState, useMemo } from 'react'
+import { redirect } from '@remix-run/react'
+import { ref, onValue } from 'firebase/database'
+import type { Game, TargetedActionType, UntargetedActionType, Player } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { prepareGameForClient } from '~/utils/game'
-import { getGameUrl } from '~/utils/url'
 
 export interface GameSocketContextType {
   game: Game<'client'>
@@ -16,6 +15,11 @@ export interface GameSocketContextType {
   selectCard: (cardId: string) => void
   sendResponse: (response: 'accept' | 'challenge' | 'block') => void
   exchangeCards: (selectedCardIds: string[]) => void
+  myself: Player<'client'>
+  actor: Player<'client'>
+  blocker?: Player<'client'>
+  challenger?: Player<'client'>
+  target?: Player<'client'>
 }
 
 interface GameSocketProviderProps extends React.PropsWithChildren {
@@ -144,6 +148,29 @@ export function GameSocketProvider({
     [gameId, playerId]
   )
 
+  const actor = useMemo(() => game.players[game.currentPlayerIndex], [game.players, game.currentPlayerIndex])
+
+  const myself = useMemo(() => game.players.find(p => p.id === playerId), [game.players, playerId])
+
+  const blocker = useMemo(
+    () => game.players.find(p => p.id === game.currentTurn?.opponentResponses?.block),
+    [game.players, game.currentTurn?.opponentResponses]
+  )
+
+  const challenger = useMemo(
+    () => game.players.find(p => p.id === game.currentTurn?.challengeResult?.challengerId),
+    [game.players, game.currentTurn?.challengeResult]
+  )
+
+  const target = useMemo(
+    () => game.players.find(p => p.id === game.currentTurn?.action.targetPlayerId),
+    [game.players, game.currentTurn?.action]
+  )
+
+  if (!myself) {
+    throw redirect('/')
+  }
+
   return (
     <GameSocketContext.Provider
       value={{
@@ -154,7 +181,12 @@ export function GameSocketProvider({
         performUntargetedAction,
         sendResponse,
         selectCard,
-        exchangeCards
+        exchangeCards,
+        myself,
+        actor,
+        blocker,
+        challenger,
+        target
       }}
     >
       {children}

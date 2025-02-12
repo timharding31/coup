@@ -1,30 +1,23 @@
 import React from 'react'
-import { useGame } from '~/hooks/socket'
+import { useGame, usePlayers } from '~/hooks/socket'
 import { OpponentHand } from './OpponentHand'
 import { PlayerHand } from './PlayerHand'
 import useMeasure from 'react-use-measure'
 import { Player } from '~/types'
+import { Header } from './Header'
 
 interface GameTableProps extends React.PropsWithChildren {
   playerId: string
   isActionMenuOpen: boolean
-  dialogNode?: React.ReactNode
-  actor?: Player<'client'>
-  blocker?: Player<'client'>
-  challenger?: Player<'client'>
-  target?: Player<'client'>
 }
 
 export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
   playerId,
   isActionMenuOpen,
-  children,
-  dialogNode = null,
-  actor,
-  blocker,
-  challenger
+  children
 }) => {
   const game = useGame()
+  const { actor, blocker, challenger } = usePlayers()
 
   if (!game) return null
 
@@ -41,7 +34,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
 
   return (
     <>
-      {children}
+      <Header />
       <div
         className={`relative p-2 pt-8 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 duration-500 transition-[brightness]${isActionMenuOpen ? ' brightness-[50%]' : ''}`}
       >
@@ -55,7 +48,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
             />
           </div>
         ))}
-        {dialogNode}
+        {children}
       </div>
       <div
         ref={playerHandRef}
