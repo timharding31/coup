@@ -1,5 +1,5 @@
 import { Reference } from 'firebase-admin/database'
-import { Action, Card, Game, GameStatus, Player, TurnChallengeResult, TurnPhase, TurnState } from '~/types'
+import { Action, Card, Game, GameStatus, Player, TurnPhase, TurnState } from '~/types'
 import { ActionService } from './action.server'
 import { VALID_TRANSITIONS, haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'

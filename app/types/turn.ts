@@ -99,6 +99,10 @@ interface BaseAction {
   blockableBy: CardType[]
   canBeChallenged: boolean
   coinCost: number
+  verb: {
+    present: string
+    past: string
+  }
 }
 
 export type TargetedActionType = Extract<ActionType, 'STEAL' | 'ASSASSINATE' | 'COUP'>

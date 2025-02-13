@@ -36,7 +36,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
     <>
       <Header />
       <div
-        className={`relative p-2 pt-8 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 duration-500 transition-[brightness]${isActionMenuOpen ? ' brightness-[50%]' : ''}`}
+        className={`relative p-2 pt-10 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 duration-500 transition-[brightness]${isActionMenuOpen ? ' brightness-[50%]' : ''}`}
       >
         {opponents.map((opponent, index) => (
           <div key={opponent.id} className={`col-span-2 ${getOpponentClasses(index, opponents.length)}`}>

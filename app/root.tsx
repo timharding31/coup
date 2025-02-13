@@ -2,6 +2,8 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '
 import type { LinksFunction, LoaderFunction } from '@remix-run/node'
 import fonts from './styles/fonts.css?url'
 import tailwind from './tailwind.css?url'
+import { Slide, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: tailwind },
@@ -60,6 +62,17 @@ export default function App() {
           dangerouslySetInnerHTML={{
             __html: `window.ENV = ${JSON.stringify(ENV)}`
           }}
+        />
+        <ToastContainer
+          position='top-center'
+          autoClose={30_000}
+          hideProgressBar={true}
+          closeOnClick={true}
+          pauseOnHover={true}
+          draggable={true}
+          transition={Slide}
+          toastClassName='bg-nord-0 px-8 py-0 nord-shadow border-b border-nord-6'
+          className='absolute top-0 left-0 right-0 z-51'
         />
       </body>
     </html>

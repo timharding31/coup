@@ -11,4 +11,5 @@ export interface Card<Context extends 'server' | 'client' = 'server'> {
   id: string
   type: Context extends 'server' ? CardType : CardType | null
   isRevealed?: boolean
+  isChallengeDefenseCard?: boolean
 }

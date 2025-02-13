@@ -42,14 +42,22 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: false,
     canBeChallenged: false,
     autoResolve: true,
-    blockableBy: []
+    blockableBy: [],
+    verb: {
+      present: 'takes INCOME',
+      past: 'took INCOME'
+    }
   },
   FOREIGN_AID: {
     coinCost: 0,
     canBeBlocked: true,
     canBeChallenged: false,
     autoResolve: false,
-    blockableBy: [CardType.DUKE]
+    blockableBy: [CardType.DUKE],
+    verb: {
+      present: 'takes FOREIGN AID',
+      past: 'took FOREIGN AID'
+    }
   },
   TAX: {
     coinCost: 0,
@@ -57,7 +65,11 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: false,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: []
+    blockableBy: [],
+    verb: {
+      present: 'collects TAX',
+      past: 'collected TAX'
+    }
   },
   STEAL: {
     coinCost: 0,
@@ -65,7 +77,11 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: true,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: [CardType.AMBASSADOR, CardType.CAPTAIN]
+    blockableBy: [CardType.AMBASSADOR, CardType.CAPTAIN],
+    verb: {
+      present: 'STEALS from',
+      past: 'STOLE from'
+    }
   },
   ASSASSINATE: {
     coinCost: 3,
@@ -73,14 +89,22 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: true,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: [CardType.CONTESSA]
+    blockableBy: [CardType.CONTESSA],
+    verb: {
+      present: 'ASSASSINATES',
+      past: 'ASSASSINATED'
+    }
   },
   COUP: {
     coinCost: 7,
     canBeBlocked: false,
     canBeChallenged: false,
     autoResolve: false,
-    blockableBy: []
+    blockableBy: [],
+    verb: {
+      present: 'COUP',
+      past: 'COUPED'
+    }
   },
   EXCHANGE: {
     coinCost: 0,
@@ -88,7 +112,11 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: false,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: []
+    blockableBy: [],
+    verb: {
+      present: 'EXCHANGES',
+      past: 'EXCHANGED'
+    }
   }
 }
 

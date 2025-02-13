@@ -1,10 +1,13 @@
-import { createContext, useEffect, useCallback, useState, useMemo } from 'react'
+import { createContext, useEffect, useCallback, useState, useMemo, useRef } from 'react'
+import { toast } from 'react-toastify'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
-import type { Game, TargetedActionType, UntargetedActionType, Player } from '~/types'
+import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
-import { prepareGameForClient } from '~/utils/game'
+import { getTurnPhaseMessage, prepareGameForClient } from '~/utils/game'
+import { DataSnapshot } from 'firebase-admin/database'
+import _ from 'lodash'
 
 export interface GameSocketContextType {
   game: Game<'client'>
@@ -31,6 +34,9 @@ interface GameSocketProviderProps extends React.PropsWithChildren {
 
 export const GameSocketContext = createContext<GameSocketContextType | null>(null)
 
+const THROTTLE_DELAY_MS = 500
+const DELAY_BETWEEN_TOASTS_MS = 1_000
+
 export function GameSocketProvider({
   children,
   gameId,
@@ -39,6 +45,11 @@ export function GameSocketProvider({
 }: Omit<GameSocketProviderProps, 'socketUrl'>) {
   const [game, setGame] = useState(initialGame)
   const [error, setError] = useState<string | null>(null)
+  const turnPhaseRef = useRef<TurnPhase | null>(null)
+
+  // These refs help with debouncing the toast updates:
+  const lastToastTimeRef = useRef(Date.now())
+  const pendingToastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const db = getFirebaseDatabase()
@@ -46,17 +57,61 @@ export function GameSocketProvider({
 
     const gameRef = ref(db, `games/${gameId}`)
 
-    const unsubscribe = onValue(gameRef, snapshot => {
+    const throttledOnSnapshotCallback = _.throttle((snapshot: any): void => {
       const game = snapshot.val() as Game<'server'> | null
       if (game) {
-        setGame(prepareGameForClient(game, playerId))
+        const preparedGame = prepareGameForClient(game, playerId)
+        setGame(preparedGame)
+        const turnPhase = game.currentTurn?.phase || null
+        if (turnPhase !== turnPhaseRef.current) {
+          const turnPhaseMessage: string = getTurnPhaseMessage(preparedGame)
+          const now = Date.now()
+          const delayForToast = Math.max(0, DELAY_BETWEEN_TOASTS_MS - (now - lastToastTimeRef.current))
+
+          // Clear any pending update so that only the latest turn phase message is shown
+          if (pendingToastTimeoutRef.current) {
+            clearTimeout(pendingToastTimeoutRef.current)
+          }
+
+          pendingToastTimeoutRef.current = setTimeout(() => {
+            const toastContent = <p className='text-nord-6 text-sm font-bold font-robotica'>{turnPhaseMessage}</p>
+
+            if (!toast.isActive('TURN_PHASE_TOAST')) {
+              toast(toastContent, {
+                toastId: 'TURN_PHASE_TOAST',
+                autoClose: 10_000,
+                hideProgressBar: true,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true
+              })
+            } else {
+              toast.update('TURN_PHASE_TOAST', {
+                render: toastContent,
+                autoClose: 10_000,
+                hideProgressBar: true,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true
+              })
+            }
+            lastToastTimeRef.current = Date.now()
+            pendingToastTimeoutRef.current = null
+          }, delayForToast)
+
+          turnPhaseRef.current = turnPhase
+        }
       }
-    })
+    }, THROTTLE_DELAY_MS)
+
+    const unsubscribe = onValue(gameRef, throttledOnSnapshotCallback)
 
     return () => {
       unsubscribe()
+      throttledOnSnapshotCallback.cancel()
+      if (pendingToastTimeoutRef.current) clearTimeout(pendingToastTimeoutRef.current)
     }
-  }, [gameId])
+  }, [gameId, playerId])
 
   const performAction = async (action: any) => {
     try {
