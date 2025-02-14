@@ -5,6 +5,7 @@ import CoinStack from './CoinStack'
 import { Sprite } from './Sprite'
 
 interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
+  textColor?: NordColor
   bgColor?: NordColor
   className?: string
   cardCount?: number
@@ -13,12 +14,13 @@ interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
 export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   username,
   coins,
+  textColor = 'nord-4',
   bgColor = 'nord-1',
   cardCount = null,
   className
 }) => {
   return (
-    <div className={cn('text-nord-4 flex justify-between items-center relative gap-4 w-full px-1', className)}>
+    <div className={cn(`text-${textColor} flex justify-between items-center relative gap-4 w-full px-1`, className)}>
       <span className='overflow-hidden whitespace-nowrap text-ellipsis font-bold'>{username}</span>
       <div className='flex items-center gap-1 flex-row-reverse'>
         {cardCount && (
