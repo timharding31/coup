@@ -53,9 +53,12 @@ function prepareCardForClient(card: Card<'server' | 'client'>, player: Player | 
   )
 */
 
-export function getPlayerActionMessages(
-  game: Game<'client'>
-): { playerId: string; message: string; clear?: boolean; color?: NordColor } | null {
+export function getPlayerActionMessages(game: Game<'client'>): {
+  playerId: string
+  message: string
+  clear?: boolean
+  color?: Extract<NordColor, 'nord-11' | 'nord-12' | 'nord-13' | 'nord-14' | 'nord-15'>
+} | null {
   const actor = getActor(game)
   const target = getTarget(game)
   const blocker = getBlocker(game)
@@ -66,7 +69,12 @@ export function getPlayerActionMessages(
 
   switch (phase) {
     case null:
-      return { playerId: actor.id, message: 'Selecting action', clear: true, color: 'nord-15' }
+      return {
+        playerId: actor.id,
+        message: 'Starting turn',
+        clear: true,
+        color: 'nord-14'
+      }
 
     case 'ACTION_DECLARED':
       if (!action) {

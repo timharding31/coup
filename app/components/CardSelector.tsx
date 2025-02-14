@@ -62,6 +62,12 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
                 if (card.isRevealed) {
                   return null
                 }
+                const bgClassName = {
+                  primary: 'bg-nord-6',
+                  success: 'bg-nord-14',
+                  danger: 'bg-nord-11',
+                  warning: 'bg-nord-13'
+                }[intent]
                 return (
                   <div
                     key={card.id}
@@ -74,9 +80,9 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
                     <PlayingCard {...card} />
                     {selectedCardIds.includes(card.id) && (
                       <div
-                        className={`absolute inset-0 ${intent === 'primary' ? 'bg-nord-6' : intent === 'danger' ? 'bg-nord-11' : 'bg-nord-13'} rounded-lg flex items-center justify-center bg-opacity-50`}
+                        className={`absolute inset-0 ${bgClassName} rounded-lg flex items-center justify-center bg-opacity-50`}
                       >
-                        <div className='w-8 h-8 rounded-full bg-white/90 flex items-center justify-center font-bold text-nord-0'>
+                        <div className='w-8 h-8 rounded-full bg-nord-6 flex items-center justify-center font-bold text-nord-0'>
                           ✓
                         </div>
                       </div>

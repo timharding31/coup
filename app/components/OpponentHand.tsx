@@ -28,7 +28,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
     <div className='relative flex flex-col items-center justify-center gap-2'>
       <PlayerNameTag {...nameTagProps} />
 
-      <div className={`flex-auto w-full grid grid-cols-${influence.length} gap-2`}>
+      <div className={`flex-auto w-full grid grid-cols-${Math.max(2, influence.length)} gap-2`}>
         {influence.map(card => (
           <PlayingCard key={card.id} isFaceDown={!game || game.status === 'WAITING'} {...card} />
         ))}

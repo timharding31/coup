@@ -29,12 +29,7 @@ interface PlayingCardProps extends Card<'client'> {
   isFaceDown?: boolean
 }
 
-export const PlayingCard: React.FC<PlayingCardProps> = ({
-  type: character,
-  isFaceDown,
-  isRevealed,
-  isChallengeDefenseCard
-}) => {
+export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFaceDown, isRevealed }) => {
   if (!character || isFaceDown) {
     // Server will omit type for face-down cards
     return <FaceDownCard />

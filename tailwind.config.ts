@@ -84,8 +84,11 @@ const config: Config = {
         'nord-14-light': '#d8e4ce'
       },
       fontFamily: {
-        sans: [
-          'Inter',
+        odachi: ['Odachi', 'sans-serif'],
+        robotica: ['Robotica', 'sans-serif'],
+        sansation: [
+          'Sansation',
+          'sans-serif',
           'ui-sans-serif',
           'system-ui',
           'sans-serif',
@@ -93,10 +96,7 @@ const config: Config = {
           'Segoe UI Emoji',
           'Segoe UI Symbol',
           'Noto Color Emoji'
-        ],
-        odachi: ['Odachi', 'sans-serif'],
-        robotica: ['Robotica', 'sans-serif'],
-        sansation: ['Sansation', 'sans-serif']
+        ]
       }
     }
   },

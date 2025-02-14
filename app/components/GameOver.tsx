@@ -1,5 +1,4 @@
 import React from 'react'
-import styles from './styles.css'
 import { Game } from '~/types'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'

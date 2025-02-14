@@ -63,7 +63,7 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
                     <span className='mr-2'>&bull;</span>
                     {player.username}
                   </div>
-                  {player.id === hostId && <span className='text-xs text-nord-1'>(host)</span>}
+                  {player.id === hostId && <span className='text-xs text-nord-1'>host</span>}
                 </li>
               ))}
             </ul>

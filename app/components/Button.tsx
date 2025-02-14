@@ -117,7 +117,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     forwardedRef
   ) => {
     const baseClasses =
-      'relative flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl'
+      'relative flex items-center transition-all duration-200 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl'
     const isOutline = variant.endsWith('Outline')
     const innerRef = useRef<HTMLButtonElement>(null)
 

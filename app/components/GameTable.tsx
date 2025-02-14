@@ -6,7 +6,7 @@ import useMeasure from 'react-use-measure'
 import { Header } from './Header'
 import { useDrawerHeight } from './Drawer'
 
-const DRAWER_OFFSET_WITH_CARDS = 96
+const DRAWER_OFFSET_WITH_CARDS = 172
 const DRAWER_OFFSET_WITHOUT_CARDS = 48
 
 interface GameTableProps extends Pick<CoupContextType, 'game' | 'players'>, React.PropsWithChildren {
@@ -49,9 +49,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
   return (
     <>
       <Header />
-      <div
-        className={`relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 duration-500 transition-[brightness]${drawerHeight ? ' brightness-[50%]' : ''}`}
-      >
+      <div className={`relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4`}>
         {opponents.map((opponent, index) => (
           <div key={opponent.id} className={`col-span-2 ${getOpponentClasses(index, opponents.length)}`}>
             <OpponentHand
@@ -63,6 +61,9 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
           </div>
         ))}
         {children}
+        {!!drawerHeight && (
+          <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord--1/50 z-60 pointer-events-none' />
+        )}
       </div>
       <div
         ref={playerHandRef}

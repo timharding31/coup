@@ -1,14 +1,11 @@
 import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
-import { toast } from 'react-toastify'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
 import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, NordColor } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { getPlayerActionMessages, prepareGameForClient } from '~/utils/game'
-import { DataSnapshot } from 'firebase-admin/database'
 import _ from 'lodash'
-import { color } from 'framer-motion'
 
 export interface CoupContextType {
   game: Game<'client'>
@@ -49,6 +46,7 @@ export function GameSocketProvider({
   const [game, setGame] = useState(initialGame)
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
+  const respondedPlayersRef = useRef<string[]>([])
 
   const [playerMessages, setPlayerMessages] = useState(new Map<string, { message: string; color?: NordColor }>())
 
@@ -64,8 +62,28 @@ export function GameSocketProvider({
         const preparedGame = prepareGameForClient(game, playerId)
         setGame(preparedGame)
 
-        const turnPhase = game.currentTurn?.phase || null
-        if (turnPhase !== turnPhaseRef.current) {
+        const { currentTurn: turn, players } = preparedGame
+        const { respondedPlayers = [] } = turn || {}
+        const { block: blockerId, challenge: challengerId } = turn?.opponentResponses || {}
+
+        if (!_.isEqual(respondedPlayers, respondedPlayersRef.current)) {
+          for (const responderId of respondedPlayers) {
+            setPlayerMessages(prev => {
+              const existing = prev.get(responderId)
+
+              const next: { message: string; color: NordColor } =
+                responderId === blockerId
+                  ? { message: '✗', color: 'nord-13' }
+                  : responderId === challengerId
+                    ? { message: '⁉️', color: 'nord-11' }
+                    : { message: '✓', color: 'nord-14' }
+
+              return existing?.message === next.message ? prev : new Map(prev).set(responderId, next)
+            })
+          }
+        }
+
+        if (turn?.phase != turnPhaseRef.current) {
           const newMessage = getPlayerActionMessages(preparedGame)
           if (newMessage) {
             setPlayerMessages(prev => {
@@ -76,7 +94,29 @@ export function GameSocketProvider({
             })
           }
         }
-        turnPhaseRef.current = turnPhase
+
+        if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
+          const challengeDefender = players.find(
+            player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
+          )
+          if (challengeDefender) {
+            const challengeDefenseCard = challengeDefender?.influence.find(card => card.isChallengeDefenseCard)
+            if (challengeDefenseCard) {
+              setPlayerMessages(prev =>
+                prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, color: 'nord-14' })
+              )
+            } else {
+              setPlayerMessages(prev => {
+                const next = new Map(prev)
+                next.delete(challengeDefender.id)
+                return next
+              })
+            }
+          }
+        }
+
+        turnPhaseRef.current = turn?.phase || null
+        respondedPlayersRef.current = respondedPlayers
       }
     }, THROTTLE_DELAY_MS)
 
