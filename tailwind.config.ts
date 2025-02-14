@@ -19,6 +19,8 @@ const config: Config = {
     'outline-nord-11',
     'outline-nord-13',
     'outline-nord-14',
+    'outline-nord-15',
+    'outline-nord-0',
     'text-nord-0',
     'text-nord-1',
     'text-nord-2',
