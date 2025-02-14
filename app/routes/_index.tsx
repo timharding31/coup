@@ -60,12 +60,12 @@ export default function Index() {
     <div className='pt-16 pb-8 px-6 flex flex-col h-full'>
       <h1 className='font-robotica text-7xl'>coup</h1>
 
-      <p className='mt-12 text-xl font-medium'>Welcome, {player?.username.toUpperCase()}</p>
+      <p className='mt-12 text-xl font-medium'>Welcome, {player?.username}</p>
 
       <div className='flex flex-col items-stretch mt-12 gap-4 w-full'>
         <Form method='post' className='contents'>
           <input type='hidden' name='intent' value='create' />
-          <Button variant='secondary' type='submit' size='lg'>
+          <Button variant='primary' type='submit' size='lg'>
             Create New Game
           </Button>
         </Form>
@@ -76,7 +76,7 @@ export default function Index() {
           <input type='hidden' name='intent' value='join' />
           <div className='flex flex-col items-stretch gap-2'>
             <PinInput name='pin' value={pin} onChange={setPin} required errorMessage={errorMessage} />
-            <Button variant='primary' type='submit' size='lg'>
+            <Button variant='secondary' type='submit' size='lg'>
               Join by PIN
             </Button>
           </div>
