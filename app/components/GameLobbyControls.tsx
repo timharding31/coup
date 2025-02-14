@@ -55,9 +55,11 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
           <div className='w-full max-w-md flex-auto'>
             <h3 className='text-lg mb-2'>Players ({players.length})</h3>
             <ul className='list-reset space-y-2'>
-              {new Array(6).fill(players[0]).map((player, i) => (
+              {/* {new Array(6).fill(players[0]).map((player, i) => ( */}
+              {players.map(player => (
                 <li
-                  key={`${player.id}-${i}`}
+                  // key={`${player.id}-${i}`}
+                  key={player.id}
                   className='px-4 py-1 bg-nord-1 rounded-lg flex items-center justify-between'
                 >
                   <div className='font-bold text-sm'>
