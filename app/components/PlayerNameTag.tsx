@@ -1,17 +1,19 @@
 import React from 'react'
-import { Player } from '~/types'
-import { Sprite } from './Button'
+import cn from 'classnames'
+import { NordColor, Player } from '~/types'
+import CoinStack from './CoinStack'
+import { Sprite } from './Sprite'
 
-interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {}
+interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
+  bgColor?: NordColor
+  className?: string
+}
 
-export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({ username, coins }) => {
+export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({ username, coins, bgColor = 'nord-1', className }) => {
   return (
-    <div className='bg-nord-4 rounded-xl text-nord-0 px-6 flex items-center relative gap-2 nord-shadow ring-1 ring-nord-0'>
-      <span className='font-medium'>{username}</span>
-      <div className='text-nord-13-dark inline-flex items-center'>
-        <Sprite sprite='dollar' size='sm' />
-        <span className='font-bold ml-[-6px]'>{coins}</span>
-      </div>
+    <div className={cn('text-nord-4 flex justify-between items-center relative gap-4 w-full', className)}>
+      <span className='overflow-hidden whitespace-nowrap text-ellipsis'>{username.toUpperCase()}</span>
+      <CoinStack count={coins} size='base' color='nord-14' bgColor={bgColor} />
     </div>
   )
 }

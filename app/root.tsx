@@ -63,7 +63,7 @@ export default function App() {
             __html: `window.ENV = ${JSON.stringify(ENV)}`
           }}
         />
-        <ToastContainer
+        {/* <ToastContainer
           position='top-center'
           autoClose={30_000}
           hideProgressBar={true}
@@ -73,7 +73,7 @@ export default function App() {
           transition={Slide}
           toastClassName='bg-nord-0 px-8 py-0 nord-shadow border-b border-nord-6'
           className='absolute top-0 left-0 right-0 z-51'
-        />
+        /> */}
       </body>
     </html>
   )

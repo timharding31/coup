@@ -54,7 +54,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
           >
             <div className='px-2'>
               <h3 className='text-xl font-bold'>{heading}</h3>
-              {subheading && <p className='text-base'>{subheading}</p>}
+              {subheading && <p className='text-base text-nord-4'>{subheading}</p>}
             </div>
 
             <div className='flex justify-center gap-2'>

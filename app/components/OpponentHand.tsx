@@ -1,9 +1,8 @@
 import React from 'react'
 import { PlayingCard } from './PlayingCard'
-import { useGame } from '~/hooks/socket'
+import { useGame, usePlayerMessages } from '~/context/CoupContext'
 import { Player } from '~/types'
 import { PlayerNameTag } from './PlayerNameTag'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './Tooltip'
 
 interface OpponentHandProps extends Player<'client'> {
   isActor?: boolean
@@ -20,9 +19,12 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 }) => {
   const game = useGame()
 
-  const isPopoverOpen = game?.status === 'IN_PROGRESS' && (isActor || isBlocker || isChallenger)
+  // const isPopoverOpen = game?.status === 'IN_PROGRESS' && (isActor || isBlocker || isChallenger)
   const accentColor = isActor ? 'nord-14' : isBlocker ? 'nord-13' : isChallenger ? 'nord-11' : ''
   const popoverTextColor = isChallenger ? 'nord-5' : 'nord-0'
+
+  const opponentMessages = usePlayerMessages(nameTagProps.id)
+  const isPopoverOpen = game?.status === 'IN_PROGRESS' && opponentMessages.length > 0
 
   return (
     <>
@@ -39,8 +41,8 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           ))}
         </div>
         {isPopoverOpen && (
-          <div
-            className={`tooltip-content absolute bottom-[100%] px-3 py-0 font-medium rounded-md text-${popoverTextColor}`}
+          <ul
+            className={`tooltip-content list-reset flex flex-col-reverse absolute bottom-[100%] px-3 py-0 rounded-md text-${popoverTextColor}`}
             style={
               {
                 marginBottom: '12px',
@@ -48,8 +50,11 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
               } as React.CSSProperties
             }
           >
-            {isActor ? <>Current Player</> : isBlocker ? <>Blocker</> : isChallenger ? <>Challenger</> : null}
-          </div>
+            {opponentMessages.reverse().map((message, index) => (
+              <li key={index}>{message}</li>
+            ))}
+            {/* {isActor ? <>Current Player</> : isBlocker ? <>Blocker</> : isChallenger ? <>Challenger</> : null} */}
+          </ul>
         )}
       </div>
       {/* </TooltipTrigger>

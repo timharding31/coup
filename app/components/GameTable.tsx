@@ -1,5 +1,5 @@
 import React from 'react'
-import { useGame, usePlayers } from '~/hooks/socket'
+import { useGame, usePlayers } from '~/context/CoupContext'
 import { OpponentHand } from './OpponentHand'
 import { PlayerHand } from './PlayerHand'
 import useMeasure from 'react-use-measure'
@@ -17,7 +17,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({
   children
 }) => {
   const game = useGame()
-  const { actor, blocker, challenger } = usePlayers()
+  const { actor, blocker, challenger } = usePlayers() || {}
 
   if (!game) return null
 

@@ -4,36 +4,59 @@ import { PluginAPI } from 'tailwindcss/types/config'
 const config: Config = {
   content: ['./app/**/*.{js,jsx,ts,tsx}'],
   safelist: [
+    'leading-1',
+    'leading-2',
+    'leading-3',
+    'leading-4',
+    'leading-5',
+    'leading-6',
+    'leading-7',
+    'leading-8',
     'grid-cols-1',
     'grid-cols-2',
     'grid-cols-3',
     'grid-cols-4',
     'outline-nord-11',
     'outline-nord-13',
-    'outline-nord-14'
+    'outline-nord-14',
+    'text-nord-0',
+    'text-nord-1',
+    'text-nord-2',
+    'text-nord-3',
+    'text-nord-4',
+    'text-nord-5',
+    'text-nord-6',
+    'text-nord-7',
+    'text-nord-8',
+    'text-nord-9',
+    'text-nord-10',
+    'text-nord-11',
+    'text-nord-12',
+    'text-nord-13',
+    'text-nord-14',
+    'text-nord-15',
+    'text-nord--1',
+    'bg-nord-0',
+    'bg-nord-1',
+    'bg-nord-2',
+    'bg-nord-3',
+    'bg-nord-4',
+    'bg-nord-5',
+    'bg-nord-6',
+    'bg-nord-7',
+    'bg-nord-8',
+    'bg-nord-9',
+    'bg-nord-10',
+    'bg-nord-11',
+    'bg-nord-12',
+    'bg-nord-13',
+    'bg-nord-14',
+    'bg-nord-15',
+    'bg-nord--1'
   ],
   theme: {
     extend: {
       colors: {
-        conifer: {
-          100: '#18201f',
-          200: '#1b2423',
-          300: '#232f2d',
-          400: '#2b3b37',
-          500: '#384d48',
-          600: '#455e59',
-          700: '#67837e',
-          800: '#a8c7c0',
-          900: '#dde5ed'
-        },
-        floral: {
-          red: '#f37653',
-          orange: '#ffc757',
-          yellow: '#ffff57',
-          green: '#a7e372',
-          blue: '#79caf6',
-          lilac: '#d488e7'
-        },
         'nord-0': '#2E3440',
         'nord-1': '#3B4252',
         'nord-2': '#434C5E',
@@ -70,12 +93,12 @@ const config: Config = {
           'Noto Color Emoji'
         ],
         odachi: ['Odachi', 'sans-serif'],
-        robotica: ['Robotica', 'sans-serif']
+        robotica: ['Robotica', 'sans-serif'],
+        sansation: ['Sansation', 'sans-serif']
       }
     }
   },
   plugins: [
-    require('tailwind-corner-smoothing'),
     function ({ addBase }: PluginAPI) {
       addBase({
         ':root': {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useGameSocket } from '~/hooks/socket'
+import { useCoupContext } from '~/context/CoupContext'
 import { ActionControls } from './ActionControls'
 import { ResponseControls } from './ResponseControls'
 import { GameTable } from './GameTable'
@@ -12,7 +12,8 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, myself, actor, blocker, challenger, target } = useGameSocket()
+  const { game, players } = useCoupContext()
+  const { myself, actor } = players
 
   const isActionMenuOpen = useMemo(() => {
     if (game.status !== 'IN_PROGRESS') return false
@@ -33,7 +34,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
 }
 
 const GameControls: React.FC = () => {
-  const { game, myself, actor, target, blocker, challenger, sendResponse, selectCard, exchangeCards } = useGameSocket()
+  const { game, players, sendResponse, selectCard, exchangeCards } = useCoupContext()
+  const { myself, actor, target, blocker, challenger } = players
 
   if (game.status !== 'IN_PROGRESS' || !game.currentTurn) {
     return null
@@ -53,17 +55,7 @@ const GameControls: React.FC = () => {
       if (actor.id === myself.id || respondedPlayers.includes(myself.id)) {
         return null
       }
-      let actionMessage = `${actor.username} chose to ${action.type.replace('_', ' ')}`
-      if (target) {
-        if (action.type === 'STEAL') {
-          actionMessage += ' from'
-        }
-        if (target.id === myself.id) {
-          actionMessage += ' you'
-        } else {
-          actionMessage += ` ${target.username}`
-        }
-      }
+      const actionMessage = `${actor.username.toUpperCase()} chose to ${action.verb.present}${target?.id === myself.id ? ' YOU' : target ? ` ${target.username.toUpperCase()}` : ''}`
       return (
         <ResponseControls
           onResponse={sendResponse}
@@ -88,7 +80,7 @@ const GameControls: React.FC = () => {
       return (
         <ResponseControls
           onResponse={sendResponse}
-          heading={`${blocker.username} BLOCKED your attempt to ${action.type}`}
+          heading={`${blocker.username.toUpperCase()} BLOCKED your attempt to ${action.type}`}
           subheading='How will you respond?'
           timeoutAt={timeoutAt}
           availableResponses={{
@@ -109,7 +101,7 @@ const GameControls: React.FC = () => {
       const defenseCard = myself.influence.find(c => c.type === action.requiredCharacter)
       return (
         <CardSelector
-          heading={`Your ${action.type} was CHALLENGED by ${challenger.username}`}
+          heading={`Your ${action.type} was CHALLENGED by ${challenger.username.toUpperCase()}`}
           subheading={
             defenseCard ? `Reveal your ${defenseCard.type} to get a new card from the deck` : 'Select a card to lose'
           }
@@ -129,7 +121,7 @@ const GameControls: React.FC = () => {
       const defenseCards = myself.influence.filter(c => (action.blockableBy || []).includes(c.type!))
       return (
         <CardSelector
-          heading={`Your BLOCK was CHALLENGED by ${actor?.username}`}
+          heading={`Your BLOCK was CHALLENGED by ${actor?.username.toUpperCase()}`}
           subheading={
             defenseCards.length
               ? `Reveal your ${defenseCards.map(c => c.type).join(' or ')} to get a new card from the deck`
@@ -166,8 +158,8 @@ const GameControls: React.FC = () => {
       }
       const actionMessage =
         action.type === 'ASSASSINATE'
-          ? `You were ASSASSINATED by ${actor.username}`
-          : `You were COUPED by ${actor.username}`
+          ? `You were ASSASSINATED by ${actor.username.toUpperCase()}`
+          : `You were COUPED by ${actor.username.toUpperCase()}`
       return (
         <CardSelector
           heading={actionMessage}

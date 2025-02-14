@@ -60,7 +60,7 @@ export default function Index() {
     <div className='pt-16 pb-8 px-6 flex flex-col h-full'>
       <h1 className='font-robotica text-7xl'>coup</h1>
 
-      <p className='mt-12 text-xl font-medium'>Welcome, {player?.username}</p>
+      <p className='mt-12 text-xl font-medium'>Welcome, {player?.username.toUpperCase()}</p>
 
       <div className='flex flex-col items-stretch mt-12 gap-4 w-full'>
         <Form method='post' className='contents'>

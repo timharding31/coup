@@ -1,15 +1,15 @@
-import { createContext, useEffect, useCallback, useState, useMemo, useRef } from 'react'
+import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
 import { toast } from 'react-toastify'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
 import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
-import { getTurnPhaseMessage, prepareGameForClient } from '~/utils/game'
+import { getPlayerActionMessages, getTurnPhaseMessage, prepareGameForClient } from '~/utils/game'
 import { DataSnapshot } from 'firebase-admin/database'
 import _ from 'lodash'
 
-export interface GameSocketContextType {
+export interface CoupContextType {
   game: Game<'client'>
   error: string | null
   startGame: () => void
@@ -18,11 +18,14 @@ export interface GameSocketContextType {
   selectCard: (cardId: string) => void
   sendResponse: (response: 'accept' | 'challenge' | 'block') => void
   exchangeCards: (selectedCardIds: string[]) => void
-  myself: Player<'client'>
-  actor: Player<'client'>
-  blocker?: Player<'client'>
-  challenger?: Player<'client'>
-  target?: Player<'client'>
+  players: {
+    myself: Player<'client'>
+    actor: Player<'client'>
+    blocker?: Player<'client'>
+    challenger?: Player<'client'>
+    target?: Player<'client'>
+  }
+  playerMessages: Map<string, string[]>
 }
 
 interface GameSocketProviderProps extends React.PropsWithChildren {
@@ -32,10 +35,9 @@ interface GameSocketProviderProps extends React.PropsWithChildren {
   game: Game<'client'>
 }
 
-export const GameSocketContext = createContext<GameSocketContextType | null>(null)
+export const CoupContext = createContext<CoupContextType | null>(null)
 
 const THROTTLE_DELAY_MS = 500
-const DELAY_BETWEEN_TOASTS_MS = 1_000
 
 export function GameSocketProvider({
   children,
@@ -47,9 +49,8 @@ export function GameSocketProvider({
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
 
-  // These refs help with debouncing the toast updates:
-  const lastToastTimeRef = useRef(Date.now())
-  const pendingToastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [playerMessages, setPlayerMessages] = useState(new Map<string, string[]>())
+  const playerMessagesClearTimer = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     const db = getFirebaseDatabase()
@@ -62,45 +63,27 @@ export function GameSocketProvider({
       if (game) {
         const preparedGame = prepareGameForClient(game, playerId)
         setGame(preparedGame)
+
         const turnPhase = game.currentTurn?.phase || null
         if (turnPhase !== turnPhaseRef.current) {
-          const turnPhaseMessage: string = getTurnPhaseMessage(preparedGame)
-          const now = Date.now()
-          const delayForToast = Math.max(0, DELAY_BETWEEN_TOASTS_MS - (now - lastToastTimeRef.current))
-
-          // Clear any pending update so that only the latest turn phase message is shown
-          if (pendingToastTimeoutRef.current) {
-            clearTimeout(pendingToastTimeoutRef.current)
+          const newMessage = getPlayerActionMessages(preparedGame)
+          if (newMessage) {
+            setPlayerMessages(prev => {
+              if (newMessage.clear) {
+                return new Map().set(newMessage.playerId, [newMessage.message])
+              }
+              return new Map(prev).set(
+                newMessage.playerId,
+                (prev.get(newMessage.playerId) || []).concat(newMessage.message)
+              )
+            })
           }
-
-          pendingToastTimeoutRef.current = setTimeout(() => {
-            const toastContent = <p className='text-nord-6 text-sm font-bold font-robotica'>{turnPhaseMessage}</p>
-
-            if (!toast.isActive('TURN_PHASE_TOAST')) {
-              toast(toastContent, {
-                toastId: 'TURN_PHASE_TOAST',
-                autoClose: 10_000,
-                hideProgressBar: true,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true
-              })
-            } else {
-              toast.update('TURN_PHASE_TOAST', {
-                render: toastContent,
-                autoClose: 10_000,
-                hideProgressBar: true,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true
-              })
-            }
-            lastToastTimeRef.current = Date.now()
-            pendingToastTimeoutRef.current = null
-          }, delayForToast)
-
-          turnPhaseRef.current = turnPhase
         }
+
+        if (!game.currentTurn) {
+          playerMessagesClearTimer.current = setTimeout(() => setPlayerMessages(new Map()), 5_000)
+        }
+        turnPhaseRef.current = turnPhase
       }
     }, THROTTLE_DELAY_MS)
 
@@ -109,7 +92,9 @@ export function GameSocketProvider({
     return () => {
       unsubscribe()
       throttledOnSnapshotCallback.cancel()
-      if (pendingToastTimeoutRef.current) clearTimeout(pendingToastTimeoutRef.current)
+      if (playerMessagesClearTimer.current) {
+        clearTimeout(playerMessagesClearTimer.current)
+      }
     }
   }, [gameId, playerId])
 
@@ -227,7 +212,7 @@ export function GameSocketProvider({
   }
 
   return (
-    <GameSocketContext.Provider
+    <CoupContext.Provider
       value={{
         game,
         error,
@@ -237,14 +222,34 @@ export function GameSocketProvider({
         sendResponse,
         selectCard,
         exchangeCards,
-        myself,
-        actor,
-        blocker,
-        challenger,
-        target
+        players: { myself, actor, blocker, challenger, target },
+        playerMessages
       }}
     >
+      {/* <pre>{JSON.stringify(playerMessages)}</pre> */}
       {children}
-    </GameSocketContext.Provider>
+    </CoupContext.Provider>
   )
+}
+
+export function useCoupContext() {
+  const value = useContext(CoupContext)
+  if (!value) {
+    throw new Error('useCoupContext must be used within a provider')
+  }
+  return value
+}
+
+export function useGame() {
+  return useContext(CoupContext)?.game || null
+}
+
+export function usePlayers() {
+  const { players } = useContext(CoupContext) || {}
+  return players
+}
+
+export function usePlayerMessages(playerId: string) {
+  const { playerMessages } = useContext(CoupContext) || {}
+  return playerMessages?.get(playerId) || []
 }

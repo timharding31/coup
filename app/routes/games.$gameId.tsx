@@ -1,7 +1,7 @@
 import type { Game } from '~/types'
 import { redirect, LoaderFunction } from '@remix-run/node'
 import { Outlet, useLoaderData } from '@remix-run/react'
-import { GameSocketProvider } from '~/context/GameSocket'
+import { GameSocketProvider } from '~/context/CoupContext'
 import { gameService, sessionService } from '~/services/index.server'
 import { prepareGameForClient } from '~/utils/game'
 import { GameBoard } from '~/components/GameBoard'

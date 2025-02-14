@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useMergedRefs } from '~/hooks/useMergedRefs'
 import cn from 'classnames'
+import { Sprite, SpriteId } from './Sprite'
+import CoinStack from './CoinStack'
+import { PlayerNameTag } from './PlayerNameTag'
 
 export const variantStyles = {
   // Nord
   primary:
-    'bg-nord-0 text-nord-6 hover:bg-nord-1 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-2 active:translate-y-0 disabled:bg-nord-3',
+    'bg-nord-0 text-nord-6 hover:bg-nord--1 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-2 active:translate-y-0 disabled:bg-nord-3',
   // Frost
   secondary:
     'bg-nord-8 text-nord-0 hover:bg-nord-9 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-10 active:translate-y-0 disabled:bg-nord-3',
@@ -22,61 +25,9 @@ export const variantStyles = {
 
 // Size styles remain the same
 export const sizeStyles = {
-  default: 'h-10 px-4 py-2',
-  sm: 'h-9 px-3',
+  base: 'h-10 px-6 py-2',
+  sm: 'h-9 px-4',
   lg: 'h-11 px-8'
-}
-
-type SpriteId =
-  | 'sword'
-  | 'skull'
-  | 'shield'
-  | 'steal'
-  | 'lock'
-  | 'challenge'
-  | 'exchange'
-  | 'token-1'
-  | 'token-2'
-  | 'token-3'
-  | 'check'
-  | 'dollar'
-  | 'arrow'
-
-export const Sprite: React.FC<{ sprite: SpriteId; size: keyof typeof sizeStyles; dir?: 'right' | 'left' }> = props => {
-  const size = props.size === 'lg' ? 32 : props.size === 'sm' ? 18 : 24
-
-  let viewBox: string
-
-  switch (props.sprite) {
-    case 'sword':
-    case 'skull':
-    case 'shield':
-    case 'steal':
-    case 'lock':
-    case 'challenge':
-    case 'exchange':
-    case 'arrow':
-    case 'dollar':
-      viewBox = '-32 -32 64 64'
-      break
-
-    case 'token-1':
-    case 'token-2':
-    case 'token-3':
-    case 'check':
-      viewBox = '0 0 256 256'
-      break
-  }
-
-  return (
-    <span
-      className={`relative flex items-center justify-center h-full w-auto ${props.dir === 'left' ? 'rotate-180' : ''}`}
-    >
-      <svg width={`${size}`} height={`${size}`} viewBox={viewBox}>
-        <use href={`#${props.sprite}`}></use>
-      </svg>
-    </span>
-  )
 }
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -84,6 +35,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   size?: keyof typeof sizeStyles
   timeoutAt?: number
   sprite?: SpriteId | 'arrow-left' | null
+  coinStack?: 1 | 2 | 3
+  nameTag?: React.ComponentProps<typeof PlayerNameTag>
 }
 
 const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: keyof typeof variantStyles }) => {
@@ -150,11 +103,21 @@ const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: k
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    { className = '', variant = 'primary', size = 'default', timeoutAt, sprite = null, children = null, ...props },
+    {
+      className = '',
+      variant = 'primary',
+      size = 'base',
+      timeoutAt,
+      sprite = null,
+      coinStack = null,
+      children = null,
+      nameTag = null,
+      ...props
+    },
     forwardedRef
   ) => {
     const baseClasses =
-      'relative inline-flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl'
+      'relative flex items-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl'
     const isOutline = variant.endsWith('Outline')
     const innerRef = useRef<HTMLButtonElement>(null)
 
@@ -162,34 +125,53 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         className={cn(baseClasses, variantStyles[variant], sizeStyles[size], className, {
           'overflow-hidden': timeoutAt,
-          'justify-start gap-4': sprite,
-          'justify-center': !sprite
+          'justify-start gap-4': sprite || props.disabled,
+          'justify-start gap-3': coinStack && !props.disabled,
+          'justify-center': !sprite && !coinStack && !nameTag
         })}
         ref={useMergedRefs(forwardedRef, innerRef)}
         {...props}
       >
         {timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
-        {sprite && (
-          <Sprite
-            sprite={props.disabled ? 'lock' : sprite === 'arrow-left' ? 'arrow' : sprite}
-            size={size}
-            dir={sprite == 'arrow-left' ? 'left' : 'right'}
+
+        {props.disabled && !!(sprite || coinStack) ? (
+          <Sprite id='lock' size={size} />
+        ) : coinStack ? (
+          <CoinStack
+            count={coinStack}
+            color='nord-6'
+            className={cn({
+              // 42, 46, 50
+              '-ml-[4px]': coinStack === 1,
+              '-ml-[8px]': coinStack === 2,
+              '-ml-[12px]': coinStack === 3
+            })}
           />
-        )}
-        {children && (
+        ) : sprite ? (
+          <Sprite
+            id={sprite === 'arrow-left' ? 'arrow' : sprite}
+            className={sprite === 'arrow-left' ? 'rotate-180' : ''}
+            size={size}
+          />
+        ) : null}
+        {nameTag ? (
+          <PlayerNameTag {...nameTag} />
+        ) : children ? (
           <span
-            className={cn('relative font-robotica', {
+            className={cn('relative font-robotica translate-y-[0.125em]', {
               'leading-[2.25rem]': size === 'sm',
-              'leading-[2.5rem]': size === 'default',
+              'leading-[2.5rem]': size === 'base',
               'leading-[2.75rem]': size === 'lg'
             })}
           >
             {children}
           </span>
-        )}
+        ) : null}
       </button>
     )
   }
 )
+
+// 3: 44, 2: 40, 1: 33
 
 Button.displayName = 'Button'

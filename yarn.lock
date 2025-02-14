@@ -7400,11 +7400,6 @@ synckit@^0.9.1:
     "@pkgr/core" "^0.1.0"
     tslib "^2.6.2"
 
-tailwind-corner-smoothing@^1.2.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/tailwind-corner-smoothing/-/tailwind-corner-smoothing-1.2.0.tgz#805ce25393e253b24897fa36345be2258088bc0a"
-  integrity sha512-lKeE58pOeIhrNbOjl6nxNSM8OMm7iTkuT01hpaipoZtVxzeN7K/Tsu4MrKdKtX/aTAwgOjaDcJghKUG1N4HcuQ==
-
 tailwindcss@^3.4.4:
   version "3.4.17"
   resolved "https://registry.yarnpkg.com/tailwindcss/-/tailwindcss-3.4.17.tgz#ae8406c0f96696a631c790768ff319d46d5e5a63"

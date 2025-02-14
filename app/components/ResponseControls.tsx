@@ -2,7 +2,7 @@ import React from 'react'
 import type { Action } from '~/types'
 import { Drawer, DrawerContent } from './Drawer'
 import { Button } from './Button'
-import { useGameSocket } from '~/hooks/socket'
+import { useCoupContext } from '~/context/CoupContext'
 
 interface ResponseControlsProps {
   onResponse: (type: 'accept' | 'challenge' | 'block') => void

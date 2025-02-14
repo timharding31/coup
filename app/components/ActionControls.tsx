@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { useGameSocket } from '~/hooks/socket'
+import { useCoupContext } from '~/context/CoupContext'
 import type { Player, TargetedActionType } from '~/types'
 import { Button } from './Button'
 import { Drawer, DrawerContent } from './Drawer'
 import cn from 'classnames'
+import { PlayerNameTag } from './PlayerNameTag'
 
-const SHARED_STYLES = 'transition-transform duration-200 ease-in-out w-full grid gap-4 grid-cols-1'
+const SHARED_STYLES = 'transition-transform duration-200 ease-in-out w-full grid gap-3 grid-cols-1'
 
 interface ActionControlsProps {
   targets: Player<'client'>[]
@@ -13,7 +14,7 @@ interface ActionControlsProps {
 }
 
 export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }) => {
-  const { performTargetedAction, performUntargetedAction } = useGameSocket()
+  const { performTargetedAction, performUntargetedAction } = useCoupContext()
   const [targetedAction, setTargetedAction] = useState<TargetedActionType>()
   const forceCoup = coins >= 10
 
@@ -22,7 +23,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
       <DrawerContent className='p-4'>
         <div className='relative overflow-x-hidden'>
           <div
-            className={cn(SHARED_STYLES, {
+            className={cn(SHARED_STYLES, 'h-[460px]', {
               'translate-x-[-100%]': targetedAction
             })}
           >
@@ -37,7 +38,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               onClick={() => {
                 performUntargetedAction('INCOME')
               }}
-              sprite='token-1'
+              coinStack={1}
               disabled={forceCoup}
             >
               INCOME
@@ -48,7 +49,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               onClick={() => {
                 performUntargetedAction('FOREIGN_AID')
               }}
-              sprite='token-2'
+              coinStack={2}
               disabled={forceCoup}
             >
               FOREIGN AID
@@ -59,7 +60,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               onClick={() => {
                 performUntargetedAction('TAX')
               }}
-              sprite='token-3'
+              coinStack={3}
               disabled={forceCoup}
             >
               TAX
@@ -120,21 +121,20 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                 {targetedAction === 'STEAL' ? ' from' : ''} which player?
               </h3>
             </div>
-            <div className='grid gap-4 grid-cols-1'>
+            <div className='grid gap-4 grid-cols-1 mb-auto'>
               {targets.map(target => (
                 <Button
                   key={`target-${target.id}`}
                   size='lg'
-                  variant='secondary'
+                  variant='primary'
                   className='w-full'
                   onClick={() => {
                     if (targetedAction) {
                       performTargetedAction(targetedAction, target.id)
                     }
                   }}
-                >
-                  {target.username} ({target.coins} coins)
-                </Button>
+                  nameTag={target}
+                />
               ))}
             </div>
           </div>

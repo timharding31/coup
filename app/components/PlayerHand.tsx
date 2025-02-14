@@ -1,7 +1,7 @@
 import React from 'react'
 import { Player } from '~/types'
 import { PlayingCard } from './PlayingCard'
-import { useGame } from '~/hooks/socket'
+import { useGame } from '~/context/CoupContext'
 import { PlayerNameTag } from './PlayerNameTag'
 
 const GUTTER_SIZE_VW = 3
