@@ -389,7 +389,6 @@ export class TurnService implements ITurnService {
 
       const updatedTurn: TurnState = {
         ...turn,
-        timeoutAt: Date.now(),
         respondedPlayers: (turn.respondedPlayers || []).concat(playerId)
       }
 
@@ -400,6 +399,7 @@ export class TurnService implements ITurnService {
         updatedTurn.timeoutAt = timeoutAt
       } else if (response === 'challenge') {
         updatedTurn.opponentResponses = { challenge: playerId }
+        updatedTurn.timeoutAt = Date.now()
         updatedTurn.challengeResult = {
           challengerId: playerId,
           defenseSuccessful: null,

@@ -41,7 +41,7 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
 
   return (
     <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord-0/50 p-2'>
-      <div className='flex flex-col w-full h-full p-6 bg-ui rounded-xl nord-shadow overflow-y-scroll ring-nord-0 ring-1'>
+      <div className='flex flex-col w-full h-full p-6 bg-ui rounded-xl nord-shadow overflow-y-scroll ring-nord-0 ring-1 relative'>
         <div className='flex flex-col items-stretch flex-1'>
           <div className='flex items-baseline justify-between gap-2 flex-wrap'>
             <h2 className='text-2xl'>Lobby</h2>
@@ -54,7 +54,7 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
 
           <div className='w-full max-w-md flex-auto'>
             <h3 className='text-lg mb-2'>Players ({players.length})</h3>
-            <ul className='list-reset space-y-2'>
+            <ul className='list-reset space-y-2 pb-6'>
               {players.map(player => (
                 <li key={player.id} className='px-4 py-1 bg-nord-15 rounded-md flex items-center justify-between'>
                   <div className='font-bold text-sm text-nord--1'>
@@ -68,7 +68,7 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
           </div>
 
           {isHost && (
-            <Button size='lg' variant='success' onClick={startGame} disabled={!canStart} className='mt-6'>
+            <Button size='lg' variant='success' onClick={startGame} disabled={!canStart} className='sticky bottom-0'>
               Start Game
             </Button>
           )}

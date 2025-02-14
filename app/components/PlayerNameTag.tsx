@@ -21,14 +21,14 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
     <div className={cn('text-nord-4 flex justify-between items-center relative gap-4 w-full', className)}>
       <span className='overflow-hidden whitespace-nowrap text-ellipsis'>{username}</span>
       <div className='flex items-center gap-5 flex-row-reverse'>
-        <CoinStack count={coins} size='base' color='nord-14' bgColor={bgColor} />
         {cardCount && (
-          <div className='flex justify-center'>
+          <div className='flex justify-start min-w-9'>
             {Array.from({ length: cardCount }).map((_, i) => (
               <Sprite key={`card-${i}`} id='card' color='nord-8' size='base' className='-mr-1.5' />
             ))}
           </div>
         )}
+        <CoinStack count={coins} size='base' color='nord-14' bgColor={bgColor} />
       </div>
     </div>
   )
