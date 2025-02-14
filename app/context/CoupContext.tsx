@@ -2,12 +2,13 @@ import { createContext, useEffect, useCallback, useState, useMemo, useRef, useCo
 import { toast } from 'react-toastify'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
-import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase } from '~/types'
+import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, NordColor } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { getPlayerActionMessages, getTurnPhaseMessage, prepareGameForClient } from '~/utils/game'
 import { DataSnapshot } from 'firebase-admin/database'
 import _ from 'lodash'
+import { color } from 'framer-motion'
 
 export interface CoupContextType {
   game: Game<'client'>
@@ -25,7 +26,7 @@ export interface CoupContextType {
     challenger?: Player<'client'>
     target?: Player<'client'>
   }
-  playerMessages: Map<string, string[]>
+  playerMessages: Map<string, { message: string; color?: NordColor }>
 }
 
 interface GameSocketProviderProps extends React.PropsWithChildren {
@@ -49,8 +50,7 @@ export function GameSocketProvider({
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
 
-  const [playerMessages, setPlayerMessages] = useState(new Map<string, string[]>())
-  const playerMessagesClearTimer = useRef<NodeJS.Timeout>()
+  const [playerMessages, setPlayerMessages] = useState(new Map<string, { message: string; color?: NordColor }>())
 
   useEffect(() => {
     const db = getFirebaseDatabase()
@@ -70,18 +70,11 @@ export function GameSocketProvider({
           if (newMessage) {
             setPlayerMessages(prev => {
               if (newMessage.clear) {
-                return new Map().set(newMessage.playerId, [newMessage.message])
+                return new Map().set(newMessage.playerId, { message: newMessage.message, color: newMessage.color })
               }
-              return new Map(prev).set(
-                newMessage.playerId,
-                (prev.get(newMessage.playerId) || []).concat(newMessage.message)
-              )
+              return new Map(prev).set(newMessage.playerId, { message: newMessage.message, color: newMessage.color })
             })
           }
-        }
-
-        if (!game.currentTurn) {
-          playerMessagesClearTimer.current = setTimeout(() => setPlayerMessages(new Map()), 5_000)
         }
         turnPhaseRef.current = turnPhase
       }
@@ -92,9 +85,6 @@ export function GameSocketProvider({
     return () => {
       unsubscribe()
       throttledOnSnapshotCallback.cancel()
-      if (playerMessagesClearTimer.current) {
-        clearTimeout(playerMessagesClearTimer.current)
-      }
     }
   }, [gameId, playerId])
 
@@ -249,7 +239,7 @@ export function usePlayers() {
   return players
 }
 
-export function usePlayerMessages(playerId: string) {
+export function usePlayerMessage(playerId: string) {
   const { playerMessages } = useContext(CoupContext) || {}
-  return playerMessages?.get(playerId) || []
+  return playerMessages?.get(playerId) || null
 }

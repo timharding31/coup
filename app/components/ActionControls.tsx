@@ -19,7 +19,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
   const forceCoup = coins >= 10
 
   return (
-    <Drawer defaultOpen>
+    <Drawer open>
       <DrawerContent className='p-4'>
         <div className='relative overflow-x-hidden'>
           <div
@@ -28,8 +28,8 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
             })}
           >
             <div className='px-2'>
-              <h3 className='text-xl'>It's your turn</h3>
-              <p className='text-base'>Select an available action:</p>
+              <h3 className='text-xl font-bold'>It's your turn</h3>
+              <p className='text-base text-nord-4'>Select an available action</p>
             </div>
 
             <Button
@@ -133,7 +133,11 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                       performTargetedAction(targetedAction, target.id)
                     }
                   }}
-                  nameTag={target}
+                  nameTag={{
+                    ...target,
+                    cardCount: target.influence.reduce<number>((ct, i) => ct - Number(i.isRevealed), 2) as 1 | 2,
+                    className: 'text-lg'
+                  }}
                 />
               ))}
             </div>

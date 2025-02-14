@@ -18,6 +18,8 @@ export type SpriteId =
   | 'arrow'
   | 'chip'
   | 'avatar'
+  | 'card'
+  | 'card-outline'
 
 export const SpriteSize = {
   sm: 18,
@@ -33,7 +35,7 @@ export interface SpriteProps {
   color?: NordColor
 }
 
-export const Sprite: React.FC<SpriteProps> = ({ id, size, color = 'nord-6', className }) => {
+export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) => {
   let width = SpriteSize[size],
     viewBox: string,
     svgClassName: string | undefined
@@ -48,6 +50,8 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color = 'nord-6', clas
     case 'exchange':
     case 'arrow':
     case 'dollar':
+    case 'card':
+    case 'card-outline':
       viewBox = '-32 -32 64 64'
       break
 

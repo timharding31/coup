@@ -21,6 +21,10 @@ body {
     left: calc(50cqi - 240px);
     right: auto;
   }
+
+  &:has(*[data-vaul-overlay]) #game-table {
+    @apply brightness-50;
+  }
 }
 
 .card-container {
@@ -48,7 +52,7 @@ body {
 }
 
 .bg-ui {
-  @apply bg-nord-2;
+  @apply bg-nord-1;
 }
 
 h1,

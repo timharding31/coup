@@ -8,7 +8,7 @@ import { PlayerNameTag } from './PlayerNameTag'
 export const variantStyles = {
   // Nord
   primary:
-    'bg-nord-0 text-nord-6 hover:bg-nord--1 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-2 active:translate-y-0 disabled:bg-nord-3',
+    'bg-nord-0 text-nord-6 hover:bg-nord--1 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord--1 active:translate-y-0 disabled:bg-nord-3',
   // Frost
   secondary:
     'bg-nord-8 text-nord-0 hover:bg-nord-9 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-10 active:translate-y-0 disabled:bg-nord-3',
@@ -134,7 +134,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
 
-        {props.disabled && !!(sprite || coinStack) ? (
+        {props.disabled && (sprite || coinStack) ? (
           <Sprite id='lock' size={size} />
         ) : coinStack ? (
           <CoinStack
@@ -150,10 +150,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : sprite ? (
           <Sprite
             id={sprite === 'arrow-left' ? 'arrow' : sprite}
-            className={sprite === 'arrow-left' ? 'rotate-180' : ''}
+            className={sprite === 'arrow-left' ? 'rotate-180 z-10' : 'z-10'}
             size={size}
           />
         ) : null}
+
         {nameTag ? (
           <PlayerNameTag {...nameTag} />
         ) : children ? (

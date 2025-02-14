@@ -26,11 +26,11 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
   label
 }) => {
   return (
-    <Drawer defaultOpen>
+    <Drawer open>
       <DrawerContent className='p-4'>
         <div className='px-2 mb-4'>
           <h3 className='text-xl font-bold'>{heading}</h3>
-          {subheading && <p className='text-base'>{subheading}</p>}
+          {subheading && <p className='text-base text-nord-4'>{subheading}</p>}
         </div>
         <div className='grid gap-4 grid-cols-1'>
           {availableResponses.canAccept && (

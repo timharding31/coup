@@ -43,7 +43,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
   const canSubmit = selectedCardIds.length >= minCards && selectedCardIds.length <= maxCards
 
   return (
-    <Drawer defaultOpen>
+    <Drawer open>
       <DrawerContent className='p-4'>
         <AnimatePresence mode='wait'>
           <motion.div

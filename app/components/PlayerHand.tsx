@@ -26,11 +26,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ influence, ...nameTagPro
   const game = useGame()
 
   return (
-    <div className='grid grid-rows-[auto_auto] p-2 gap-2'>
-      <div className='mx-auto'>
-        <PlayerNameTag {...nameTagProps} />
-      </div>
-      <div className={`grid grid-cols-${influence.length} gap-2`}>
+    <div className='grid grid-rows-[auto_auto] px-4 pb-4'>
+      <PlayerNameTag {...nameTagProps} className='text-lg my-3' />
+      <div className={`grid grid-cols-${influence.length} gap-4`}>
         {influence.map(card => (
           <PlayingCard key={card.id} isFaceDown={!game || game.status === 'WAITING'} {...card} />
         ))}

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useCoupContext } from '~/context/CoupContext'
+import { CoupContextType, useCoupContext } from '~/context/CoupContext'
 import { ActionControls } from './ActionControls'
 import { ResponseControls } from './ResponseControls'
 import { GameTable } from './GameTable'
@@ -12,7 +12,7 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, players } = useCoupContext()
+  const { game, players, sendResponse, selectCard, exchangeCards } = useCoupContext()
   const { myself, actor } = players
 
   const isActionMenuOpen = useMemo(() => {
@@ -27,14 +27,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
       {isActionMenuOpen ? (
         <ActionControls targets={game.players.filter(p => p.id !== myself.id)} coins={myself.coins} />
       ) : (
-        <GameControls />
+        <GameControls
+          game={game}
+          players={players}
+          sendResponse={sendResponse}
+          selectCard={selectCard}
+          exchangeCards={exchangeCards}
+        />
       )}
     </GameTable>
   )
 }
 
-const GameControls: React.FC = () => {
-  const { game, players, sendResponse, selectCard, exchangeCards } = useCoupContext()
+interface GameControlsProps
+  extends Pick<CoupContextType, 'game' | 'players' | 'sendResponse' | 'selectCard' | 'exchangeCards'> {}
+
+const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse, selectCard, exchangeCards }) => {
   const { myself, actor, target, blocker, challenger } = players
 
   if (game.status !== 'IN_PROGRESS' || !game.currentTurn) {
@@ -55,7 +63,7 @@ const GameControls: React.FC = () => {
       if (actor.id === myself.id || respondedPlayers.includes(myself.id)) {
         return null
       }
-      const actionMessage = `${actor.username.toUpperCase()} chose to ${action.verb.present}${target?.id === myself.id ? ' YOU' : target ? ` ${target.username.toUpperCase()}` : ''}`
+      const actionMessage = `${actor.username} chose to ${action.verb.present}${target?.id === myself.id ? ' YOU' : target ? ` ${target.username}` : ''}`
       return (
         <ResponseControls
           onResponse={sendResponse}
@@ -67,7 +75,7 @@ const GameControls: React.FC = () => {
             canBlock: action.canBeBlocked,
             canChallenge: action.canBeChallenged
           }}
-          label={action.type.replace('_', ' ').toUpperCase()}
+          label={action.type.replace('_', ' ')}
         />
       )
     }
@@ -80,7 +88,7 @@ const GameControls: React.FC = () => {
       return (
         <ResponseControls
           onResponse={sendResponse}
-          heading={`${blocker.username.toUpperCase()} BLOCKED your attempt to ${action.type}`}
+          heading={`${blocker.username} BLOCKED your attempt to ${action.type}`}
           subheading='How will you respond?'
           timeoutAt={timeoutAt}
           availableResponses={{
@@ -101,7 +109,7 @@ const GameControls: React.FC = () => {
       const defenseCard = myself.influence.find(c => c.type === action.requiredCharacter)
       return (
         <CardSelector
-          heading={`Your ${action.type} was CHALLENGED by ${challenger.username.toUpperCase()}`}
+          heading={`Your ${action.type} was CHALLENGED by ${challenger.username}`}
           subheading={
             defenseCard ? `Reveal your ${defenseCard.type} to get a new card from the deck` : 'Select a card to lose'
           }
@@ -121,7 +129,7 @@ const GameControls: React.FC = () => {
       const defenseCards = myself.influence.filter(c => (action.blockableBy || []).includes(c.type!))
       return (
         <CardSelector
-          heading={`Your BLOCK was CHALLENGED by ${actor?.username.toUpperCase()}`}
+          heading={`Your BLOCK was CHALLENGED by ${actor?.username}`}
           subheading={
             defenseCards.length
               ? `Reveal your ${defenseCards.map(c => c.type).join(' or ')} to get a new card from the deck`
@@ -158,8 +166,8 @@ const GameControls: React.FC = () => {
       }
       const actionMessage =
         action.type === 'ASSASSINATE'
-          ? `You were ASSASSINATED by ${actor.username.toUpperCase()}`
-          : `You were COUPED by ${actor.username.toUpperCase()}`
+          ? `You were ASSASSINATED by ${actor.username}`
+          : `You were COUPED by ${actor.username}`
       return (
         <CardSelector
           heading={actionMessage}

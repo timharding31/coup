@@ -1,6 +1,6 @@
 import React from 'react'
 import { PlayingCard } from './PlayingCard'
-import { useGame, usePlayerMessages } from '~/context/CoupContext'
+import { useGame, usePlayerMessage } from '~/context/CoupContext'
 import { Player } from '~/types'
 import { PlayerNameTag } from './PlayerNameTag'
 
@@ -23,8 +23,8 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   const accentColor = isActor ? 'nord-14' : isBlocker ? 'nord-13' : isChallenger ? 'nord-11' : ''
   const popoverTextColor = isChallenger ? 'nord-5' : 'nord-0'
 
-  const opponentMessages = usePlayerMessages(nameTagProps.id)
-  const isPopoverOpen = game?.status === 'IN_PROGRESS' && opponentMessages.length > 0
+  const opponentMessage = usePlayerMessage(nameTagProps.id)
+  const isPopoverOpen = game?.status === 'IN_PROGRESS' && opponentMessage
 
   return (
     <>
@@ -41,20 +41,18 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           ))}
         </div>
         {isPopoverOpen && (
-          <ul
-            className={`tooltip-content list-reset flex flex-col-reverse absolute bottom-[100%] px-3 py-0 rounded-md text-${popoverTextColor}`}
+          <div
+            className={`tooltip-content flex flex-col-reverse absolute bottom-[100%] px-3 py-0 rounded-md text-${popoverTextColor}`}
             style={
               {
                 marginBottom: '12px',
-                '--accent-color': `var(--${accentColor})`
+                '--accent-color': `var(--${opponentMessage.color || 'nord-14'})`
               } as React.CSSProperties
             }
           >
-            {opponentMessages.reverse().map((message, index) => (
-              <li key={index}>{message}</li>
-            ))}
+            {opponentMessage.message}
             {/* {isActor ? <>Current Player</> : isBlocker ? <>Blocker</> : isChallenger ? <>Challenger</> : null} */}
-          </ul>
+          </div>
         )}
       </div>
       {/* </TooltipTrigger>

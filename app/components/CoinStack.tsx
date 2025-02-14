@@ -43,7 +43,6 @@ const CoinStack: React.FC<CoinStackProps> = ({
             'leading-8': size === 'lg'
           }
         )}
-        style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {count}
       </span>

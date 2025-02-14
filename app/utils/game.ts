@@ -1,4 +1,4 @@
-import { Card, Game, Player } from '~/types'
+import { Card, Game, NordColor, Player } from '~/types'
 
 export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: string): Game<'client'> {
   const player = game.status === 'WAITING' ? null : game.players.find(p => p.id === playerId)
@@ -54,7 +54,7 @@ function prepareCardForClient(card: Card<'server' | 'client'>, player: Player | 
 
 export function getPlayerActionMessages(
   game: Game<'client'>
-): { playerId: string; message: string; clear?: boolean } | null {
+): { playerId: string; message: string; clear?: boolean; color?: NordColor } | null {
   const actor = getActor(game)
   const target = getTarget(game)
   const blocker = getBlocker(game)
@@ -63,14 +63,20 @@ export function getPlayerActionMessages(
   const turn = game.currentTurn
   const { action, phase = null } = turn || {}
 
-  if (!phase) return null
-
   switch (phase) {
+    case null:
+      return { playerId: actor.id, message: 'Selecting action', clear: true, color: 'nord-15' }
+
     case 'ACTION_DECLARED':
       if (!action) {
         throw new Error('No action found')
       }
-      return { playerId: actor.id, message: `${actor.username.toUpperCase()} ${action.verb.present}`, clear: true }
+      return {
+        playerId: actor.id,
+        message: `${actor.username} ${action.verb.present}${target ? ` ${target.username}` : ''}`,
+        color: 'nord-14',
+        clear: true
+      }
 
     case 'AWAITING_OPPONENT_RESPONSES':
       return null
@@ -79,50 +85,48 @@ export function getPlayerActionMessages(
       if (!blocker || !action) {
         throw new Error('Blocker or Action not found')
       }
-      return { playerId: blocker.id, message: `${blocker.username.toUpperCase()} BLOCKS ${action.type}` }
-    // return `Waiting for ${actor.username.toUpperCase()} to respond to BLOCK`
+      return { playerId: blocker.id, message: `Block ${action.type}`, color: 'nord-13' }
+    // return `Waiting for ${actor.username} to respond to BLOCK`
 
     case 'AWAITING_ACTOR_DEFENSE':
-      if (!challenger) {
-        throw new Error('Challenger not found')
+      if (!challenger || !action) {
+        throw new Error('Challenger or Action not found')
       }
       return {
         playerId: challenger.id,
-        message: `${challenger.username.toUpperCase()} CHALLENGES ${actor.username.toUpperCase()}`
+        message: `Challenge ${action.type}`,
+        color: 'nord-11'
       }
-    // return `Waiting for ${actor.username.toUpperCase()} to respond to ${challenger.username.toUpperCase()}'s CHALLENGE`
+    // return `Waiting for ${actor.username} to respond to ${challenger.username}'s CHALLENGE`
 
     case 'AWAITING_BLOCKER_DEFENSE':
       if (!challenger || !blocker) {
         throw new Error('Challenger or Blocker not found')
       }
-      return {
-        playerId: challenger.id,
-        message: `${challenger.username.toUpperCase()} CHALLENGES ${blocker.username.toUpperCase()}`
-      }
-    // return `Waiting for ${blocker.username.toUpperCase()} to respond to ${actor.username.toUpperCase()}'s CHALLENGE`
+      return { playerId: challenger.id, message: `Challenge block`, color: 'nord-11' }
+    // return `Waiting for ${blocker.username} to respond to ${actor.username}'s CHALLENGE`
 
     case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
       if (!challenger) {
         throw new Error('Challenger not found')
       }
-      return { playerId: challenger.id, message: `${challenger.username.toUpperCase()}'s CHALLENGE failed` }
-    // return `${challenger.username.toUpperCase()}'s CHALLENGE failed. Waiting for ${challenger.username.toUpperCase()} to reveal card`
+      return { playerId: challenger.id, message: `Challenge failed`, color: 'nord-11' }
+    // return `${challenger.username}'s CHALLENGE failed. Waiting for ${challenger.username} to reveal card`
 
     case 'ACTION_EXECUTION':
       return null
-    // return `Executing ${actor.username.toUpperCase()}'s ${action.type}`
+    // return `Executing ${actor.username}'s ${action.type}`
 
     case 'AWAITING_TARGET_SELECTION':
       if (!target) {
         throw new Error('Target not found')
       }
-      return { playerId: target.id, message: 'Choosing card to reveal', clear: true }
-    // return `Waiting for ${target?.username.toUpperCase()} to reveal card`
+      return { playerId: target.id, message: 'Choosing card to reveal', color: 'nord-0' }
+    // return `Waiting for ${target?.username} to reveal card`
 
     case 'AWAITING_EXCHANGE_RETURN':
-      return { playerId: actor.id, message: `Exchanging cards` }
-    // return `Waiting for ${actor.username.toUpperCase()} to return cards`
+      return { playerId: actor.id, message: `Exchanging cards`, color: 'nord-14' }
+    // return `Waiting for ${actor.username} to return cards`
 
     case 'ACTION_FAILED':
       return null
@@ -143,42 +147,42 @@ export function getTurnPhaseMessage(game: Game<'client'>): string {
 
   switch (phase) {
     case null:
-      return `It's ${actor.username.toUpperCase()}'s turn`
+      return `It's ${actor.username}'s turn`
 
     case 'ACTION_DECLARED':
       if (!action) return ''
-      return `${actor.username.toUpperCase()} ${action.verb.present}`
+      return `${actor.username} ${action.verb.present}`
 
     case 'AWAITING_OPPONENT_RESPONSES':
       return `Waiting for responses`
 
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
-      return `Waiting for ${actor.username.toUpperCase()} to respond to BLOCK`
+      return `Waiting for ${actor.username} to respond to BLOCK`
 
     case 'AWAITING_ACTOR_DEFENSE':
       if (!challenger) return ''
-      return `Waiting for ${actor.username.toUpperCase()} to respond to ${challenger.username.toUpperCase()}'s CHALLENGE`
+      return `Waiting for ${actor.username} to respond to ${challenger.username}'s CHALLENGE`
 
     case 'AWAITING_BLOCKER_DEFENSE':
       if (!blocker) return ''
-      return `Waiting for ${blocker.username.toUpperCase()} to respond to ${actor.username.toUpperCase()}'s CHALLENGE`
+      return `Waiting for ${blocker.username} to respond to ${actor.username}'s CHALLENGE`
 
     case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
       if (!challenger) return ''
-      return `${challenger.username.toUpperCase()}'s CHALLENGE failed. Waiting for ${challenger.username.toUpperCase()} to reveal card`
+      return `${challenger.username}'s CHALLENGE failed. Waiting for ${challenger.username} to reveal card`
 
     case 'ACTION_EXECUTION':
       if (!action) return ''
-      return `Executing ${actor.username.toUpperCase()}'s ${action.type}`
+      return `Executing ${actor.username}'s ${action.type}`
 
     case 'AWAITING_TARGET_SELECTION':
-      return `Waiting for ${target?.username.toUpperCase()} to reveal card`
+      return `Waiting for ${target?.username} to reveal card`
 
     case 'AWAITING_EXCHANGE_RETURN':
-      return `Waiting for ${actor.username.toUpperCase()} to return cards`
+      return `Waiting for ${actor.username} to return cards`
 
     case 'ACTION_FAILED':
-      return `${actor.username.toUpperCase()}'s action failed`
+      return `${actor.username}'s action failed`
 
     case 'TURN_COMPLETE':
       return 'Turn complete'
