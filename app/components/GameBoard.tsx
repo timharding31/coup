@@ -7,6 +7,7 @@ import { Header } from './Header'
 import { CardSelector } from './CardSelector'
 import { GameLobbyControls } from './GameLobbyControls'
 import { getResponseMenuProps } from '~/utils/game'
+import { GameOver } from './GameOver'
 
 interface GameBoardProps {
   playerId: string
@@ -26,6 +27,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
         selectCard={selectCard}
         exchangeCards={exchangeCards}
       />
+
+      <GameOver game={game} />
     </GameTable>
   )
 }

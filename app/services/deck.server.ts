@@ -63,7 +63,10 @@ export class DeckService implements IDeckService {
       })
 
       // Add card to deck and shuffle
-      const updatedDeck = this.shuffleDeck([...game.deck, ...cards.map(c => ({ ...c, isRevealed: false }))])
+      const updatedDeck = this.shuffleDeck([
+        ...game.deck,
+        ...cards.map(c => ({ ...c, isRevealed: false, isChallengeDefenseCard: false }))
+      ])
 
       return {
         ...game,

@@ -21,6 +21,7 @@ export type SpriteId =
   | 'card'
   | 'card-outline'
   | 'link'
+  | 'crown'
 
 export const SpriteSize = {
   sm: 18,
@@ -31,13 +32,13 @@ export type SpriteSize = keyof typeof SpriteSize
 
 export interface SpriteProps {
   id: SpriteId
-  size: SpriteSize
+  size: SpriteSize | number
   className?: string
   color?: NordColor
 }
 
 export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) => {
-  let width = SpriteSize[size],
+  let width = typeof size === 'number' ? size : SpriteSize[size],
     viewBox: string,
     svgClassName: string | undefined
 
@@ -74,6 +75,10 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
     case 'avatar':
       viewBox = '0 0 512 512'
       width = 14
+      break
+
+    case 'crown':
+      viewBox = '0 0 512 512'
       break
   }
 
