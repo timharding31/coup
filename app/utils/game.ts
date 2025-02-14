@@ -1,4 +1,5 @@
 import { Card, Game, NordColor, Player } from '~/types'
+import { getActionObject, getActionVerb } from './action'
 
 export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: string): Game<'client'> {
   const player = game.status === 'WAITING' ? null : game.players.find(p => p.id === playerId)
@@ -25,7 +26,7 @@ function prepareCardForClient(card: Card<'server' | 'client'>, player: Player | 
     return { ...card, type: null }
   }
   const playerCardIds = new Set(player.influence.map(c => c.id))
-  if (card.isRevealed || playerCardIds.has(card.id)) {
+  if (card.isRevealed || card.isChallengeDefenseCard || playerCardIds.has(card.id)) {
     return card
   }
   return { ...card, type: null }
@@ -71,9 +72,10 @@ export function getPlayerActionMessages(
       if (!action) {
         throw new Error('No action found')
       }
+      const actionVerb = getActionVerb(actor.id, action, 'infinitive', target)
       return {
         playerId: actor.id,
-        message: `${actor.username} ${action.verb.present}${target ? ` ${target.username}` : ''}`,
+        message: actionVerb.charAt(0).toUpperCase() + actionVerb.slice(1),
         color: 'nord-14',
         clear: true
       }
@@ -85,7 +87,11 @@ export function getPlayerActionMessages(
       if (!blocker || !action) {
         throw new Error('Blocker or Action not found')
       }
-      return { playerId: blocker.id, message: `Block ${action.type}`, color: 'nord-13' }
+      return {
+        playerId: blocker.id,
+        message: `Block ${action.type}`,
+        color: 'nord-13'
+      }
     // return `Waiting for ${actor.username} to respond to BLOCK`
 
     case 'AWAITING_ACTOR_DEFENSE':
@@ -103,14 +109,22 @@ export function getPlayerActionMessages(
       if (!challenger || !blocker) {
         throw new Error('Challenger or Blocker not found')
       }
-      return { playerId: challenger.id, message: `Challenge block`, color: 'nord-11' }
+      return {
+        playerId: challenger.id,
+        message: `Challenge block`,
+        color: 'nord-11'
+      }
     // return `Waiting for ${blocker.username} to respond to ${actor.username}'s CHALLENGE`
 
     case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
       if (!challenger) {
         throw new Error('Challenger not found')
       }
-      return { playerId: challenger.id, message: `Challenge failed`, color: 'nord-11' }
+      return {
+        playerId: challenger.id,
+        message: `Challenge failed`,
+        color: 'nord-11'
+      }
     // return `${challenger.username}'s CHALLENGE failed. Waiting for ${challenger.username} to reveal card`
 
     case 'ACTION_EXECUTION':
@@ -121,11 +135,19 @@ export function getPlayerActionMessages(
       if (!target) {
         throw new Error('Target not found')
       }
-      return { playerId: target.id, message: 'Choosing card to reveal', color: 'nord-0' }
+      return {
+        playerId: target.id,
+        message: 'Choosing card to reveal',
+        color: 'nord-12'
+      }
     // return `Waiting for ${target?.username} to reveal card`
 
     case 'AWAITING_EXCHANGE_RETURN':
-      return { playerId: actor.id, message: `Exchanging cards`, color: 'nord-14' }
+      return {
+        playerId: actor.id,
+        message: 'Exchanging cards',
+        color: 'nord-14'
+      }
     // return `Waiting for ${actor.username} to return cards`
 
     case 'ACTION_FAILED':
@@ -136,7 +158,10 @@ export function getPlayerActionMessages(
   }
 }
 
-export function getTurnPhaseMessage(game: Game<'client'>): string {
+export function getResponseMenuProps(
+  game: Game<'client'>,
+  myself: Player<'client'>
+): Partial<{ heading: string; subheading: string }> {
   const actor = getActor(game)
   const target = getTarget(game)
   const blocker = getBlocker(game)
@@ -145,47 +170,60 @@ export function getTurnPhaseMessage(game: Game<'client'>): string {
   const turn = game.currentTurn
   const { action, phase = null } = turn || {}
 
-  switch (phase) {
-    case null:
-      return `It's ${actor.username}'s turn`
+  if (!action || !phase) return {}
 
+  switch (phase) {
     case 'ACTION_DECLARED':
-      if (!action) return ''
-      return `${actor.username} ${action.verb.present}`
+    case 'ACTION_EXECUTION':
+    case 'ACTION_FAILED':
+    case 'TURN_COMPLETE':
+      return {}
 
     case 'AWAITING_OPPONENT_RESPONSES':
-      return `Waiting for responses`
+      return {
+        heading: `${actor.username} chose to ${getActionVerb(myself.id, action, 'infinitive', target)}`,
+        subheading: 'How will you respond?'
+      }
 
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
-      return `Waiting for ${actor.username} to respond to BLOCK`
+      if (!blocker) return {}
+      return {
+        heading: `${blocker.username} chose to BLOCK your ${getActionObject(action)}`,
+        subheading: 'How will you respond?'
+      }
 
     case 'AWAITING_ACTOR_DEFENSE':
-      if (!challenger) return ''
-      return `Waiting for ${actor.username} to respond to ${challenger.username}'s CHALLENGE`
+      if (!challenger) return {}
+      return {
+        heading: `${challenger.username} CHALLENGED your ${getActionObject(action)}`,
+        subheading: `Reveal ${action.requiredCharacter?.startsWith('A') ? 'an' : 'a'} ${action.requiredCharacter} to defend the challenge`
+      }
 
     case 'AWAITING_BLOCKER_DEFENSE':
-      if (!blocker) return ''
-      return `Waiting for ${blocker.username} to respond to ${actor.username}'s CHALLENGE`
+      if (!challenger) return {}
+      const requiredCards = action.blockableBy.join(' or ')
+      return {
+        heading: `${challenger.username} CHALLENGED your BLOCK`,
+        subheading: `Reveal ${requiredCards.startsWith('A') ? 'an' : 'a'} ${requiredCards} to defend the challenge`
+      }
 
     case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
-      if (!challenger) return ''
-      return `${challenger.username}'s CHALLENGE failed. Waiting for ${challenger.username} to reveal card`
-
-    case 'ACTION_EXECUTION':
-      if (!action) return ''
-      return `Executing ${actor.username}'s ${action.type}`
+      return {
+        heading: 'Your CHALLENGE failed',
+        subheading: 'Choose a card to lose'
+      }
 
     case 'AWAITING_TARGET_SELECTION':
-      return `Waiting for ${target?.username} to reveal card`
+      return {
+        heading: `${actor.username}'s ${getActionObject(action)} succeeded`,
+        subheading: 'Choose a card to lose'
+      }
 
     case 'AWAITING_EXCHANGE_RETURN':
-      return `Waiting for ${actor.username} to return cards`
-
-    case 'ACTION_FAILED':
-      return `${actor.username}'s action failed`
-
-    case 'TURN_COMPLETE':
-      return 'Turn complete'
+      return {
+        heading: 'Exchanging cards',
+        subheading: 'Choose two cards to return to the deck'
+      }
   }
 }
 

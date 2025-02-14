@@ -8,7 +8,10 @@ import {
   UntargetedAction,
   TargetedAction,
   TurnPhase,
-  WaitingPhase
+  WaitingPhase,
+  UntargetedActionType,
+  TargetedActionType,
+  Player
 } from '~/types'
 
 export function getActionFromType(
@@ -36,28 +39,105 @@ export function getActionFromType(playerId: string, type: ActionType, targetPlay
   }
 }
 
+export function getActionObject(action: Action): string {
+  switch (action.type) {
+    case 'ASSASSINATE':
+      return 'ASSASSINATION'
+
+    case 'INCOME':
+      return 'INCOME'
+
+    case 'FOREIGN_AID':
+      return 'FOREIGN AID'
+
+    case 'COUP':
+      return 'COUP'
+
+    case 'EXCHANGE':
+      return 'EXCHANGE'
+
+    case 'STEAL':
+      return 'STEAL'
+
+    case 'TAX':
+      return 'TAX'
+  }
+}
+
+export type ActionVerbTense = 'present' | 'past' | 'infinitive'
+
+export function getActionVerb(
+  playerId: string,
+  action: Action,
+  tense: ActionVerbTense,
+  target: Player<'server' | 'client'> | null = null
+): string {
+  if (action.type in UNTARGETED_ACTION_VERBS) {
+    return UNTARGETED_ACTION_VERBS[action.type as UntargetedActionType][tense]
+  } else if (!target) {
+    throw new Error('Target is required for targeted actions')
+  }
+  return TARGETED_ACTION_VERBS[action.type as TargetedActionType][tense].call(
+    null,
+    target.id === playerId ? 'you' : target.username
+  )
+}
+
+const TARGETED_ACTION_VERBS: Record<TargetedActionType, Record<ActionVerbTense, (targetUsername: string) => string>> = {
+  STEAL: {
+    present: targetUsername => `STEALS from ${targetUsername}`,
+    past: targetUsername => `STOLE from ${targetUsername}`,
+    infinitive: targetUsername => `STEAL from ${targetUsername}`
+  },
+  ASSASSINATE: {
+    present: targetUsername => `ASSASSINATES ${targetUsername}`,
+    past: targetUsername => `ASSASSINATED ${targetUsername}`,
+    infinitive: targetUsername => `ASSASSINATE ${targetUsername}`
+  },
+  COUP: {
+    present: targetUsername => `COUPS ${targetUsername}`,
+    past: targetUsername => `COUPED ${targetUsername}`,
+    infinitive: targetUsername => `COUP ${targetUsername}`
+  }
+}
+
+const UNTARGETED_ACTION_VERBS: Record<UntargetedActionType, Record<ActionVerbTense, string>> = {
+  INCOME: {
+    present: 'takes INCOME',
+    past: 'took INCOME',
+    infinitive: 'take INCOME'
+  },
+  FOREIGN_AID: {
+    present: 'takes FOREIGN AID',
+    past: 'took FOREIGN AID',
+    infinitive: 'take FOREIGN AID'
+  },
+  TAX: {
+    present: 'collects TAX',
+    past: 'collected TAX',
+    infinitive: 'collect TAX'
+  },
+  EXCHANGE: {
+    present: 'EXCHANGES',
+    past: 'EXCHANGED',
+    infinitive: 'EXCHANGE'
+  }
+}
+
 export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | 'type'>> = {
   INCOME: {
     coinCost: 0,
     canBeBlocked: false,
     canBeChallenged: false,
     autoResolve: true,
-    blockableBy: [],
-    verb: {
-      present: 'takes INCOME',
-      past: 'took INCOME'
-    }
+    blockableBy: []
   },
   FOREIGN_AID: {
     coinCost: 0,
     canBeBlocked: true,
     canBeChallenged: false,
     autoResolve: false,
-    blockableBy: [CardType.DUKE],
-    verb: {
-      present: 'takes FOREIGN AID',
-      past: 'took FOREIGN AID'
-    }
+    blockableBy: [CardType.DUKE]
   },
   TAX: {
     coinCost: 0,
@@ -65,11 +145,7 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: false,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: [],
-    verb: {
-      present: 'collects TAX',
-      past: 'collected TAX'
-    }
+    blockableBy: []
   },
   STEAL: {
     coinCost: 0,
@@ -77,11 +153,7 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: true,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: [CardType.AMBASSADOR, CardType.CAPTAIN],
-    verb: {
-      present: 'STEALS from',
-      past: 'STOLE from'
-    }
+    blockableBy: [CardType.AMBASSADOR, CardType.CAPTAIN]
   },
   ASSASSINATE: {
     coinCost: 3,
@@ -89,22 +161,14 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: true,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: [CardType.CONTESSA],
-    verb: {
-      present: 'ASSASSINATES',
-      past: 'ASSASSINATED'
-    }
+    blockableBy: [CardType.CONTESSA]
   },
   COUP: {
     coinCost: 7,
     canBeBlocked: false,
     canBeChallenged: false,
     autoResolve: false,
-    blockableBy: [],
-    verb: {
-      present: 'COUP',
-      past: 'COUPED'
-    }
+    blockableBy: []
   },
   EXCHANGE: {
     coinCost: 0,
@@ -112,11 +176,7 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     canBeBlocked: false,
     canBeChallenged: true,
     autoResolve: false,
-    blockableBy: [],
-    verb: {
-      present: 'EXCHANGES',
-      past: 'EXCHANGED'
-    }
+    blockableBy: []
   }
 }
 

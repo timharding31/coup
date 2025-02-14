@@ -156,10 +156,44 @@ export class TurnService implements ITurnService {
     if (result.committed) {
       if (defenseSuccessful && revealedCard) {
         // Replace the revealed card.
-        await this.returnAndReplaceCard(gameId, defenderId, revealedCard)
+        const card = await this.revealChallengeDefenseCardTemporarily(gameId, defenderId, revealedCard)
+        // Sleep for 5s before replacing the card with a new one from the deck
+        await new Promise(res => setTimeout(res, 5_000))
+        await this.returnAndReplaceCard(gameId, defenderId, card)
       }
       await this.progressToNextPhase(gameId)
     }
+  }
+
+  private async revealChallengeDefenseCardTemporarily(
+    gameId: string,
+    defenderId: string,
+    revealedCard: Card
+  ): Promise<Card> {
+    const gameRef = this.gamesRef.child(gameId)
+
+    const result = await gameRef.transaction((game: Game | null): Game | null => {
+      if (!game || !game.currentTurn) return game
+
+      return {
+        ...game,
+        players: game.players.map(p => {
+          if (p.id !== defenderId) return p
+          const cardIndex = p.influence.findIndex(c => c.id === revealedCard.id)
+          if (cardIndex === -1) return p
+          const newInfluence = p.influence.slice()
+          newInfluence[cardIndex].isChallengeDefenseCard = true
+          return { ...p, influence: newInfluence }
+        }),
+        updatedAt: Date.now()
+      }
+    })
+
+    if (!result.committed) {
+      throw new Error('Failed to reveal challenge defense card')
+    }
+
+    return { ...revealedCard, isChallengeDefenseCard: true }
   }
 
   async handleFailedChallengerCard(gameId: string, challengerId: string, cardId: string) {
@@ -241,7 +275,7 @@ export class TurnService implements ITurnService {
       return {
         ...game,
         players: updatedPlayers,
-        deck: game.deck.concat(exchangedCards.map(c => ({ ...c, isRevealed: false }))),
+        deck: game.deck.concat(exchangedCards.map(c => ({ ...c, isRevealed: false, isChallengeDefenseCard: false }))),
         currentTurn: {
           ...game.currentTurn,
           phase: 'TURN_COMPLETE',

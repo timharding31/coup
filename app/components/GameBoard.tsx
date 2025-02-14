@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CoupContextType, useCoupContext } from '~/context/CoupContext'
 import { ActionControls } from './ActionControls'
 import { ResponseControls } from './ResponseControls'
@@ -6,6 +6,7 @@ import { GameTable } from './GameTable'
 import { Header } from './Header'
 import { CardSelector } from './CardSelector'
 import { GameLobbyControls } from './GameLobbyControls'
+import { getResponseMenuProps } from '~/utils/game'
 
 interface GameBoardProps {
   playerId: string
@@ -13,28 +14,18 @@ interface GameBoardProps {
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
   const { game, players, sendResponse, selectCard, exchangeCards } = useCoupContext()
-  const { myself, actor } = players
-
-  const isActionMenuOpen = useMemo(() => {
-    if (game.status !== 'IN_PROGRESS') return false
-    if (actor.id !== playerId) return false
-    return !game.currentTurn || !game.currentTurn.action
-  }, [playerId, actor.id, game.status, game.currentTurn])
 
   return (
-    <GameTable playerId={playerId} isActionMenuOpen={isActionMenuOpen}>
+    <GameTable playerId={playerId} game={game} players={players}>
       <GameLobbyControls game={game} playerId={playerId} />
-      {isActionMenuOpen ? (
-        <ActionControls targets={game.players.filter(p => p.id !== myself.id)} coins={myself.coins} />
-      ) : (
-        <GameControls
-          game={game}
-          players={players}
-          sendResponse={sendResponse}
-          selectCard={selectCard}
-          exchangeCards={exchangeCards}
-        />
-      )}
+
+      <GameControls
+        game={game}
+        players={players}
+        sendResponse={sendResponse}
+        selectCard={selectCard}
+        exchangeCards={exchangeCards}
+      />
     </GameTable>
   )
 }
@@ -43,13 +34,38 @@ interface GameControlsProps
   extends Pick<CoupContextType, 'game' | 'players' | 'sendResponse' | 'selectCard' | 'exchangeCards'> {}
 
 const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse, selectCard, exchangeCards }) => {
+  const [isActionMenuVisible, setIsActionMenuVisible] = useState(false)
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout | undefined
+    if (!game.currentTurn?.phase) {
+      timeout = setTimeout(() => {
+        setIsActionMenuVisible(true)
+      }, 2_000)
+    }
+    return () => {
+      clearTimeout(timeout)
+      setIsActionMenuVisible(false)
+    }
+  }, [game.currentTurn?.phase])
+
   const { myself, actor, target, blocker, challenger } = players
 
-  if (game.status !== 'IN_PROGRESS' || !game.currentTurn) {
+  if (game.status !== 'IN_PROGRESS') {
+    return null
+  }
+
+  if (myself.id === actor.id && !game.currentTurn?.action && isActionMenuVisible) {
+    return <ActionControls targets={game.players.filter(p => p.id !== myself.id)} coins={myself.coins} />
+  }
+
+  if (!game.currentTurn) {
     return null
   }
 
   const { phase, action, timeoutAt, respondedPlayers = [] } = game.currentTurn
+
+  const { heading = '', subheading } = getResponseMenuProps(game, myself)
 
   switch (phase) {
     case 'ACTION_DECLARED':
@@ -63,16 +79,15 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       if (actor.id === myself.id || respondedPlayers.includes(myself.id)) {
         return null
       }
-      const actionMessage = `${actor.username} chose to ${action.verb.present}${target?.id === myself.id ? ' YOU' : target ? ` ${target.username}` : ''}`
       return (
         <ResponseControls
           onResponse={sendResponse}
-          heading={actionMessage}
-          subheading='How will you respond?'
+          heading={heading}
+          subheading={subheading}
           timeoutAt={timeoutAt}
           availableResponses={{
             canAccept: true,
-            canBlock: action.canBeBlocked,
+            canBlock: action.canBeBlocked && target?.id === myself.id,
             canChallenge: action.canBeChallenged
           }}
           label={action.type.replace('_', ' ')}
@@ -88,8 +103,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       return (
         <ResponseControls
           onResponse={sendResponse}
-          heading={`${blocker.username} BLOCKED your attempt to ${action.type}`}
-          subheading='How will you respond?'
+          heading={heading}
+          subheading={subheading}
           timeoutAt={timeoutAt}
           availableResponses={{
             canAccept: true,
@@ -109,10 +124,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       const defenseCard = myself.influence.find(c => c.type === action.requiredCharacter)
       return (
         <CardSelector
-          heading={`Your ${action.type} was CHALLENGED by ${challenger.username}`}
-          subheading={
-            defenseCard ? `Reveal your ${defenseCard.type} to get a new card from the deck` : 'Select a card to lose'
-          }
+          heading={heading}
+          subheading={defenseCard ? subheading : 'Choose a card to lose'}
           cards={myself.influence}
           intent={defenseCard ? 'success' : 'danger'}
           onSubmit={([cardId]) => selectCard(cardId)}
@@ -129,12 +142,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       const defenseCards = myself.influence.filter(c => (action.blockableBy || []).includes(c.type!))
       return (
         <CardSelector
-          heading={`Your BLOCK was CHALLENGED by ${actor?.username}`}
-          subheading={
-            defenseCards.length
-              ? `Reveal your ${defenseCards.map(c => c.type).join(' or ')} to get a new card from the deck`
-              : 'Select a card to lose'
-          }
+          heading={heading}
+          subheading={defenseCards.length ? subheading : 'Choose a card to lose'}
           cards={myself.influence}
           intent={defenseCards.length ? 'success' : 'danger'}
           onSubmit={([cardId]) => selectCard(cardId)}
@@ -150,8 +159,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       }
       return (
         <CardSelector
-          heading='Your CHALLENGE was unsuccessful'
-          subheading='Select a card to lose'
+          heading={heading}
+          subheading={subheading}
           cards={myself.influence}
           intent='danger'
           onSubmit={([cardId]) => selectCard(cardId)}
@@ -164,14 +173,10 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       if (!target || target.id !== myself.id) {
         return null
       }
-      const actionMessage =
-        action.type === 'ASSASSINATE'
-          ? `You were ASSASSINATED by ${actor.username}`
-          : `You were COUPED by ${actor.username}`
       return (
         <CardSelector
-          heading={actionMessage}
-          subheading='Select a card to lose'
+          heading={heading}
+          subheading={subheading}
           cards={myself.influence}
           intent='danger'
           onSubmit={([cardId]) => selectCard(cardId)}
@@ -186,8 +191,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       }
       return (
         <CardSelector
-          subheading='Select two cards to RETURN to the deck'
-          heading='EXCHANGE'
+          heading={heading}
+          subheading={subheading}
           cards={myself.influence}
           intent='primary'
           onSubmit={exchangeCards}

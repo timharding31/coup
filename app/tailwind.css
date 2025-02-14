@@ -21,10 +21,6 @@ body {
     left: calc(50cqi - 240px);
     right: auto;
   }
-
-  &:has(*[data-vaul-overlay]) #game-table {
-    @apply brightness-50;
-  }
 }
 
 .card-container {
@@ -68,10 +64,34 @@ h4 {
 }
 
 .tooltip-content {
-  background: var(--accent-color);
+  animation: slideUpFade 0.2s ease-in-out forwards;
 }
 
-.tooltip-content::after {
+.drawer {
+  animation: slideUp 0.5s ease-in-out forwards;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUpFade {
+  from {
+    transform: translateY(100%);
+    filter: opacity(0);
+  }
+  to {
+    transform: translateY(0);
+    filter: opacity(1);
+  }
+}
+
+/* .tooltip-content::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -80,4 +100,4 @@ h4 {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 4px solid var(--accent-color);
-}
+} */

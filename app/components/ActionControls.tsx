@@ -5,6 +5,7 @@ import { Button } from './Button'
 import { Drawer, DrawerContent } from './Drawer'
 import cn from 'classnames'
 import { PlayerNameTag } from './PlayerNameTag'
+import { Sprite } from './Sprite'
 
 const SHARED_STYLES = 'transition-transform duration-200 ease-in-out w-full grid gap-3 grid-cols-1'
 
@@ -90,7 +91,11 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               sprite='sword'
               disabled={coins < 3 || forceCoup}
             >
-              ASSASSINATE
+              <>ASSASINATE</>
+              <p className='absolute top-3 right-2 flex gap-1 text-xs text-nord-4'>
+                <span className='translate-y-[0.125em]'>-3</span>
+                <Sprite id='chip' size='sm' color='nord-4' />
+              </p>
             </Button>
             <Button
               size='lg'
@@ -99,7 +104,11 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               sprite='skull'
               disabled={coins < 7}
             >
-              COUP
+              <>COUP</>
+              <p className='absolute top-3 right-2 flex gap-1 text-xs text-nord-4'>
+                <span className='translate-y-[0.125em]'>-7</span>
+                <Sprite id='chip' size='sm' color='nord-4' />
+              </p>
             </Button>
           </div>
 
@@ -122,24 +131,30 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               </h3>
             </div>
             <div className='grid gap-4 grid-cols-1 mb-auto'>
-              {targets.map(target => (
-                <Button
-                  key={`target-${target.id}`}
-                  size='lg'
-                  variant='primary'
-                  className='w-full'
-                  onClick={() => {
-                    if (targetedAction) {
-                      performTargetedAction(targetedAction, target.id)
-                    }
-                  }}
-                  nameTag={{
-                    ...target,
-                    cardCount: target.influence.reduce<number>((ct, i) => ct - Number(i.isRevealed), 2) as 1 | 2,
-                    className: 'text-lg'
-                  }}
-                />
-              ))}
+              {targets.map(target => {
+                const unrevealedCardCount = target.influence.reduce<number>(
+                  (ct, card) => ct + Number(!card.isRevealed),
+                  0
+                )
+                return (
+                  <Button
+                    key={`target-${target.id}`}
+                    size='lg'
+                    variant='primary'
+                    className='w-full'
+                    onClick={() => {
+                      if (targetedAction) {
+                        performTargetedAction(targetedAction, target.id)
+                      }
+                    }}
+                    nameTag={{
+                      ...target,
+                      cardCount: unrevealedCardCount,
+                      className: 'text-lg'
+                    }}
+                  />
+                )
+              })}
             </div>
           </div>
         </div>

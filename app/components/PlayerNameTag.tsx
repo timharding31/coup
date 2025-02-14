@@ -7,7 +7,7 @@ import { Sprite } from './Sprite'
 interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
   bgColor?: NordColor
   className?: string
-  cardCount?: 1 | 2
+  cardCount?: number
 }
 
 export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
@@ -18,8 +18,8 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   className
 }) => {
   return (
-    <div className={cn('text-nord-4 flex justify-between items-center relative gap-4 w-full', className)}>
-      <span className='overflow-hidden whitespace-nowrap text-ellipsis'>{username}</span>
+    <div className={cn('text-nord-4 flex justify-between items-center relative gap-4 w-full px-1', className)}>
+      <span className='overflow-hidden whitespace-nowrap text-ellipsis font-bold'>{username}</span>
       <div className='flex items-center gap-5 flex-row-reverse'>
         {cardCount && (
           <div className='flex justify-start min-w-9'>

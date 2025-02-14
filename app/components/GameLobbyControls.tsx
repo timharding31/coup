@@ -45,10 +45,12 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
         <div className='flex flex-col items-stretch flex-1'>
           <div className='flex items-baseline justify-between gap-2 flex-wrap'>
             <h2 className='text-2xl'>Lobby</h2>
-            <p className='text-sm text-right font-bold text-nord-4'>PIN: {pin}</p>
+            <p className='text-sm text-right text-nord-4'>
+              pin: <strong>{pin}</strong>
+            </p>
           </div>
 
-          <Button size='sm' variant='primary' onClick={handleShare} sprite='arrow' className='mt-2 mb-6'>
+          <Button size='sm' variant='primary' onClick={handleShare} sprite='link' className='mt-2 mb-6'>
             Share Game Link
           </Button>
 

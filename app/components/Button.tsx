@@ -25,9 +25,9 @@ export const variantStyles = {
 
 // Size styles remain the same
 export const sizeStyles = {
-  base: 'h-10 px-6 py-2',
-  sm: 'h-9 px-4',
-  lg: 'h-11 px-8'
+  base: 'h-10 px-6 py-2 text-sm',
+  sm: 'h-9 px-4 text-base',
+  lg: 'h-11 pl-8 pr-4 text-lg'
 }
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -160,6 +160,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : children ? (
           <span
             className={cn('relative font-robotica translate-y-[0.125em]', {
+              'flex flex-auto': sprite || coinStack,
               'leading-[2.25rem]': size === 'sm',
               'leading-[2.5rem]': size === 'base',
               'leading-[2.75rem]': size === 'lg'

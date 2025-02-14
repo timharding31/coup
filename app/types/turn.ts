@@ -93,16 +93,13 @@ export const ActionType = {
 export type ActionType = (typeof ActionType)[keyof typeof ActionType]
 
 interface BaseAction {
+  type: ActionType
   playerId: string
   requiredCharacter?: CardType
   canBeBlocked: boolean
   blockableBy: CardType[]
   canBeChallenged: boolean
   coinCost: number
-  verb: {
-    present: string
-    past: string
-  }
 }
 
 export type TargetedActionType = Extract<ActionType, 'STEAL' | 'ASSASSINATE' | 'COUP'>

@@ -20,6 +20,7 @@ export type SpriteId =
   | 'avatar'
   | 'card'
   | 'card-outline'
+  | 'link'
 
 export const SpriteSize = {
   sm: 18,
@@ -41,6 +42,10 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
     svgClassName: string | undefined
 
   switch (id) {
+    case 'link':
+      viewBox = '0 0 16 16'
+      break
+
     case 'sword':
     case 'skull':
     case 'shield':

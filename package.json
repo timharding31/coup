@@ -25,6 +25,7 @@
     "firebase-admin": "^13.0.2",
     "framer-motion": "^12.1.0",
     "isbot": "^4.1.0",
+    "jotai": "^2.12.0",
     "lodash": "^4.17.21",
     "motion": "^12.1.0",
     "polished": "^4.3.1",
