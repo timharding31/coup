@@ -1,9 +1,15 @@
 import React from 'react'
 
 const sizeStyles = {
-  default: 'h-10 px-4',
+  base: 'h-10 px-4',
   sm: 'h-9 px-3',
   lg: 'h-11 px-6'
+}
+
+const LABEL_SIZE: Record<keyof typeof sizeStyles, string> = {
+  base: 'text-sm',
+  sm: 'text-xs',
+  lg: 'text-base'
 }
 
 const variantStyles = {
@@ -24,7 +30,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
     {
       className = 'font-medium',
       variant = 'primary',
-      size = 'default',
+      size = 'base',
       errorMessage = null,
       label,
       type = 'text',
@@ -40,7 +46,7 @@ export const TextInput = React.forwardRef<HTMLInputElement, TextInputProps>(
     return (
       <div className='flex flex-col gap-2'>
         {label && (
-          <label className='font-medium text-sm'>
+          <label className={`font-medium ${LABEL_SIZE[size]}`}>
             {label}
             {required && <span className='text-nord-11'> *</span>}
           </label>

@@ -10,7 +10,7 @@ export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: 
   }
 }
 
-function prepareOpponentForPlayer(
+export function prepareOpponentForPlayer(
   opponent: Player<'server' | 'client'>,
   player: Player<'server' | 'client'> | null = null
 ): Player<'client'> {

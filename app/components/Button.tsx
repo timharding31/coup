@@ -11,7 +11,7 @@ export const variantStyles = {
     'bg-nord-0 text-nord-6 hover:bg-nord--1 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord--1 active:translate-y-0 disabled:bg-nord-3',
   // Frost
   secondary:
-    'bg-nord-8 text-nord-0 hover:bg-nord-9 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-10 active:translate-y-0 disabled:bg-nord-3',
+    'bg-nord-8 text-nord-0 hover:bg-nord-7 hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-7 active:translate-y-0 disabled:bg-nord-3',
   // Nord Outline
   tertiary:
     'bg-nord-6 text-nord-0 border-2 border-nord-0 hover:bg-nord-5 hover:nord-shadow hover:-translate-y-0.5 active:translate-y-0 disabled:bg-nord-3',

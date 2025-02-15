@@ -22,6 +22,7 @@ export type SpriteId =
   | 'card-outline'
   | 'link'
   | 'crown'
+  | 'pencil'
 
 export const SpriteSize = {
   sm: 18,
@@ -79,6 +80,10 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
 
     case 'crown':
       viewBox = '0 0 512 512'
+      break
+
+    case 'pencil':
+      viewBox = '0 0 700 700'
       break
   }
 

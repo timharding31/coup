@@ -2,6 +2,7 @@ import { redirect, type ActionFunction, type LoaderFunction, type MetaFunction }
 import { Form, Link, useActionData, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
 import { Button } from '~/components/Button'
+import { IdentityPopover } from '~/components/IdentityPopover'
 import { PinInput } from '~/components/PinInput'
 import { PlayingCard } from '~/components/PlayingCard'
 import { TextInput } from '~/components/TextInput'
@@ -58,11 +59,15 @@ export default function Index() {
 
   return (
     <div className='pt-16 pb-8 px-6 flex flex-col h-full'>
+      <header className='fixed top-0 left-max right-max p-1 flex'>
+        <div className='ml-auto'>
+          <IdentityPopover {...player} buttonProps={{ variant: 'secondary' }} />
+        </div>
+      </header>
+
       <h1 className='font-robotica text-7xl'>coup</h1>
 
-      <p className='mt-12 text-xl font-medium'>Welcome, {player?.username}</p>
-
-      <div className='flex flex-col items-stretch mt-12 gap-4 w-full'>
+      <div className='flex flex-col items-stretch mt-16 gap-6 w-full'>
         <Form method='post' className='contents'>
           <input type='hidden' name='intent' value='create' />
           <Button variant='primary' type='submit' size='lg'>
@@ -82,10 +87,6 @@ export default function Index() {
           </div>
         </Form>
       </div>
-
-      <Link to='/logout' className='mt-auto underline text-base'>
-        Logout
-      </Link>
     </div>
   )
 }
