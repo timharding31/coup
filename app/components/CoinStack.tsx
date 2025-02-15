@@ -27,6 +27,13 @@ const CoinStack: React.FC<CoinStackProps> = ({
   const safeCount = Math.min(Math.max(0, count), 12)
   const offset = HORIZONTAL_OFFSET[size]
 
+  const textShadow = `
+    1px 1px 1px var(--${bgColor}),
+    -1px -1px 1px var(--${bgColor}),
+    1px -1px 1px var(--${bgColor}),
+    -1px 1px 1px var(--${bgColor})
+    `
+
   return (
     <div
       className={cn('flex flex-row-reverse justify-center', className, {
@@ -34,18 +41,21 @@ const CoinStack: React.FC<CoinStackProps> = ({
         'gap-0.5': size !== 'lg'
       })}
     >
-      <span
-        className={cn(
-          `font-robotica translate-y-[0.125em] text-${size} text-${color} inline-block w-[1em] text-center`,
-          {
-            'leading-[18px]': size === 'sm',
-            'leading-6': size === 'base',
-            'leading-8': size === 'lg'
-          }
-        )}
-      >
-        {count}
-      </span>
+      {count > 0 && (
+        <span
+          className={cn(
+            `font-robotica translate-y-[0.125em] text-${size} text-${color} inline-block w-[1em] text-center no-underline`,
+            {
+              'leading-[18px]': size === 'sm',
+              'leading-6': size === 'base',
+              'leading-8': size === 'lg'
+            }
+          )}
+          style={{ textShadow }}
+        >
+          {count}
+        </span>
+      )}
       <div
         className='relative'
         style={{

@@ -458,7 +458,7 @@ export class TurnService implements ITurnService {
     }
 
     // Progress phase based on responses.
-    // If a block is recorded, transition to AWAITING_ACTIVE_RESPONSE_TO_BLOCK.
+    // If a block was recorded, transition to AWAITING_ACTIVE_RESPONSE_TO_BLOCK.
     // If a challenge is recorded, transition to AWAITING_ACTOR_DEFENSE.
     await this.progressToNextPhase(gameId)
 
@@ -764,8 +764,19 @@ export class TurnService implements ITurnService {
 
   private async checkGameStatus(game: Game): Promise<GameStatus> {
     const activePlayers = game.players.filter(p => !this.isPlayerEliminated(p))
+
+    // Find newly eliminated players
+    const currentlyEliminated = game.players.filter(p => this.isPlayerEliminated(p)).map(p => p.id)
+
+    const eliminationOrder = game.eliminationOrder || []
+
+    const newlyEliminated = currentlyEliminated.filter(id => !eliminationOrder.includes(id))
+
+    if (newlyEliminated.length > 0) {
+      await this.gamesRef.child(`${game.id}/eliminationOrder`).set(eliminationOrder.concat(newlyEliminated))
+    }
+
     if (activePlayers.length <= 1) {
-      this.clearTimer(game.id)
       await this.onGameEnded(game.id, activePlayers[0]?.id)
       return GameStatus.COMPLETED
     }

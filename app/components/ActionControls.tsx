@@ -141,12 +141,13 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                     key={`target-${target.id}`}
                     size='lg'
                     variant='primary'
-                    className='w-full'
+                    className={cn('w-full')}
                     onClick={() => {
                       if (targetedAction) {
                         performTargetedAction(targetedAction, target.id)
                       }
                     }}
+                    disabled={unrevealedCardCount < 1}
                     nameTag={{
                       ...target,
                       cardCount: unrevealedCardCount,

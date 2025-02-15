@@ -32,27 +32,6 @@ function prepareCardForClient(card: Card<'server' | 'client'>, player: Player | 
   return { ...card, type: null }
 }
 
-/* 
-  const actor = useMemo(() => game.players[game.currentPlayerIndex], [game.players, game.currentPlayerIndex])
-
-  const myself = useMemo(() => game.players.find(p => p.id === playerId), [game.players, playerId])
-
-  const blocker = useMemo(
-    () => game.players.find(p => p.id === game.currentTurn?.opponentResponses?.block),
-    [game.players, game.currentTurn?.opponentResponses]
-  )
-
-  const challenger = useMemo(
-    () => game.players.find(p => p.id === game.currentTurn?.challengeResult?.challengerId),
-    [game.players, game.currentTurn?.challengeResult]
-  )
-
-  const target = useMemo(
-    () => game.players.find(p => p.id === game.currentTurn?.action.targetPlayerId),
-    [game.players, game.currentTurn?.action]
-  )
-*/
-
 export function getPlayerActionMessages(game: Game<'client'>): {
   playerId: string
   message: string

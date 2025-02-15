@@ -1,41 +1,61 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Game } from '~/types'
 import { Button } from './Button'
 import { useCoupContext } from '~/context/CoupContext'
 
-interface GameLobbyControlsProps {
+interface GameLobbyProps {
   game: Game<'client'>
   playerId: string
 }
 
-export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
-  game: { hostId, status, pin, players },
-  playerId
-}) => {
+export const GameLobby: React.FC<GameLobbyProps> = ({ game: { hostId, status, pin, players }, playerId }) => {
   const { startGame } = useCoupContext()
-  if (status !== 'WAITING') {
-    return null
-  }
 
   const isHost = playerId === hostId
   const canStart = players.length >= 2 && isHost
+
+  const [shareButtonText, setShareButtonText] = useState<string | null>(null)
+
+  const [waitingCursor, setWaitingCursor] = useState(0)
+
+  useEffect(() => {
+    if (status !== 'WAITING' || isHost) {
+      return
+    }
+    const interval = setInterval(() => {
+      setWaitingCursor(prev => (prev + 1) % 4)
+    }, 500)
+    return () => clearInterval(interval)
+  }, [status, isHost])
+
+  if (status !== 'WAITING') {
+    return null
+  }
 
   const handleShare = async () => {
     const shareLink = `/games/join/${pin}`
     const fullUrl = `${window.location.origin}${shareLink}`
 
-    if (navigator.share) {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+
+    const handleCopy = () =>
+      navigator.clipboard.writeText(fullUrl).then(() => {
+        setShareButtonText('Copied')
+        setTimeout(() => setShareButtonText(null), 2_000)
+      })
+
+    if (isTouchDevice && navigator.share) {
       try {
         await navigator.share({
-          title: 'Join my Coup game!',
-          text: `Join my game with PIN: ${pin}`,
+          title: 'Join my Coup game',
+          text: `PIN: ${pin}`,
           url: fullUrl
         })
       } catch (err) {
-        await navigator.clipboard.writeText(fullUrl)
+        await handleCopy()
       }
     } else {
-      await navigator.clipboard.writeText(fullUrl)
+      await handleCopy()
     }
   }
 
@@ -51,12 +71,12 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
           </div>
 
           <Button size='sm' variant='primary' onClick={handleShare} sprite='link' className='mt-2 mb-6'>
-            Share Game Link
+            {shareButtonText || 'Share Game Link'}
           </Button>
 
           <div className='w-full max-w-md flex-auto'>
             <h3 className='text-lg mb-2'>Players ({players.length})</h3>
-            <ul className='list-reset space-y-2 pb-6'>
+            <ol className='list-reset space-y-2 pb-6'>
               {players.map(player => (
                 <li key={player.id} className='px-4 py-1 bg-nord-15 rounded-md flex items-center justify-between'>
                   <div className='font-bold text-sm text-nord--1'>
@@ -66,13 +86,18 @@ export const GameLobbyControls: React.FC<GameLobbyControlsProps> = ({
                   {player.id === hostId && <span className='text-xs text-nord-1'>host</span>}
                 </li>
               ))}
-            </ul>
+            </ol>
           </div>
 
-          {isHost && (
+          {isHost ? (
             <Button size='lg' variant='success' onClick={startGame} disabled={!canStart} className='sticky bottom-0'>
               Start Game
             </Button>
+          ) : (
+            <div className='text-lg leading-16 sticky bottom-0 text-center'>
+              Waiting for host to start game
+              <span className='text-left inline-block w-[20px]'>{'...'.slice(0, waitingCursor)}</span>
+            </div>
           )}
         </div>
       </div>

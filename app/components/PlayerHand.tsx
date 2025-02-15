@@ -27,7 +27,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ influence, ...nameTagPro
 
   return (
     <div className='grid grid-rows-[auto_auto] px-4 pb-4'>
-      <PlayerNameTag {...nameTagProps} className='text-lg my-3' />
+      <PlayerNameTag {...nameTagProps} className='text-lg my-3' bgColor='nord-0' />
       <div className='grid grid-cols-2 gap-4'>
         {influence.slice(0, 2).map(card => (
           <PlayingCard key={card.id} isFaceDown={!game || game.status === 'WAITING'} {...card} />

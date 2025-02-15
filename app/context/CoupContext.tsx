@@ -24,6 +24,7 @@ export interface CoupContextType {
     target?: Player<'client'>
   }
   playerMessages: Map<string, { message: string; color?: NordColor }>
+  updatePlayer: (update: Partial<Player>) => Promise<void>
 }
 
 interface GameSocketProviderProps extends React.PropsWithChildren {
@@ -218,6 +219,22 @@ export function GameSocketProvider({
     [gameId, playerId]
   )
 
+  const updatePlayer = useCallback(
+    async (update: Partial<Player>) => {
+      try {
+        const res = await fetch(`/api/games/${gameId}/players/${playerId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...update })
+        })
+        if (!res.ok) throw new Error('Failed to start game')
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      }
+    },
+    [gameId, playerId]
+  )
+
   const actor = useMemo(() => game.players[game.currentPlayerIndex], [game.players, game.currentPlayerIndex])
 
   const myself = useMemo(() => game.players.find(p => p.id === playerId), [game.players, playerId])
@@ -252,6 +269,7 @@ export function GameSocketProvider({
         sendResponse,
         selectCard,
         exchangeCards,
+        updatePlayer,
         players: { myself, actor, blocker, challenger, target },
         playerMessages
       }}

@@ -8,7 +8,7 @@ export class PinService {
     const maxAttempts = 10
     let attempts = 0
     const pinLength = 4
-    const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
     while (attempts < maxAttempts) {
       // Generate a random 4-character PIN
       let pin = ''

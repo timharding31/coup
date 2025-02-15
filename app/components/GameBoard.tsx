@@ -5,7 +5,7 @@ import { ResponseControls } from './ResponseControls'
 import { GameTable } from './GameTable'
 import { Header } from './Header'
 import { CardSelector } from './CardSelector'
-import { GameLobbyControls } from './GameLobbyControls'
+import { GameLobby } from './GameLobby'
 import { getResponseMenuProps } from '~/utils/game'
 import { GameOver } from './GameOver'
 
@@ -18,17 +18,19 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
 
   return (
     <GameTable playerId={playerId} game={game} players={players}>
-      <GameLobbyControls game={game} playerId={playerId} />
-
-      <GameControls
-        game={game}
-        players={players}
-        sendResponse={sendResponse}
-        selectCard={selectCard}
-        exchangeCards={exchangeCards}
-      />
-
-      <GameOver game={game} />
+      {game.status === 'WAITING' ? (
+        <GameLobby game={game} playerId={playerId} />
+      ) : game.status === 'IN_PROGRESS' ? (
+        <GameControls
+          game={game}
+          players={players}
+          sendResponse={sendResponse}
+          selectCard={selectCard}
+          exchangeCards={exchangeCards}
+        />
+      ) : (
+        <GameOver game={game} />
+      )}
     </GameTable>
   )
 }
@@ -54,7 +56,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
 
   const { myself, actor, target, blocker, challenger } = players
 
-  if (game.status !== 'IN_PROGRESS') {
+  if (!myself.influence.some(card => !card.isRevealed)) {
+    // No controls for dead players
     return null
   }
 

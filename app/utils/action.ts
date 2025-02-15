@@ -113,14 +113,14 @@ const UNTARGETED_ACTION_VERBS: Record<UntargetedActionType, Record<ActionVerbTen
     infinitive: 'take FOREIGN AID'
   },
   TAX: {
-    present: 'collects TAX',
-    past: 'collected TAX',
-    infinitive: 'collect TAX'
+    present: 'claims DUKE (tax)',
+    past: 'claimed DUKE (tax)',
+    infinitive: 'DUKE'
   },
   EXCHANGE: {
-    present: 'EXCHANGES',
-    past: 'EXCHANGED',
-    infinitive: 'EXCHANGE'
+    present: 'claims AMBASSADOR',
+    past: 'claimed AMBASSADOR',
+    infinitive: 'AMBASSADOR'
   }
 }
 

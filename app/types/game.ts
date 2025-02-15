@@ -19,6 +19,7 @@ export interface Game<Context extends 'server' | 'client' = 'server'> {
   currentPlayerIndex: number // Index of current player
   currentTurn: TurnState | null
   winnerId?: string
+  eliminationOrder: string[] | null
   createdAt: number
   updatedAt: number
   completedAt?: number

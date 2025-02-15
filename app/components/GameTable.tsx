@@ -67,7 +67,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
       </div>
       <div
         ref={playerHandRef}
-        className='transition-transform duration-500 ease-in-out flex-none bg-nord-0'
+        className='transition-transform duration-500 ease-in-out flex-none bg-nord-0 border-t border-nord-3'
         style={{
           transform: `translateY(${translateAmount.toFixed(2)}px)`,
           boxShadow: '0px 300px 0px 0px var(--nord-0)'

@@ -71,7 +71,7 @@ const FaceDownCard: React.FC = () => {
   return (
     <div className='card-container'>
       <div className='rounded-card w-full h-full nord-shadow relative overflow-hidden'>
-        <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 60 80'>
+        <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
           <use href='#card-back' />
         </svg>
       </div>

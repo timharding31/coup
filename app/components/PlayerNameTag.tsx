@@ -16,20 +16,26 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   coins,
   textColor = 'nord-4',
   bgColor = 'nord-1',
-  cardCount = null,
+  cardCount,
   className
 }) => {
   return (
     <div className={cn(`text-${textColor} flex justify-between items-center relative gap-4 w-full px-1`, className)}>
-      <span className='overflow-hidden whitespace-nowrap text-ellipsis font-bold'>{username}</span>
+      <span
+        className={cn('overflow-hidden whitespace-nowrap text-ellipsis font-bold', {
+          'font-normal line-through': cardCount === 0
+        })}
+      >
+        {username}
+      </span>
       <div className='flex items-center gap-1 flex-row-reverse'>
-        {cardCount && (
+        {cardCount == null ? null : cardCount > 0 ? (
           <div className='flex flex-row-reverse justify-start min-w-9'>
             {Array.from({ length: cardCount }).map((_, i) => (
               <Sprite key={`card-${i}`} id='card' color='nord-8' size='base' className='-mr-1.5' />
             ))}
           </div>
-        )}
+        ) : null}
         <CoinStack count={coins} size='base' color='nord-14' bgColor={bgColor} />
       </div>
     </div>

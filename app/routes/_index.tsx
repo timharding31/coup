@@ -34,14 +34,22 @@ export const action: ActionFunction = async ({ request }) => {
 
   switch (intent) {
     case 'create':
-      gameId = (await gameService.createGame(playerId)).gameId
+      try {
+        gameId = (await gameService.createGame(playerId)).gameId
+      } catch (e) {
+        return { error: 'Something went wrong, please try again' }
+      }
       break
 
     case 'join':
       if (!pin) {
         return { error: 'PIN is required' }
       }
-      gameId = (await gameService.joinGameByPin(playerId, pin.toString())).gameId
+      try {
+        gameId = (await gameService.joinGameByPin(playerId, pin.toString())).gameId
+      } catch (e) {
+        return { error: 'Invalid PIN' }
+      }
       break
   }
 

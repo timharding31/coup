@@ -26,7 +26,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 
   return (
     <div className='relative flex flex-col items-center justify-center gap-2'>
-      <PlayerNameTag {...nameTagProps} />
+      <PlayerNameTag {...nameTagProps} bgColor='nord-1' />
 
       <div className={`flex-auto w-full grid grid-cols-${Math.max(2, influence.length)} gap-2`}>
         {influence.map(card => (

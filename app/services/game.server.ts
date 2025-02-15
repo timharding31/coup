@@ -76,7 +76,8 @@ export class GameService implements IGameService {
       deck: remainingDeck,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      currentPlayerIndex: 0
+      currentPlayerIndex: 0,
+      eliminationOrder: []
     }
 
     await Promise.all([
