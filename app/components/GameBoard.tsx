@@ -8,6 +8,7 @@ import { CardSelector } from './CardSelector'
 import { GameLobby } from './GameLobby'
 import { getResponseMenuProps } from '~/utils/game'
 import { GameOver } from './GameOver'
+import { getActionObject, getActionVerb } from '~/utils/action'
 
 interface GameBoardProps {
   playerId: string
@@ -96,7 +97,7 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
             canBlock: action.canBeBlocked && target?.id === myself.id,
             canChallenge: action.canBeChallenged
           }}
-          label={action.type.replace('_', ' ')}
+          label={getActionObject(action)}
         />
       )
     }
@@ -127,7 +128,7 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       if (!challenger || actor.id !== myself.id) {
         return null
       }
-      const defenseCard = myself.influence.find(c => c.type === action.requiredCharacter)
+      const defenseCard = myself.influence.find(c => !c.isRevealed && c.type === action.requiredCharacter)
       return (
         <CardSelector
           heading={heading}
@@ -145,7 +146,7 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
       if (!blocker || blocker.id !== myself.id) {
         return null
       }
-      const defenseCards = myself.influence.filter(c => (action.blockableBy || []).includes(c.type!))
+      const defenseCards = myself.influence.filter(c => !c.isRevealed && (action.blockableBy || []).includes(c.type!))
       return (
         <CardSelector
           heading={heading}

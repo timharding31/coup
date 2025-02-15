@@ -54,13 +54,13 @@ export function getActionObject(action: Action): string {
       return 'COUP'
 
     case 'EXCHANGE':
-      return 'EXCHANGE'
+      return 'AMBASSADOR'
 
     case 'STEAL':
       return 'STEAL'
 
     case 'TAX':
-      return 'TAX'
+      return 'DUKE'
   }
 }
 
@@ -79,7 +79,7 @@ export function getActionVerb(
   }
   return TARGETED_ACTION_VERBS[action.type as TargetedActionType][tense].call(
     null,
-    target.id === playerId ? 'you' : target.username
+    target.id === playerId ? 'you' : `@${target.username}`
   )
 }
 
@@ -105,12 +105,12 @@ const UNTARGETED_ACTION_VERBS: Record<UntargetedActionType, Record<ActionVerbTen
   INCOME: {
     present: 'takes INCOME',
     past: 'took INCOME',
-    infinitive: 'take INCOME'
+    infinitive: 'INCOME'
   },
   FOREIGN_AID: {
     present: 'takes FOREIGN AID',
     past: 'took FOREIGN AID',
-    infinitive: 'take FOREIGN AID'
+    infinitive: 'FOREIGN AID'
   },
   TAX: {
     present: 'claims DUKE (tax)',

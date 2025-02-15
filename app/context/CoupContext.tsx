@@ -84,7 +84,7 @@ export function GameSocketProvider({
           }
         }
 
-        if (turn?.phase != turnPhaseRef.current) {
+        if (turn?.phase !== turnPhaseRef.current) {
           const newMessage = getPlayerActionMessages(preparedGame)
           if (newMessage) {
             setPlayerMessages(prev => {

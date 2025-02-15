@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Game } from '~/types'
+import { Game, Player } from '~/types'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'
 import { Button } from './Button'

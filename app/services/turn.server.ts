@@ -753,7 +753,13 @@ export class TurnService implements ITurnService {
 
       case 'COUP':
       case 'ASSASSINATE':
-        await this.transitionState(gameId, turn.phase, 'AWAITING_TARGET_SELECTION')
+        // The target might have already died by now, turn must end before target selection
+        const target = game.players.find(p => p.id === action.targetPlayerId)
+        if (target && this.isPlayerEliminated(target)) {
+          await this.endTurn(gameId)
+        } else {
+          await this.transitionState(gameId, turn.phase, 'AWAITING_TARGET_SELECTION')
+        }
         break
 
       default:

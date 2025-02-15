@@ -59,10 +59,9 @@ export function getPlayerActionMessages(game: Game<'client'>): {
       if (!action) {
         throw new Error('No action found')
       }
-      const actionVerb = getActionVerb(actor.id, action, 'infinitive', target)
       return {
         playerId: actor.id,
-        message: actionVerb.charAt(0).toUpperCase() + actionVerb.slice(1),
+        message: getActionVerb(actor.id, action, 'infinitive', target),
         color: 'nord-14',
         clear: true
       }
@@ -87,7 +86,7 @@ export function getPlayerActionMessages(game: Game<'client'>): {
       }
       return {
         playerId: challenger.id,
-        message: `Challenge ${action.type}`,
+        message: `Challenge ${getActionObject(action)}`,
         color: 'nord-11'
       }
     // return `Waiting for ${actor.username} to respond to ${challenger.username}'s CHALLENGE`
@@ -109,7 +108,7 @@ export function getPlayerActionMessages(game: Game<'client'>): {
       }
       return {
         playerId: challenger.id,
-        message: `Challenge failed`,
+        message: `Lost challenge`,
         color: 'nord-11'
       }
     // return `${challenger.username}'s CHALLENGE failed. Waiting for ${challenger.username} to reveal card`
