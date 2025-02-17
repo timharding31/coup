@@ -1,9 +1,10 @@
 import { ActionFunction, LoaderFunction } from '@remix-run/node'
-import { Form, Link, useActionData, useLoaderData } from '@remix-run/react'
+import { Form, Link, useActionData, useLoaderData, useNavigate } from '@remix-run/react'
 import { Button } from '~/components/Button'
 import { Header } from '~/components/Header'
 import { TextInput } from '~/components/TextInput'
-import { playerService, sessionService } from '~/services/index.server'
+import { gameService, playerService, sessionService } from '~/services/index.server'
+import { prepareOpponentForPlayer } from '~/utils/game'
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { playerId } = await sessionService.requirePlayerSession(request)
@@ -31,17 +32,18 @@ export const action: ActionFunction = async ({ request }) => {
     return { error: 'Username already exists' }
   }
 
-  await playerService.updatePlayer(playerId, { username })
-  return { success: true }
+  const { player } = await gameService.updatePlayer(playerId, { username })
+  return { success: !!player }
 }
 
 export default function Settings() {
+  const navigate = useNavigate()
   const { username } = useLoaderData<{ username: string; currentGameId?: string }>()
   const { error: errorMessage, success } = useActionData<{ error?: string; success?: boolean }>() || {}
 
   return (
     <>
-      <Header backButton={'/'} showIdentityPopoverTrigger={false} />
+      <Header showIdentityPopoverTrigger={false} />
       <div className='mt-16 px-6'>
         <h1 className='font-robotica text-5xl'>Settings</h1>
         <Form method='post' className='mt-12 flex flex-col items-stretch gap-6 w-full'>
@@ -53,9 +55,14 @@ export default function Settings() {
             size='lg'
             errorMessage={errorMessage}
           />
-          <Button variant='primary' type='submit' size='lg' sprite={success ? 'check' : undefined}>
-            {success ? 'Saved' : 'Save'}
-          </Button>
+          <div className='grid grid-cols-[auto_1fr] gap-2'>
+            <Button variant='secondary' type='button' size='base' onClick={() => navigate(-1)} sprite='arrow-left'>
+              Back
+            </Button>
+            <Button variant='primary' type='submit' size='base' sprite={success ? 'check' : undefined}>
+              {success ? 'Saved' : 'Save'}
+            </Button>
+          </div>
         </Form>
       </div>
     </>

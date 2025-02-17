@@ -49,7 +49,7 @@ export default function Login() {
   const nextUrl = searchParams.get('then') || null
   return (
     <div className='pt-16 px-6'>
-      <h1 className='font-robotica text-7xl'>coup</h1>
+      <h1 className='font-robotica text-6xl'>polar coup</h1>
       <Form method='post' className='mt-12 flex flex-col items-stretch gap-4 w-full'>
         {nextUrl && <input type='hidden' name='then' value={nextUrl} />}
         <TextInput name='username' placeholder='Enter your username' required size='lg' errorMessage={errorMessage} />

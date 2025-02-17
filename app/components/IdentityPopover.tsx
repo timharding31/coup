@@ -1,8 +1,10 @@
 import React from 'react'
+import cn from 'classnames'
 import { Link } from '@remix-run/react'
 import { Popover, PopoverButton, PopoverPanel, Transition } from '@headlessui/react'
 import { Button, ButtonProps } from './Button'
 import { Player } from '~/types'
+import { useDrawerHeight } from './Drawer'
 
 interface IdentityPopoverProps extends Player<'server' | 'client'> {
   buttonProps?: Partial<Pick<ButtonProps, 'variant' | 'size' | 'color'>>
@@ -10,6 +12,7 @@ interface IdentityPopoverProps extends Player<'server' | 'client'> {
 
 export const IdentityPopover: React.FC<IdentityPopoverProps> = ({ username, buttonProps }) => {
   const { variant = 'primary', size = 'sm', color = 'nord-6' } = buttonProps || {}
+  const isDrawerOpen = !!useDrawerHeight()
   return (
     <Popover className='relative w-[46px] h-9'>
       <PopoverButton
@@ -18,7 +21,9 @@ export const IdentityPopover: React.FC<IdentityPopoverProps> = ({ username, butt
         variant={variant}
         size={size}
         color={color}
-        className='absolute inset-0 z-50'
+        className={cn('absolute inset-0', {
+          'z-50': !isDrawerOpen
+        })}
       />
 
       <Transition

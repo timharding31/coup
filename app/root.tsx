@@ -1,7 +1,8 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData } from '@remix-run/react'
+import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useNavigation } from '@remix-run/react'
 import type { LinksFunction, LoaderFunction } from '@remix-run/node'
 import fonts from './styles/fonts.css?url'
 import tailwind from './tailwind.css?url'
+import { LoadingSpinner } from './components/LoadingSpinner'
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: tailwind },
@@ -30,6 +31,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 }
 
 export default function App() {
+  const { state: navigationState } = useNavigation()
   const { ENV, svgContent } = useLoaderData<{ svgContent: string } & (typeof globalThis)['window']>()
   return (
     <html lang='en' translate='no'>
@@ -48,6 +50,7 @@ export default function App() {
         />
         <div id='root'>
           <Outlet />
+          <LoadingSpinner loading={navigationState !== 'idle'} />
         </div>
         <ScrollRestoration />
         <Scripts />

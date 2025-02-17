@@ -9,14 +9,6 @@ const colorSchemes: Record<CardType, string> = {
   [CardType.DUKE]: 'bg-gradient-to-br from-cyan-600 to-purple-800'
 }
 
-const decorativeElements: Record<CardType, string> = {
-  [CardType.AMBASSADOR]: 'border-amber-400',
-  [CardType.ASSASSIN]: 'border-emerald-800',
-  [CardType.CAPTAIN]: 'border-gray-600',
-  [CardType.CONTESSA]: 'border-rose-800',
-  [CardType.DUKE]: 'border-cyan-800'
-}
-
 const textColors: Record<CardType, string> = {
   [CardType.AMBASSADOR]: 'text-amber-900',
   [CardType.ASSASSIN]: 'text-emerald-400',

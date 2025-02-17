@@ -16,12 +16,12 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, players, sendResponse, selectCard, exchangeCards } = useCoupContext()
+  const { game, players, startGame, leaveGame, sendResponse, selectCard, exchangeCards } = useCoupContext()
 
   return (
     <GameTable playerId={playerId} game={game} players={players}>
       {game.status === 'WAITING' ? (
-        <GameLobby game={game} playerId={playerId} />
+        <GameLobby game={game} playerId={playerId} startGame={startGame} leaveGame={leaveGame} />
       ) : game.status === 'IN_PROGRESS' ? (
         <GameControls
           game={game}

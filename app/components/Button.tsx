@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useMergedRefs } from '~/hooks/useMergedRefs'
 import cn from 'classnames'
+import { useMergedRefs } from '~/hooks/useMergedRefs'
 import { Sprite, SpriteId } from './Sprite'
 import CoinStack from './CoinStack'
 import { PlayerNameTag } from './PlayerNameTag'
@@ -120,41 +120,61 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     forwardedRef
   ) => {
-    const baseClasses =
-      'relative flex items-center transition-all duration-200 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl'
-    const isOutline = variant.endsWith('Outline')
     const innerRef = useRef<HTMLButtonElement>(null)
+    const isOutline = variant.endsWith('Outline')
+    const hasIcon = sprite || coinStack
+    const isDisabled = props.disabled
+
+    const getContentGapClass = () => {
+      if ((sprite || isDisabled) && size === 'lg') return 'gap-4'
+      if ((sprite || isDisabled) && (size === 'base' || size === 'sm')) return 'gap-3'
+      if (coinStack && !isDisabled && size === 'lg') return 'gap-3'
+      if (coinStack && !isDisabled && (size === 'base' || size === 'sm')) return 'gap-2'
+      return ''
+    }
+
+    const getCoinStackMargin = () => {
+      if (!coinStack) return ''
+      const margins = {
+        1: '-ml-[4px]',
+        2: '-ml-[8px]',
+        3: '-ml-[12px]'
+      }
+      return margins[coinStack as keyof typeof margins] || ''
+    }
+
+    const classes = cn(
+      // Base classes
+      'relative flex items-center transition-all duration-200 focus-visible:outline-none',
+      'disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl',
+
+      // Variant and size styles
+      variantStyles[variant],
+      sizeStyles[size],
+
+      // Layout classes
+      {
+        'overflow-hidden': timeoutAt,
+        'justify-start': hasIcon,
+        'justify-center': !hasIcon && !nameTag
+      },
+
+      getContentGapClass(),
+      className
+    )
 
     return (
-      <button
-        className={cn(baseClasses, variantStyles[variant], sizeStyles[size], className, {
-          'overflow-hidden': timeoutAt,
-          'justify-start gap-4': sprite || props.disabled,
-          'justify-start gap-3': coinStack && !props.disabled,
-          'justify-center': !sprite && !coinStack && !nameTag
-        })}
-        ref={useMergedRefs(forwardedRef, innerRef)}
-        {...props}
-      >
+      <button className={classes} ref={useMergedRefs(forwardedRef, innerRef)} {...props}>
         {timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
 
-        {props.disabled && (sprite || coinStack) ? (
+        {isDisabled && hasIcon ? (
           <Sprite id='lock' size={size} />
         ) : coinStack ? (
-          <CoinStack
-            count={coinStack}
-            color='nord-6'
-            className={cn({
-              // 42, 46, 50
-              '-ml-[4px]': coinStack === 1,
-              '-ml-[8px]': coinStack === 2,
-              '-ml-[12px]': coinStack === 3
-            })}
-          />
+          <CoinStack count={coinStack} color='nord-6' className={getCoinStackMargin()} />
         ) : sprite ? (
           <Sprite
             id={sprite === 'arrow-left' ? 'arrow' : sprite}
-            className={sprite === 'arrow-left' ? 'rotate-180 z-10' : 'z-10'}
+            className={sprite === 'arrow-left' ? 'rotate-180' : ''}
             size={size}
           />
         ) : null}
@@ -164,7 +184,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : children ? (
           <span
             className={cn('relative font-robotica translate-y-[0.125em]', {
-              'flex flex-auto': sprite || coinStack,
+              'flex flex-auto': hasIcon,
               'leading-[2.25rem]': size === 'sm',
               'leading-[2.5rem]': size === 'base',
               'leading-[2.75rem]': size === 'lg'
@@ -177,7 +197,5 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     )
   }
 )
-
-// 3: 44, 2: 40, 1: 33
 
 Button.displayName = 'Button'

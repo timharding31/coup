@@ -1,6 +1,6 @@
 import type { ActionFunction } from '@remix-run/node'
 import { gameService } from '~/services/index.server'
-import { Player } from '~/types'
+import { prepareGameForClient } from '~/utils/game'
 
 export const action: ActionFunction = async ({ request, params }) => {
   if (request.method !== 'POST') {
@@ -8,15 +8,16 @@ export const action: ActionFunction = async ({ request, params }) => {
   }
 
   try {
-    const { gameId, playerId } = params
-    const playerUpdates = (await request.json()) as Partial<Player>
+    const { gameId } = params
+    const { playerId } = await request.json()
 
     if (!gameId || !playerId) {
       return { error: 'Missing required fields' }
     }
 
-    const { player } = await gameService.updatePlayer(playerId, playerUpdates)
-    return Response.json({ player })
+    const { success } = await gameService.leaveGame(playerId, gameId)
+
+    return Response.json({ success })
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error' }
   }

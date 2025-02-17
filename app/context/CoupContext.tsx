@@ -11,6 +11,7 @@ export interface CoupContextType {
   game: Game<'client'>
   error: string | null
   startGame: () => void
+  leaveGame: () => void
   performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => void
   performUntargetedAction: (actionType: UntargetedActionType) => void
   selectCard: (cardId: string) => void
@@ -203,6 +204,19 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
     }
   }, [gameId, playerId])
 
+  const leaveGame = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/games/${gameId}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId })
+      })
+      if (!res.ok) throw new Error('Failed to leave game')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    }
+  }, [gameId, playerId])
+
   const exchangeCards = useCallback(
     async (cardIds: string[]) => {
       try {
@@ -264,6 +278,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         game,
         error,
         startGame,
+        leaveGame,
         performTargetedAction,
         performUntargetedAction,
         sendResponse,

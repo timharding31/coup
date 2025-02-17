@@ -1,6 +1,6 @@
 import React from 'react'
 import cn from 'classnames'
-import { Sprite, SpriteSize } from './Sprite'
+import { Sprite, SpriteProps, SpriteSize } from './Sprite'
 import { NordColor } from '~/types'
 
 const HORIZONTAL_OFFSET: Record<SpriteSize, number> = {
@@ -12,7 +12,7 @@ const HORIZONTAL_OFFSET: Record<SpriteSize, number> = {
 interface CoinStackProps {
   count: number
   size?: SpriteSize
-  color?: NordColor
+  color?: SpriteProps['color']
   bgColor?: NordColor
   className?: string
 }

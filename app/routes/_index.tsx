@@ -73,7 +73,7 @@ export default function Index() {
         </div>
       </header>
 
-      <h1 className='font-robotica text-7xl'>coup</h1>
+      <h1 className='font-robotica text-6xl'>polar coup</h1>
 
       <div className='flex flex-col items-stretch mt-16 gap-6 w-full'>
         <Form method='post' className='contents'>

@@ -27,6 +27,7 @@ export interface IGameService {
     response: 'accept' | 'challenge' | 'block'
   ): Promise<{ game: Game | null }>
   handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<{ game: Game | null }>
+  updatePlayer(playerId: string, data: Partial<Omit<Player, 'influence' | 'coins'>>): Promise<{ player: Player | null }>
 }
 
 export class GameService implements IGameService {
@@ -233,10 +234,14 @@ export class GameService implements IGameService {
 
   async leaveGame(playerId: string, gameId: string) {
     const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
-      if (!game || game.status !== GameStatus.WAITING) return game
+      if (!game || game.status !== GameStatus.WAITING) {
+        return game
+      }
 
       const playerIndex = game.players.findIndex(p => p.id === playerId)
-      if (playerIndex === -1) return game
+      if (playerIndex === -1) {
+        return game
+      }
 
       const playerCards = game.players[playerIndex].influence
       const updatedDeck = this.deckService.shuffleDeck([...game.deck, ...playerCards])
@@ -322,5 +327,26 @@ export class GameService implements IGameService {
       this.pinService.removeGamePin(gameId),
       gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() })
     ])
+  }
+
+  async updatePlayer(playerId: string, data: Partial<Omit<Player, 'influence' | 'coins'>>) {
+    const { player } = await this.playerService.updatePlayer(playerId, data)
+    if (player?.currentGameId) {
+      const result = await this.gamesRef.child(player.currentGameId).transaction((game: Game | null): Game | null => {
+        if (!game) return game
+        const playerIndex = game.players.findIndex(p => p.id === playerId)
+        if (playerIndex === -1) {
+          console.error('Player not found')
+          return game
+        }
+        const updatedPlayers = game.players.slice()
+        updatedPlayers[playerIndex] = { ...updatedPlayers[playerIndex], ...data }
+        return { ...game, players: updatedPlayers, updatedAt: Date.now() }
+      })
+      if (!result.committed) {
+        throw new Error('Failed to update player in game')
+      }
+    }
+    return { player }
   }
 }

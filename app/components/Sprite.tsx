@@ -23,6 +23,7 @@ export type SpriteId =
   | 'link'
   | 'crown'
   | 'pencil'
+  | 'spinner'
 
 export const SpriteSize = {
   sm: 18,
@@ -35,7 +36,7 @@ export interface SpriteProps {
   id: SpriteId
   size: SpriteSize | number
   className?: string
-  color?: NordColor
+  color?: NordColor | 'purple-400' | 'emerald-400' | 'amber-400'
 }
 
 export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) => {
@@ -84,6 +85,10 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
 
     case 'pencil':
       viewBox = '0 0 700 700'
+      break
+
+    case 'spinner':
+      viewBox = '0 0 100 101'
       break
   }
 

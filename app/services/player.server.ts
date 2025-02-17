@@ -45,8 +45,17 @@ export class PlayerService {
     return { playerId, player }
   }
 
-  async updatePlayer(playerId: string, updates: Partial<PlayerInDatabase>): Promise<void> {
-    await this.playersRef.child(playerId).update(updates)
+  async updatePlayer(playerId: string, updates: Partial<PlayerInDatabase>): Promise<{ player: Player | null }> {
+    const result = await this.playersRef.child(playerId).transaction((player: Player | null): Player | null => {
+      if (!player) return player
+      return { ...player, ...updates }
+    })
+
+    if (!result.committed) {
+      throw new Error('Failed to update player')
+    }
+
+    return { player: result.snapshot.val() as Player | null }
   }
 
   async deletePlayer(playerId: string): Promise<void> {
