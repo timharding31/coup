@@ -96,7 +96,7 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
             timeoutAt={timeoutAt}
             availableResponses={{
               canAccept: true,
-              canBlock: action.canBeBlocked && target?.id === myself.id,
+              canBlock: action.canBeBlocked && (action.type === 'FOREIGN_AID' || target?.id === myself.id),
               canChallenge: action.canBeChallenged
             }}
             label={action.requiredCharacter || action.type.replace('_', ' ')}
