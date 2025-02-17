@@ -54,13 +54,13 @@ export function getActionObject(action: Action): string {
       return 'COUP'
 
     case 'EXCHANGE':
-      return 'AMBASSADOR'
+      return 'EXCHANGE'
 
     case 'STEAL':
       return 'STEAL'
 
     case 'TAX':
-      return 'DUKE'
+      return 'TAX'
   }
 }
 
@@ -115,12 +115,12 @@ const UNTARGETED_ACTION_VERBS: Record<UntargetedActionType, Record<ActionVerbTen
   TAX: {
     present: 'claims DUKE (tax)',
     past: 'claimed DUKE (tax)',
-    infinitive: 'DUKE'
+    infinitive: 'TAX'
   },
   EXCHANGE: {
     present: 'claims AMBASSADOR',
     past: 'claimed AMBASSADOR',
-    infinitive: 'AMBASSADOR'
+    infinitive: 'EXCHANGE'
   }
 }
 
@@ -129,14 +129,12 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     coinCost: 0,
     canBeBlocked: false,
     canBeChallenged: false,
-    autoResolve: true,
     blockableBy: []
   },
   FOREIGN_AID: {
     coinCost: 0,
     canBeBlocked: true,
     canBeChallenged: false,
-    autoResolve: false,
     blockableBy: [CardType.DUKE]
   },
   TAX: {
@@ -144,7 +142,6 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     requiredCharacter: CardType.DUKE,
     canBeBlocked: false,
     canBeChallenged: true,
-    autoResolve: false,
     blockableBy: []
   },
   STEAL: {
@@ -152,7 +149,6 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     requiredCharacter: CardType.CAPTAIN,
     canBeBlocked: true,
     canBeChallenged: true,
-    autoResolve: false,
     blockableBy: [CardType.AMBASSADOR, CardType.CAPTAIN]
   },
   ASSASSINATE: {
@@ -160,14 +156,12 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     requiredCharacter: CardType.ASSASSIN,
     canBeBlocked: true,
     canBeChallenged: true,
-    autoResolve: false,
     blockableBy: [CardType.CONTESSA]
   },
   COUP: {
     coinCost: 7,
     canBeBlocked: false,
     canBeChallenged: false,
-    autoResolve: false,
     blockableBy: []
   },
   EXCHANGE: {
@@ -175,7 +169,6 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     requiredCharacter: CardType.AMBASSADOR,
     canBeBlocked: false,
     canBeChallenged: true,
-    autoResolve: false,
     blockableBy: []
   }
 }
@@ -226,7 +219,7 @@ export const VALID_TRANSITIONS: StateTransition[] = [
   {
     from: 'ACTION_DECLARED',
     to: 'ACTION_EXECUTION',
-    condition: turn => turn.action.autoResolve || (!turn.action.canBeBlocked && !turn.action.canBeChallenged)
+    condition: turn => !turn.action.canBeBlocked && !turn.action.canBeChallenged
   },
   {
     from: 'ACTION_EXECUTION',

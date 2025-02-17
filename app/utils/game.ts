@@ -1,4 +1,4 @@
-import { Card, Game, NordColor, Player } from '~/types'
+import { Card, Game, NordColor, Player, PlayerMessage } from '~/types'
 import { getActionObject, getActionVerb } from './action'
 
 export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: string): Game<'client'> {
@@ -32,12 +32,7 @@ function prepareCardForClient(card: Card<'server' | 'client'>, player: Player | 
   return { ...card, type: null }
 }
 
-export function getPlayerActionMessages(game: Game<'client'>): {
-  playerId: string
-  message: string
-  clear?: boolean
-  color?: Extract<NordColor, 'nord-11' | 'nord-12' | 'nord-13' | 'nord-14' | 'nord-15'>
-} | null {
+export function getPlayerActionMessages(game: Game<'client'>): { [playerId: string]: PlayerMessage } | null {
   const actor = getActor(game)
   const target = getTarget(game)
   const blocker = getBlocker(game)
@@ -49,10 +44,10 @@ export function getPlayerActionMessages(game: Game<'client'>): {
   switch (phase) {
     case null:
       return {
-        playerId: actor.id,
-        message: 'Starting turn',
-        clear: true,
-        color: 'nord-14'
+        [actor.id]: {
+          message: 'Starting turn',
+          type: 'info'
+        }
       }
 
     case 'ACTION_DECLARED':
@@ -60,10 +55,10 @@ export function getPlayerActionMessages(game: Game<'client'>): {
         throw new Error('No action found')
       }
       return {
-        playerId: actor.id,
-        message: getActionVerb(actor.id, action, 'infinitive', target),
-        color: 'nord-14',
-        clear: true
+        [actor.id]: {
+          message: getActionVerb(actor.id, action, 'infinitive', target),
+          type: 'info'
+        }
       }
 
     case 'AWAITING_OPPONENT_RESPONSES':
@@ -74,70 +69,106 @@ export function getPlayerActionMessages(game: Game<'client'>): {
         throw new Error('Blocker or Action not found')
       }
       return {
-        playerId: blocker.id,
-        message: `Block ${action.type}`,
-        color: 'nord-13'
+        [blocker.id]: {
+          message: `Block ${getActionObject(action)}`,
+          type: 'block'
+        },
+        [actor.id]: {
+          message: 'Responding to block',
+          type: 'info'
+        }
       }
-    // return `Waiting for ${actor.username} to respond to BLOCK`
 
     case 'AWAITING_ACTOR_DEFENSE':
       if (!challenger || !action) {
         throw new Error('Challenger or Action not found')
       }
-      return {
-        playerId: challenger.id,
-        message: `Challenge ${getActionObject(action)}`,
-        color: 'nord-11'
+      if (!action.requiredCharacter) {
+        throw new Error('Required character not found')
       }
-    // return `Waiting for ${actor.username} to respond to ${challenger.username}'s CHALLENGE`
+      return {
+        [challenger.id]: {
+          message: `Challenge ${action.requiredCharacter}`,
+          type: 'challenge'
+        },
+        [actor.id]: {
+          message: 'Defending challenge',
+          type: 'info'
+        }
+      }
 
     case 'AWAITING_BLOCKER_DEFENSE':
       if (!challenger || !blocker) {
         throw new Error('Challenger or Blocker not found')
       }
       return {
-        playerId: challenger.id,
-        message: `Challenge block`,
-        color: 'nord-11'
+        [challenger.id]: {
+          message: `Challenge BLOCK`,
+          type: 'challenge'
+        },
+        [blocker.id]: {
+          message: 'Defending challenge',
+          type: 'info'
+        }
       }
-    // return `Waiting for ${blocker.username} to respond to ${actor.username}'s CHALLENGE`
 
     case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
-      if (!challenger) {
-        throw new Error('Challenger not found')
+      const defender = turn?.opponentResponses?.block ? blocker : actor
+      if (!challenger || !defender) {
+        throw new Error('Challenger and/or defender not found')
       }
       return {
-        playerId: challenger.id,
-        message: `Lost challenge`,
-        color: 'nord-11'
+        [challenger.id]: {
+          message: 'Challenge failed',
+          type: 'failure'
+        },
+        [defender.id]: {
+          message: 'Challenge defended',
+          type: 'success'
+        }
       }
-    // return `${challenger.username}'s CHALLENGE failed. Waiting for ${challenger.username} to reveal card`
 
     case 'ACTION_EXECUTION':
-      return null
-    // return `Executing ${actor.username}'s ${action.type}`
+      if (!action) {
+        throw new Error('Action not found')
+      }
+      return {
+        [actor.id]: {
+          message: `${getActionObject(action)} succeeded`,
+          type: 'success'
+        }
+      }
 
     case 'AWAITING_TARGET_SELECTION':
       if (!target) {
         throw new Error('Target not found')
       }
       return {
-        playerId: target.id,
-        message: 'Choosing card to reveal',
-        color: 'nord-12'
+        [target.id]: {
+          message: 'Choosing card to reveal',
+          type: 'failure'
+        }
       }
     // return `Waiting for ${target?.username} to reveal card`
 
     case 'AWAITING_EXCHANGE_RETURN':
       return {
-        playerId: actor.id,
-        message: 'Exchanging cards',
-        color: 'nord-14'
+        [actor.id]: {
+          message: 'Exchanging cards',
+          type: 'info'
+        }
       }
-    // return `Waiting for ${actor.username} to return cards`
 
     case 'ACTION_FAILED':
-      return null
+      if (!action) {
+        throw new Error('Action not found')
+      }
+      return {
+        [actor.id]: {
+          message: `${getActionObject(action)} failed`,
+          type: 'failure'
+        }
+      }
 
     case 'TURN_COMPLETE':
       return null
@@ -179,9 +210,9 @@ export function getResponseMenuProps(
       }
 
     case 'AWAITING_ACTOR_DEFENSE':
-      if (!challenger) return {}
+      if (!challenger || !action.requiredCharacter) return {}
       return {
-        heading: `${challenger.username} CHALLENGED your ${getActionObject(action)}`,
+        heading: `${challenger.username} CHALLENGED your ${action.requiredCharacter}`,
         subheading: `Reveal ${action.requiredCharacter?.startsWith('A') ? 'an' : 'a'} ${action.requiredCharacter} to defend the challenge`
       }
 

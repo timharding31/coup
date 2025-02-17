@@ -1,7 +1,7 @@
 import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
-import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, NordColor } from '~/types'
+import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, NordColor, PlayerMessage } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { getPlayerActionMessages, prepareGameForClient } from '~/utils/game'
@@ -23,12 +23,11 @@ export interface CoupContextType {
     challenger?: Player<'client'>
     target?: Player<'client'>
   }
-  playerMessages: Map<string, { message: string; color?: NordColor }>
+  playerMessages: Map<string, PlayerMessage>
   updatePlayer: (update: Partial<Player>) => Promise<void>
 }
 
-interface GameSocketProviderProps extends React.PropsWithChildren {
-  socketUrl: string
+interface CoupContextProviderProps extends React.PropsWithChildren {
   gameId: string
   playerId: string
   game: Game<'client'>
@@ -38,18 +37,18 @@ export const CoupContext = createContext<CoupContextType | null>(null)
 
 const THROTTLE_DELAY_MS = 500
 
-export function GameSocketProvider({
+export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   children,
   gameId,
   playerId,
   game: initialGame
-}: Omit<GameSocketProviderProps, 'socketUrl'>) {
+}) => {
   const [game, setGame] = useState(initialGame)
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
 
-  const [playerMessages, setPlayerMessages] = useState(new Map<string, { message: string; color?: NordColor }>())
+  const [playerMessages, setPlayerMessages] = useState(new Map<string, PlayerMessage>())
 
   useEffect(() => {
     const db = getFirebaseDatabase()
@@ -72,12 +71,12 @@ export function GameSocketProvider({
             setPlayerMessages(prev => {
               const existing = prev.get(responderId)
 
-              const next: { message: string; color: NordColor } =
+              const next: PlayerMessage =
                 responderId === blockerId
-                  ? { message: '✗', color: 'nord-13' }
+                  ? { message: '✗', type: 'block' }
                   : responderId === challengerId
-                    ? { message: '⁉️', color: 'nord-11' }
-                    : { message: '✓', color: 'nord-14' }
+                    ? { message: '⁉️', type: 'challenge' }
+                    : { message: '✓', type: 'success' }
 
               return existing?.message === next.message ? prev : new Map(prev).set(responderId, next)
             })
@@ -85,13 +84,14 @@ export function GameSocketProvider({
         }
 
         if (turn?.phase !== turnPhaseRef.current) {
-          const newMessage = getPlayerActionMessages(preparedGame)
-          if (newMessage) {
+          const newMessages = getPlayerActionMessages(preparedGame)
+          if (newMessages) {
             setPlayerMessages(prev => {
-              if (newMessage.clear) {
-                return new Map().set(newMessage.playerId, { message: newMessage.message, color: newMessage.color })
+              const next = turn?.phase ? new Map(prev) : new Map()
+              for (const [playerId, message] of Object.entries(newMessages)) {
+                next.set(playerId, message)
               }
-              return new Map(prev).set(newMessage.playerId, { message: newMessage.message, color: newMessage.color })
+              return next
             })
           }
         }
@@ -104,7 +104,7 @@ export function GameSocketProvider({
             const challengeDefenseCard = challengeDefender?.influence.find(card => card.isChallengeDefenseCard)
             if (challengeDefenseCard) {
               setPlayerMessages(prev =>
-                prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, color: 'nord-14' })
+                prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, type: 'info' })
               )
             } else {
               setPlayerMessages(prev => {
@@ -297,7 +297,7 @@ export function usePlayers() {
   return players
 }
 
-export function usePlayerMessage(playerId: string) {
+export function usePlayerMessage(playerId: string): PlayerMessage | null {
   const { playerMessages } = useContext(CoupContext) || {}
   return playerMessages?.get(playerId) || null
 }

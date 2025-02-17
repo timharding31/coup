@@ -1,7 +1,7 @@
 import type { Game } from '~/types'
 import { redirect, LoaderFunction } from '@remix-run/node'
 import { Outlet, useLoaderData } from '@remix-run/react'
-import { GameSocketProvider } from '~/context/CoupContext'
+import { CoupContextProvider } from '~/context/CoupContext'
 import { gameService, sessionService } from '~/services/index.server'
 import { prepareGameForClient } from '~/utils/game'
 import { GameBoard } from '~/components/GameBoard'
@@ -26,10 +26,10 @@ export default function GameRoute() {
   }>()
 
   return (
-    <GameSocketProvider gameId={gameId} playerId={playerId} game={game}>
+    <CoupContextProvider gameId={gameId} playerId={playerId} game={game}>
       <div className='h-full w-full flex flex-col items-stretch justify-between'>
         <GameBoard playerId={playerId} />
       </div>
-    </GameSocketProvider>
+    </CoupContextProvider>
   )
 }

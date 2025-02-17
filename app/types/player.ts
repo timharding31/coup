@@ -1,4 +1,5 @@
 import { Card, CardType } from './card'
+import { NordColor } from './style'
 
 export interface Player<Context extends 'server' | 'client' = 'server'> {
   id: string
@@ -6,4 +7,9 @@ export interface Player<Context extends 'server' | 'client' = 'server'> {
   influence: Card<Context>[]
   coins: number
   currentGameId?: string | null // Reference to current game
+}
+
+export interface PlayerMessage {
+  message: string
+  type: 'info' | 'challenge' | 'block' | 'success' | 'failure'
 }

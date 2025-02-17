@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useRef } from 'react'
 import { Game, Player } from '~/types'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'
@@ -11,6 +11,7 @@ interface GameOverProps {
 
 export const GameOver: React.FC<GameOverProps> = ({ game: { winnerId, status, players, eliminationOrder } }) => {
   const allPlayers = useMemo(() => new Map(players.map(player => [player.id, player])), [players])
+  const losersRef = useRef(eliminationOrder?.reverse().filter(id => id !== winnerId) || [])
 
   const winner = winnerId && allPlayers.get(winnerId)
 
@@ -22,8 +23,8 @@ export const GameOver: React.FC<GameOverProps> = ({ game: { winnerId, status, pl
 
   return (
     <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord-0/50 p-2'>
-      <div className='flex flex-col w-full h-full p-6 bg-ui rounded-xl nord-shadow overflow-y-scroll ring-nord-0 ring-1 relative'>
-        <div className='flex flex-col items-stretch flex-auto gap-2 sm:gap-6'>
+      <div className='flex flex-col w-full h-full p-6 bg-ui rounded-xl nord-shadow overflow-y-scroll no-scrollbar ring-nord-0 ring-1 relative'>
+        <div className='flex flex-col items-stretch flex-auto gap-0 sm:gap-6'>
           <h2 className='text-2xl text-center'>Game Over</h2>
 
           <div className='w-full max-w-md flex-auto flex flex-col items-stretch px-8'>
@@ -34,7 +35,7 @@ export const GameOver: React.FC<GameOverProps> = ({ game: { winnerId, status, pl
             </div>
             {eliminationOrder && (
               <ul className='mt-6 pr-2 pb-4 pl-1 list-reset flex flex-col items-stretch gap-2'>
-                {eliminationOrder.reverse().map((loserId, i) => {
+                {losersRef.current.slice(0, 2).map((loserId, i) => {
                   const loser = allPlayers.get(loserId)
                   return loser ? (
                     <li key={loser.id} className='flex items-baseline justify-between gap-1'>

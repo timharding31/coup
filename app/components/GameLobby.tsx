@@ -47,8 +47,8 @@ export const GameLobby: React.FC<GameLobbyProps> = ({ game: { hostId, status, pi
     if (isTouchDevice && navigator.share) {
       try {
         await navigator.share({
-          title: 'Join my Coup game',
-          text: `PIN: ${pin}`,
+          title: 'Join my Coup game!',
+          text: `Join my game with PIN: ${pin}`,
           url: fullUrl
         })
       } catch (err) {
@@ -61,7 +61,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({ game: { hostId, status, pi
 
   return (
     <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord-0/50 p-2'>
-      <div className='flex flex-col w-full h-full p-6 bg-ui rounded-xl nord-shadow overflow-y-scroll ring-nord-0 ring-1 relative'>
+      <div className='flex flex-col w-full h-full p-6 bg-ui rounded-xl nord-shadow overflow-y-scroll no-scrollbar ring-nord-0 ring-1 relative'>
         <div className='flex flex-col items-stretch flex-1'>
           <div className='flex items-baseline justify-between gap-2 flex-wrap'>
             <h2 className='text-2xl'>Lobby</h2>

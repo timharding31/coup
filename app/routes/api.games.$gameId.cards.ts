@@ -17,9 +17,9 @@ export const action: ActionFunction = async ({ request, params }) => {
 
     const { game } = await gameService.handleCardSelection(gameId, playerId, cardId)
 
-    return {
+    return Response.json({
       game: game ? prepareGameForClient(game, playerId) : null
-    }
+    })
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error' }
   }

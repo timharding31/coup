@@ -16,7 +16,7 @@ export const action: ActionFunction = async ({ request, params }) => {
     }
 
     await playerService.updatePlayer(playerId, playerUpdates)
-    return { success: true }
+    return Response.json({ success: true })
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Unknown error' }
   }

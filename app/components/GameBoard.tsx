@@ -9,6 +9,7 @@ import { GameLobby } from './GameLobby'
 import { getResponseMenuProps } from '~/utils/game'
 import { GameOver } from './GameOver'
 import { getActionObject, getActionVerb } from '~/utils/action'
+import { TimeoutProgressBar } from './TimeoutProgressBar'
 
 interface GameBoardProps {
   playerId: string
@@ -47,7 +48,7 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
     if (!game.currentTurn?.phase) {
       timeout = setTimeout(() => {
         setIsActionMenuVisible(true)
-      }, 2_000)
+      }, 1_000)
     }
     return () => {
       clearTimeout(timeout)
@@ -83,44 +84,53 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
 
     case 'AWAITING_OPPONENT_RESPONSES': {
       // Only unresponded, non-actors can respond to action
-      if (actor.id === myself.id || respondedPlayers.includes(myself.id)) {
+      if (respondedPlayers.includes(myself.id)) {
         return null
       }
-      return (
-        <ResponseControls
-          onResponse={sendResponse}
-          heading={heading}
-          subheading={subheading}
-          timeoutAt={timeoutAt}
-          availableResponses={{
-            canAccept: true,
-            canBlock: action.canBeBlocked && target?.id === myself.id,
-            canChallenge: action.canBeChallenged
-          }}
-          label={getActionObject(action)}
-        />
-      )
+      if (actor.id !== myself.id) {
+        return (
+          <ResponseControls
+            onResponse={sendResponse}
+            heading={heading}
+            subheading={subheading}
+            timeoutAt={timeoutAt}
+            availableResponses={{
+              canAccept: true,
+              canBlock: action.canBeBlocked && target?.id === myself.id,
+              canChallenge: action.canBeChallenged
+            }}
+            label={action.requiredCharacter || action.type.replace('_', ' ')}
+          />
+        )
+      }
+      return <TimeoutProgressBar timeoutAt={timeoutAt} />
     }
 
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK': {
       // Only actor can respond to block
-      if (!blocker || actor.id !== myself.id) {
+      if (!blocker) {
         return null
       }
-      return (
-        <ResponseControls
-          onResponse={sendResponse}
-          heading={heading}
-          subheading={subheading}
-          timeoutAt={timeoutAt}
-          availableResponses={{
-            canAccept: true,
-            canBlock: false,
-            canChallenge: true
-          }}
-          label='BLOCK'
-        />
-      )
+      if (actor.id === myself.id) {
+        return (
+          <ResponseControls
+            onResponse={sendResponse}
+            heading={heading}
+            subheading={subheading}
+            timeoutAt={timeoutAt}
+            availableResponses={{
+              canAccept: true,
+              canBlock: false,
+              canChallenge: true
+            }}
+            label='BLOCK'
+          />
+        )
+      }
+      if (blocker.id === myself.id) {
+        return <TimeoutProgressBar timeoutAt={timeoutAt} />
+      }
+      break
     }
 
     case 'AWAITING_ACTOR_DEFENSE': {

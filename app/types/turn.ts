@@ -107,7 +107,6 @@ export type TargetedActionType = Extract<ActionType, 'STEAL' | 'ASSASSINATE' | '
 export interface TargetedAction extends BaseAction {
   type: TargetedActionType
   targetPlayerId: string
-  autoResolve: false
 }
 
 export type UntargetedActionType = Extract<ActionType, 'INCOME' | 'FOREIGN_AID' | 'TAX' | 'EXCHANGE'>
@@ -115,7 +114,6 @@ export type UntargetedActionType = Extract<ActionType, 'INCOME' | 'FOREIGN_AID' 
 export interface UntargetedAction extends BaseAction {
   type: UntargetedActionType
   targetPlayerId?: never
-  autoResolve: boolean
 }
 
 export type Action = TargetedAction | UntargetedAction
