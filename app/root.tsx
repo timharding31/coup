@@ -1,8 +1,17 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useNavigation } from '@remix-run/react'
-import type { LinksFunction, LoaderFunction } from '@remix-run/node'
+import type { LinksFunction, LoaderFunction, MetaFunction } from '@remix-run/node'
 import fonts from './styles/fonts.css?url'
 import tailwind from './tailwind.css?url'
 import { LoadingSpinner } from './components/LoadingSpinner'
+
+export const meta: MetaFunction = () => {
+  return [
+    { title: 'Polar Coup' },
+    { property: 'og:title', content: 'Polar Coup' },
+    { property: 'og:description', content: 'Play Coup online' },
+    { property: 'og:image', content: 'https://polarcoup.app/og-image.png' }
+  ]
+}
 
 export const links: LinksFunction = () => [
   { rel: 'stylesheet', href: tailwind },
