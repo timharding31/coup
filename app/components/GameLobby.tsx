@@ -3,6 +3,8 @@ import { Game } from '~/types'
 import { Button } from './Button'
 import { useCoupContext } from '~/context/CoupContext'
 import { Link } from '@remix-run/react'
+import { WaitingEllipsis } from './WaitingEllipsis'
+import { PlayerNameTag } from './PlayerNameTag'
 
 interface GameLobbyProps {
   game: Game<'client'>
@@ -22,18 +24,6 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
   const [shareButtonText, setShareButtonText] = useState<string | null>(null)
   const [wasPinCopied, setWasPinCopied] = useState(false)
-
-  const [waitingCursor, setWaitingCursor] = useState(0)
-
-  useEffect(() => {
-    if (status !== 'WAITING' || isHost) {
-      return
-    }
-    const interval = setInterval(() => {
-      setWaitingCursor(prev => (prev + 1) % 4)
-    }, 500)
-    return () => clearInterval(interval)
-  }, [status, isHost])
 
   if (status !== 'WAITING') {
     return null
@@ -71,7 +61,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         <div className='flex flex-col items-stretch flex-1'>
           <div className='text-2xl inline-flex items-baseline justify-center gap-1'>
             <h2>Game Lobby</h2>
-            <div className='ml-1 text-lg font-sansation relative'>
+            <div className='ml-1 text-sm font-sansation absolute top-1 right-2'>
               <span
                 onClick={() => {
                   navigator.clipboard.writeText(pin).then(() => {
@@ -80,10 +70,10 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                   })
                 }}
               >
-                ({pin})
+                pin: {pin}
               </span>
               {wasPinCopied && (
-                <div className='tooltip-content absolute -left-5 -right-5 text-center top-[100%] text-sm rounded-md bg-nord-8 text-nord-0 z-50'>
+                <div className='tooltip-content absolute -left-10 right-0 text-center top-[100%] text-sm rounded-md bg-nord-8 text-nord-0 z-50'>
                   Copied {pin}
                 </div>
               )}
@@ -103,24 +93,28 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                 </Button>
               </Link>
               <Button size='sm' variant='primary' onClick={handleShare} sprite='link'>
-                {shareButtonText || 'Share Link'}
+                {shareButtonText || 'Invite Players'}
               </Button>
             </div>
           )}
 
           <div className='w-full max-w-md flex-auto'>
             <h3 className='text-lg mb-2'>Players ({players.length})</h3>
-            <ol className='list-reset space-y-2 pb-6'>
-              {players.map(player => (
-                <li key={player.id} className='px-4 py-1 bg-nord-15 rounded-md flex items-center justify-between'>
-                  <div className='font-bold text-sm text-nord--1'>
-                    <span className='mr-2'>&bull;</span>
-                    {player.username}
-                  </div>
-                  {player.id === hostId && <span className='text-xs text-nord-1'>host</span>}
+            <ul className='list-reset space-y-2 pb-6'>
+              {players.map((player, i) => (
+                <li key={player.id} className='inline-flex w-full rounded-full px-2 py-0.5 bg-nord-15 text-base'>
+                  <span className='mr-2 text-nord-1'>&bull;</span>
+                  <PlayerNameTag
+                    {...player}
+                    isHost={player.id === hostId}
+                    cardCount={2}
+                    coins={2}
+                    textColor='nord-1'
+                    bgColor='nord-1'
+                  />
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
 
           {isHost ? (
@@ -130,7 +124,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           ) : (
             <div className='text-lg leading-16 sticky bottom-0 text-center bg-nord-1'>
               Waiting for host
-              <span className='text-left inline-block w-[20px]'>{'...'.slice(0, waitingCursor)}</span>
+              <WaitingEllipsis size='lg' />
             </div>
           )}
         </div>

@@ -71,7 +71,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
     return null
   }
 
-  const { phase, action, timeoutAt, respondedPlayers = [] } = game.currentTurn
+  const { phase, action, timeoutAt, respondedPlayers = [], opponentResponses } = game.currentTurn
+  const { blockableBy = [] } = action
 
   const { heading = '', subheading } = getResponseMenuProps(game, myself)
 
@@ -100,6 +101,7 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
               canChallenge: action.canBeChallenged
             }}
             label={action.requiredCharacter || action.type.replace('_', ' ')}
+            blockableBy={blockableBy}
           />
         )
       }
@@ -123,7 +125,8 @@ const GameControls: React.FC<GameControlsProps> = ({ game, players, sendResponse
               canBlock: false,
               canChallenge: true
             }}
-            label='BLOCK'
+            label={opponentResponses?.claimedCard || 'BLOCK'}
+            blockableBy={blockableBy}
           />
         )
       }

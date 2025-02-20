@@ -9,13 +9,13 @@ export const action: ActionFunction = async ({ request, params }) => {
 
   try {
     const { gameId } = params
-    const { response, playerId } = await request.json()
+    const { response, playerId, blockCard } = await request.json()
 
     if (!gameId || !response || !playerId) {
       return { error: 'Missing required fields' }
     }
 
-    const { game } = await gameService.handleResponse(gameId, playerId, response)
+    const { game } = await gameService.handleResponse(gameId, playerId, response, blockCard)
 
     return Response.json({
       game: game ? prepareGameForClient(game, playerId) : null

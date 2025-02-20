@@ -90,7 +90,12 @@ export class GameService implements IGameService {
     return { gameId, pin }
   }
 
-  async handleResponse(gameId: string, playerId: string, response: 'accept' | 'challenge' | 'block') {
+  async handleResponse(
+    gameId: string,
+    playerId: string,
+    response: 'accept' | 'challenge' | 'block',
+    claimedCardForBlock?: CardType
+  ) {
     const gameRef = this.gamesRef.child(gameId)
     const game = (await gameRef.get()).val() as Game
 
@@ -111,7 +116,7 @@ export class GameService implements IGameService {
         return this.turnService.handleBlockResponse(gameId, playerId, response)
 
       case 'AWAITING_OPPONENT_RESPONSES':
-        return this.turnService.handleActionResponse(gameId, playerId, response)
+        return this.turnService.handleActionResponse(gameId, playerId, response, claimedCardForBlock)
 
       default:
         throw new Error(`Invalid phase for response: ${turn.phase}`)

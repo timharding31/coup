@@ -1,5 +1,5 @@
 import { Reference } from 'firebase-admin/database'
-import { Action, Card, Game, GameStatus, Player, TurnPhase, TurnState } from '~/types'
+import { Action, Card, CardType, Game, GameStatus, Player, TurnPhase, TurnState } from '~/types'
 import { ActionService } from './action.server'
 import { VALID_TRANSITIONS, haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
@@ -9,7 +9,8 @@ export interface ITurnService {
   handleActionResponse(
     gameId: string,
     playerId: string,
-    response: 'accept' | 'block' | 'challenge'
+    response: 'accept' | 'block' | 'challenge',
+    claimedCardForBlock?: CardType
   ): Promise<{ game: Game | null }>
   handleBlockResponse(
     gameId: string,
@@ -413,7 +414,12 @@ export class TurnService implements ITurnService {
     return { game }
   }
 
-  async handleActionResponse(gameId: string, playerId: string, response: 'accept' | 'block' | 'challenge') {
+  async handleActionResponse(
+    gameId: string,
+    playerId: string,
+    response: 'accept' | 'block' | 'challenge',
+    claimedCardForBlock: CardType | null = null
+  ) {
     const gameRef = this.gamesRef.child(gameId)
 
     let timeoutAt: number | null = null
@@ -433,18 +439,27 @@ export class TurnService implements ITurnService {
 
       // Record opponent response.
       if (response === 'block') {
-        updatedTurn.opponentResponses = { block: playerId }
+        if (!claimedCardForBlock) {
+          console.error('Block response without claimed card')
+          return game
+        }
+        updatedTurn.opponentResponses = { block: playerId, claimedCard: claimedCardForBlock }
         // New timeout for actor to respond to block
         timeoutAt = Date.now() + this.RESPONSE_TIMEOUT
         updatedTurn.timeoutAt = timeoutAt
       } else if (response === 'challenge') {
+        if (!turn.action.requiredCharacter) {
+          console.error('Challenge response without required character')
+          return game
+        }
         updatedTurn.opponentResponses = { challenge: playerId }
         updatedTurn.timeoutAt = 0
         updatedTurn.challengeResult = {
           challengerId: playerId,
           defenseSuccessful: null,
           defendingCardId: null,
-          lostCardId: null
+          lostCardId: null,
+          challengedCaracter: turn.action.requiredCharacter
         }
       }
 
@@ -492,13 +507,18 @@ export class TurnService implements ITurnService {
         // Accepting the block: action fails.
         updatedTurn.phase = 'ACTION_FAILED'
       } else if (response === 'challenge') {
+        if (!turn.opponentResponses?.claimedCard) {
+          console.error('Challenge response without claimed card')
+          return game
+        }
         // Challenging the block sets the phase so that the blocker must now defend.
         updatedTurn.phase = 'AWAITING_BLOCKER_DEFENSE'
         updatedTurn.challengeResult = {
           challengerId: playerId,
           defenseSuccessful: null,
           defendingCardId: null,
-          lostCardId: null
+          lostCardId: null,
+          challengedCaracter: turn.opponentResponses.claimedCard
         }
       }
 

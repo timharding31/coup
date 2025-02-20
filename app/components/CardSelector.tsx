@@ -6,8 +6,8 @@ import { PlayingCard } from './PlayingCard'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface CardSelectorProps {
-  heading: string
-  subheading?: string
+  heading: React.ReactNode
+  subheading?: React.ReactNode
   cards: Card<'client'>[]
   onSubmit: (cardIds: string[]) => void
   intent?: Extract<ButtonProps['variant'], 'danger' | 'success' | 'primary'>

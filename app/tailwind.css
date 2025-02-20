@@ -81,6 +81,7 @@ h4 {
 }
 
 .drawer {
+  will-change: transform;
   animation: slideUp 0.5s ease-in-out forwards;
 }
 

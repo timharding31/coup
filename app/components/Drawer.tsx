@@ -48,7 +48,7 @@ const DrawerContent = React.forwardRef<
         className={`
         fixed left-max right-max bottom-0 z-50 flex h-auto flex-col 
         rounded-t-[24px] bg-nord-1 nord-shadow
-        slide-in-from-bottom duration-500
+        drawer duration-500
         pb-4
         ${className}`}
         {...props}

@@ -44,11 +44,13 @@ export type WaitingPhase = Extract<
 
 export interface OpponentChallengeResponse {
   block?: never
+  claimedCard?: never
   challenge: string
 }
 
 export interface OpponentBlockResponse {
   block: string
+  claimedCard: CardType
   challenge?: never
 }
 
@@ -58,6 +60,7 @@ export interface TurnChallengeResult {
   defenseSuccessful: boolean | null
   defendingCardId: string | null // Card used for defense if successful, otherwise null.
   lostCardId: string | null
+  challengedCaracter: CardType
 }
 
 // Revised TurnState with improved structure:

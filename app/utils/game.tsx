@@ -1,5 +1,6 @@
 import { Card, Game, NordColor, Player, PlayerMessage } from '~/types'
 import { getActionObject, getActionVerb } from './action'
+import { WaitingEllipsis } from '~/components/WaitingEllipsis'
 
 export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: string): Game<'client'> {
   const player = game.status === 'WAITING' ? null : game.players.find(p => p.id === playerId)
@@ -39,13 +40,18 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
   const challenger = getChallenger(game)
 
   const turn = game.currentTurn
-  const { action, phase = null } = turn || {}
+  const { action, phase = null, challengeResult } = turn || {}
 
   switch (phase) {
     case null:
       return {
         [actor.id]: {
-          message: 'Starting turn',
+          message: (
+            <>
+              Starting turn
+              <WaitingEllipsis />
+            </>
+          ),
           type: 'info'
         }
       }
@@ -62,7 +68,19 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
       }
 
     case 'AWAITING_OPPONENT_RESPONSES':
-      return null
+      return Object.assign(
+        {},
+        ...game.players.map(opponent => {
+          if (opponent.id !== actor.id) {
+            return {
+              [opponent.id]: {
+                message: <WaitingEllipsis />,
+                type: 'info'
+              }
+            }
+          }
+        })
+      )
 
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
       if (!blocker || !action) {
@@ -74,7 +92,12 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
           type: 'block'
         },
         [actor.id]: {
-          message: 'Responding to block',
+          message: (
+            <>
+              Responding to block
+              <WaitingEllipsis />
+            </>
+          ),
           type: 'info'
         }
       }
@@ -83,7 +106,7 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
       if (!challenger || !action) {
         throw new Error('Challenger or Action not found')
       }
-      if (!action.requiredCharacter) {
+      if (!challengeResult?.challengedCaracter) {
         throw new Error('Required character not found')
       }
       return {
@@ -92,7 +115,12 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
           type: 'challenge'
         },
         [actor.id]: {
-          message: 'Defending challenge',
+          message: (
+            <>
+              Proving {challengeResult.challengedCaracter}
+              <WaitingEllipsis />
+            </>
+          ),
           type: 'info'
         }
       }
@@ -101,13 +129,21 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
       if (!challenger || !blocker) {
         throw new Error('Challenger or Blocker not found')
       }
+      if (!challengeResult?.challengedCaracter) {
+        throw new Error('Required character not found')
+      }
       return {
         [challenger.id]: {
-          message: `Challenge BLOCK`,
+          message: `Challenge ${challengeResult.challengedCaracter}`,
           type: 'challenge'
         },
         [blocker.id]: {
-          message: 'Defending challenge',
+          message: (
+            <>
+              Proving {challengeResult.challengedCaracter}
+              <WaitingEllipsis />
+            </>
+          ),
           type: 'info'
         }
       }
@@ -119,12 +155,13 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
       }
       return {
         [challenger.id]: {
-          message: 'Challenge failed',
+          message: (
+            <>
+              Selecting challenge penalty
+              <WaitingEllipsis />
+            </>
+          ),
           type: 'failure'
-        },
-        [defender.id]: {
-          message: 'Challenge defended',
-          type: 'success'
         }
       }
 
@@ -140,12 +177,21 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
       }
 
     case 'AWAITING_TARGET_SELECTION':
-      if (!target) {
-        throw new Error('Target not found')
+      if (!target || !action) {
+        throw new Error('Target and/or action not found')
       }
       return {
+        [actor.id]: {
+          message: <>{getActionVerb(actor.id, action, 'past', target)}</>,
+          type: 'success'
+        },
         [target.id]: {
-          message: 'Choosing card to reveal',
+          message: (
+            <>
+              Choosing card to reveal
+              <WaitingEllipsis />
+            </>
+          ),
           type: 'failure'
         }
       }
@@ -154,7 +200,12 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
     case 'AWAITING_EXCHANGE_RETURN':
       return {
         [actor.id]: {
-          message: 'Exchanging cards',
+          message: (
+            <>
+              Exchanging cards
+              <WaitingEllipsis />
+            </>
+          ),
           type: 'info'
         }
       }
@@ -178,7 +229,7 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
 export function getResponseMenuProps(
   game: Game<'client'>,
   myself: Player<'client'>
-): Partial<{ heading: string; subheading: string }> {
+): Partial<{ heading: React.ReactNode; subheading: React.ReactNode }> {
   const actor = getActor(game)
   const target = getTarget(game)
   const blocker = getBlocker(game)
@@ -198,7 +249,11 @@ export function getResponseMenuProps(
 
     case 'AWAITING_OPPONENT_RESPONSES':
       return {
-        heading: `${actor.username} chose to ${getActionVerb(myself.id, action, 'infinitive', target)}`,
+        heading: (
+          <>
+            {actor.username} chose to {getActionVerb(myself.id, action, 'infinitive', target)}
+          </>
+        ),
         subheading: 'How will you respond?'
       }
 
@@ -213,15 +268,14 @@ export function getResponseMenuProps(
       if (!challenger || !action.requiredCharacter) return {}
       return {
         heading: `${challenger.username} CHALLENGED your ${action.requiredCharacter}`,
-        subheading: `Reveal ${action.requiredCharacter?.startsWith('A') ? 'an' : 'a'} ${action.requiredCharacter} to defend the challenge`
+        subheading: 'Select one to defend the challenge'
       }
 
     case 'AWAITING_BLOCKER_DEFENSE':
-      if (!challenger) return {}
-      const requiredCards = action.blockableBy.join(' or ')
+      if (!challenger || !turn?.opponentResponses?.claimedCard) return {}
       return {
-        heading: `${challenger.username} CHALLENGED your BLOCK`,
-        subheading: `Reveal ${requiredCards.startsWith('A') ? 'an' : 'a'} ${requiredCards} to defend the challenge`
+        heading: `${challenger.username} CHALLENGED your ${turn.opponentResponses.claimedCard}`,
+        subheading: 'Select one to defend the challenge'
       }
 
     case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
@@ -232,7 +286,11 @@ export function getResponseMenuProps(
 
     case 'AWAITING_TARGET_SELECTION':
       return {
-        heading: `${actor.username}'s ${getActionObject(action)} succeeded`,
+        heading: (
+          <>
+            {actor.username} {getActionVerb(myself.id, action, 'past', target)}
+          </>
+        ),
         subheading: 'Choose a card to lose'
       }
 

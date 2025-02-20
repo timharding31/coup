@@ -1,19 +1,20 @@
 import React from 'react'
-import type { Action } from '~/types'
+import type { Action, CardType } from '~/types'
 import { Drawer, DrawerContent } from './Drawer'
 import { Button } from './Button'
 import { useCoupContext } from '~/context/CoupContext'
 
 interface ResponseControlsProps {
-  onResponse: (type: 'accept' | 'challenge' | 'block') => void
+  onResponse: (type: 'accept' | 'challenge' | 'block', blockCard?: CardType) => void
   timeoutAt: number
-  heading: string
-  subheading?: string
+  heading: React.ReactNode
+  subheading?: React.ReactNode
   availableResponses: {
     canAccept: boolean
     canChallenge: boolean
     canBlock: boolean
   }
+  blockableBy: CardType[]
   label: string
 }
 
@@ -23,6 +24,7 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
   heading,
   subheading,
   availableResponses,
+  blockableBy,
   label
 }) => {
   return (
@@ -45,15 +47,20 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
             </Button>
           )}
           {availableResponses.canBlock && (
-            <Button
-              size='lg'
-              variant='warning'
-              onClick={() => onResponse('block')}
-              sprite='shield'
-              timeoutAt={timeoutAt}
-            >
-              Block {label}
-            </Button>
+            <>
+              {blockableBy.map(card => (
+                <Button
+                  key={card}
+                  size='lg'
+                  variant='warning'
+                  onClick={() => onResponse('block', card)}
+                  sprite='shield'
+                  timeoutAt={timeoutAt}
+                >
+                  Block w/ {card}
+                </Button>
+              ))}
+            </>
           )}
           {availableResponses.canChallenge && (
             <Button

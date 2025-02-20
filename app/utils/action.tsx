@@ -71,7 +71,7 @@ export function getActionVerb(
   action: Action,
   tense: ActionVerbTense,
   target: Player<'server' | 'client'> | null = null
-): string {
+): React.ReactNode {
   if (action.type in UNTARGETED_ACTION_VERBS) {
     return UNTARGETED_ACTION_VERBS[action.type as UntargetedActionType][tense]
   } else if (!target) {
@@ -83,21 +83,60 @@ export function getActionVerb(
   )
 }
 
-const TARGETED_ACTION_VERBS: Record<TargetedActionType, Record<ActionVerbTense, (targetUsername: string) => string>> = {
+const TARGETED_ACTION_VERBS: Record<
+  TargetedActionType,
+  Record<ActionVerbTense, (targetUsername: string) => React.ReactNode>
+> = {
   STEAL: {
-    present: targetUsername => `STEALS from ${targetUsername}`,
-    past: targetUsername => `STOLE from ${targetUsername}`,
-    infinitive: targetUsername => `STEAL from ${targetUsername}`
+    present: targetUsername => (
+      <>
+        STEALS from&nbsp;<strong>{targetUsername}</strong>
+      </>
+    ),
+    past: targetUsername => (
+      <>
+        STOLE from <strong>{targetUsername}</strong>
+      </>
+    ),
+    infinitive: targetUsername => (
+      <>
+        STEAL from <strong>{targetUsername}</strong>
+      </>
+    )
   },
   ASSASSINATE: {
-    present: targetUsername => `ASSASSINATES ${targetUsername}`,
-    past: targetUsername => `ASSASSINATED ${targetUsername}`,
-    infinitive: targetUsername => `ASSASSINATE ${targetUsername}`
+    present: targetUsername => (
+      <>
+        ASSASSINATES <strong>{targetUsername}</strong>
+      </>
+    ),
+    past: targetUsername => (
+      <>
+        ASSASSINATED <strong>{targetUsername}</strong>
+      </>
+    ),
+    infinitive: targetUsername => (
+      <>
+        ASSASSINATE <strong>{targetUsername}</strong>
+      </>
+    )
   },
   COUP: {
-    present: targetUsername => `COUPS ${targetUsername}`,
-    past: targetUsername => `COUPED ${targetUsername}`,
-    infinitive: targetUsername => `COUP ${targetUsername}`
+    present: targetUsername => (
+      <>
+        COUPS <strong>{targetUsername}</strong>
+      </>
+    ),
+    past: targetUsername => (
+      <>
+        COUPED <strong>{targetUsername}</strong>
+      </>
+    ),
+    infinitive: targetUsername => (
+      <>
+        COUP <strong>{targetUsername}</strong>
+      </>
+    )
   }
 }
 

@@ -28,10 +28,10 @@ const CoinStack: React.FC<CoinStackProps> = ({
   const offset = HORIZONTAL_OFFSET[size]
 
   const textShadow = `
-    1px 1px 1px var(--${bgColor}),
-    -1px -1px 1px var(--${bgColor}),
-    1px -1px 1px var(--${bgColor}),
-    -1px 1px 1px var(--${bgColor})
+    1px 1px var(--${bgColor}),
+    -1px -1px var(--${bgColor}),
+    1px -1px var(--${bgColor}),
+    -1px 1px var(--${bgColor})
     `
 
   return (

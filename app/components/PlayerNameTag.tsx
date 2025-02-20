@@ -9,6 +9,7 @@ interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
   bgColor?: NordColor
   className?: string
   cardCount?: number
+  isHost?: boolean
 }
 
 export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
@@ -17,6 +18,7 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   textColor = 'nord-4',
   bgColor = 'nord-1',
   cardCount,
+  isHost = false,
   className
 }) => {
   return (
@@ -27,6 +29,11 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
         })}
       >
         {username}
+        {isHost && (
+          <span className='font-normal ml-2' style={{ fontSize: 'smaller' }}>
+            (host)
+          </span>
+        )}
       </span>
       <div className='flex items-center gap-1 flex-row-reverse'>
         {cardCount == null ? null : cardCount > 0 ? (

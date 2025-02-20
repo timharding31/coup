@@ -10,6 +10,6 @@ export interface Player<Context extends 'server' | 'client' = 'server'> {
 }
 
 export interface PlayerMessage {
-  message: string
+  message: React.ReactNode
   type: 'info' | 'challenge' | 'block' | 'success' | 'failure'
 }

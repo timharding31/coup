@@ -1,7 +1,16 @@
 import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
-import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, NordColor, PlayerMessage } from '~/types'
+import {
+  Game,
+  TargetedActionType,
+  UntargetedActionType,
+  Player,
+  TurnPhase,
+  NordColor,
+  PlayerMessage,
+  CardType
+} from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { getPlayerActionMessages, prepareGameForClient } from '~/utils/game'
@@ -15,7 +24,7 @@ export interface CoupContextType {
   performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => void
   performUntargetedAction: (actionType: UntargetedActionType) => void
   selectCard: (cardId: string) => void
-  sendResponse: (response: 'accept' | 'challenge' | 'block') => void
+  sendResponse: (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => void
   exchangeCards: (selectedCardIds: string[]) => void
   players: {
     myself: Player<'client'>
@@ -160,12 +169,12 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   )
 
   const sendResponse = useCallback(
-    async (response: 'accept' | 'challenge' | 'block') => {
+    async (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => {
       try {
         const res = await fetch(`/api/games/${gameId}/responses`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ response, playerId })
+          body: JSON.stringify({ response, playerId, blockCard })
         })
         if (!res.ok) throw new Error('Failed to send response')
       } catch (err) {

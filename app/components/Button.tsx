@@ -174,7 +174,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : sprite ? (
           <Sprite
             id={sprite === 'arrow-left' ? 'arrow' : sprite}
-            className={sprite === 'arrow-left' ? 'rotate-180' : ''}
+            className={sprite === 'arrow-left' ? 'rotate-180 z-50' : 'z-50'}
             size={size}
           />
         ) : null}
@@ -183,7 +183,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           <PlayerNameTag {...nameTag} />
         ) : children ? (
           <span
-            className={cn('relative font-robotica translate-y-[0.125em]', {
+            className={cn('relative font-sansation font-bold', {
+              'translate-y-[0.125em]': false,
               'flex flex-auto': hasIcon,
               'leading-[2.25rem]': size === 'sm',
               'leading-[2.5rem]': size === 'base',
