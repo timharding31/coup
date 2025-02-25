@@ -7,14 +7,15 @@ import { getResponseMenuProps } from '~/utils/game'
 import { TimeoutProgressBar } from './TimeoutProgressBar'
 
 export interface GameControlsProps
-  extends Pick<CoupContextType, 'game' | 'players' | 'sendResponse' | 'selectCard' | 'exchangeCards'> {}
+  extends Pick<CoupContextType, 'game' | 'players' | 'sendResponse' | 'selectCard' | 'exchangeCards' | 'isLoading'> {}
 
 export const GameControls: React.FC<GameControlsProps> = ({
   game,
   players,
   sendResponse,
   selectCard,
-  exchangeCards
+  exchangeCards,
+  isLoading
 }) => {
   const [isActionMenuVisible, setIsActionMenuVisible] = useState(false)
 
@@ -78,6 +79,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
             }}
             label={action.requiredCharacter || action.type.replace('_', ' ')}
             blockableBy={blockableBy}
+            isLoading={isLoading}
           />
         )
       }
@@ -103,6 +105,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
             }}
             label={opponentResponses?.claimedCard || 'BLOCK'}
             blockableBy={blockableBy}
+            isLoading={isLoading}
           />
         )
       }
@@ -126,6 +129,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           intent={defenseCard ? 'success' : 'danger'}
           onSubmit={([cardId]) => selectCard(cardId)}
           selectedCardIds={defenseCard ? [defenseCard.id] : []}
+          isLoading={isLoading}
         />
       )
     }
@@ -144,6 +148,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           intent={defenseCard ? 'success' : 'danger'}
           onSubmit={([cardId]) => selectCard(cardId)}
           selectedCardIds={defenseCard ? [defenseCard.id] : []}
+          isLoading={isLoading}
         />
       )
     }
@@ -160,6 +165,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           cards={myself.influence}
           intent='danger'
           onSubmit={([cardId]) => selectCard(cardId)}
+          isLoading={isLoading}
         />
       )
     }
@@ -176,6 +182,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           cards={myself.influence}
           intent='danger'
           onSubmit={([cardId]) => selectCard(cardId)}
+          isLoading={isLoading}
         />
       )
     }
@@ -194,6 +201,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           onSubmit={exchangeCards}
           minCards={2}
           maxCards={2}
+          isLoading={isLoading}
         />
       )
     }

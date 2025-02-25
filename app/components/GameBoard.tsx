@@ -12,7 +12,7 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, players, startGame, leaveGame, sendResponse, selectCard, exchangeCards } = useCoupContext()
+  const { game, players, startGame, leaveGame, sendResponse, selectCard, exchangeCards, isLoading } = useCoupContext()
 
   return (
     <>
@@ -31,6 +31,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
                   sendResponse={sendResponse}
                   selectCard={selectCard}
                   exchangeCards={exchangeCards}
+                  isLoading={isLoading}
                 />
               )
 
