@@ -16,6 +16,7 @@ interface ResponseControlsProps {
   }
   blockableBy: CardType[]
   label: string
+  isLoading?: boolean
 }
 
 export const ResponseControls: React.FC<ResponseControlsProps> = ({
@@ -25,7 +26,8 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
   subheading,
   availableResponses,
   blockableBy,
-  label
+  label,
+  isLoading
 }) => {
   return (
     <Drawer open>
@@ -42,6 +44,7 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
               onClick={() => onResponse('accept')}
               sprite='check'
               timeoutAt={timeoutAt}
+              isLoading={isLoading}
             >
               Accept {label}
             </Button>
@@ -56,6 +59,7 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
                   onClick={() => onResponse('block', card)}
                   sprite='shield'
                   timeoutAt={timeoutAt}
+                  isLoading={isLoading}
                 >
                   Block w/ {card}
                 </Button>
@@ -69,6 +73,7 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
               onClick={() => onResponse('challenge')}
               sprite='challenge'
               timeoutAt={timeoutAt}
+              isLoading={isLoading}
             >
               Challenge {label}
             </Button>

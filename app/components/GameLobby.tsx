@@ -86,7 +86,6 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           onClick={() => {
             leaveGame().then(() => navigate('/'))
           }}
-          disabled={isHost ? players.length > 1 : false}
         >
           Leave
         </Button>

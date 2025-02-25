@@ -38,6 +38,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   coinStack?: 1 | 2 | 3
   nameTag?: React.ComponentProps<typeof PlayerNameTag>
   coinCost?: number
+  isLoading?: boolean
 }
 
 const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: keyof typeof variantStyles }) => {
@@ -118,6 +119,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       children = null,
       nameTag = null,
       coinCost = null,
+      isLoading = false,
       ...props
     },
     forwardedRef
@@ -125,7 +127,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const innerRef = useRef<HTMLButtonElement>(null)
     const isOutline = variant.endsWith('Outline')
     const hasIcon = sprite || coinStack
-    const isDisabled = props.disabled
+    const isDisabled = isLoading || props.disabled
 
     const getContentGapClass = () => {
       if ((sprite || isDisabled) && size === 'lg') return 'gap-4'
@@ -166,10 +168,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     )
 
     return (
-      <button className={classes} ref={useMergedRefs(forwardedRef, innerRef)} {...props}>
+      <button className={classes} ref={useMergedRefs(forwardedRef, innerRef)} {...props} disabled={isDisabled}>
         {timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
 
-        {isDisabled && hasIcon ? (
+        {isLoading && hasIcon ? (
+          <Sprite id='loading' size={size} className='animate-spin duration-500' />
+        ) : isDisabled && hasIcon ? (
           <Sprite id='lock' size={size} />
         ) : coinStack ? (
           <CoinStack count={coinStack} color='nord-6' className={getCoinStackMargin()} />

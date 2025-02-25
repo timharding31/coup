@@ -25,6 +25,7 @@ export type SpriteId =
   | 'pencil'
   | 'spinner'
   | 'exclamation'
+  | 'loading'
 
 export const SpriteSize = {
   sm: 18,
@@ -61,6 +62,7 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
     case 'dollar':
     case 'card':
     case 'card-outline':
+    case 'loading':
       viewBox = '-32 -32 64 64'
       break
 

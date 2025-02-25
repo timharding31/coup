@@ -271,6 +271,7 @@ export class GameService implements IGameService {
 
       return {
         ...game,
+        status: playerId === game.hostId ? 'COMPLETED' : game.status,
         players: updatedPlayers,
         deck: updatedDeck,
         updatedAt: Date.now()
@@ -279,6 +280,12 @@ export class GameService implements IGameService {
 
     if (!result.committed) {
       throw new Error('Failed to leave game')
+    }
+
+    const updatedGame = result.snapshot.val() as Game | null
+
+    if (updatedGame?.status === 'COMPLETED') {
+      await this.cleanupGame(gameId)
     }
 
     await this.playerService.updatePlayer(playerId, { currentGameId: null })
@@ -333,7 +340,7 @@ export class GameService implements IGameService {
     return { turn: snapshot.val() as TurnState | null }
   }
 
-  private async cleanupGame(gameId: string, winnerId = ''): Promise<void> {
+  private async cleanupGame(gameId: string, winnerId?: string): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
     const snapshot = await gameRef.get()
     const game = snapshot.val() as Game

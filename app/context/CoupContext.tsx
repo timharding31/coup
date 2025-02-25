@@ -1,16 +1,7 @@
 import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
-import {
-  Game,
-  TargetedActionType,
-  UntargetedActionType,
-  Player,
-  TurnPhase,
-  NordColor,
-  PlayerMessage,
-  CardType
-} from '~/types'
+import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, PlayerMessage, CardType } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { getPlayerActionMessages, prepareGameForClient } from '~/utils/game'
@@ -19,6 +10,7 @@ import _ from 'lodash'
 export interface CoupContextType {
   game: Game<'client'>
   error: string | null
+  isLoading: boolean
   players: {
     myself: Player<'client'>
     actor: Player<'client'>
@@ -54,6 +46,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   game: initialGame
 }) => {
   const [game, setGame] = useState(initialGame)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
@@ -186,6 +179,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   }, [gameId, playerId, scheduleMessageUpdate])
 
   const performAction = async (action: any) => {
+    setIsLoading(true)
     try {
       const response = await fetch(`/api/games/${gameId}/actions`, {
         method: 'POST',
@@ -195,27 +189,40 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
       if (!response.ok) throw new Error('Failed to perform action')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    } finally {
+      return setIsLoading(false)
     }
   }
 
   const performTargetedAction = useCallback(
-    (actionType: TargetedActionType, targetPlayerId: string) => {
+    async (actionType: TargetedActionType, targetPlayerId: string) => {
+      setIsLoading(true)
       const targetedAction = getActionFromType(playerId, actionType, targetPlayerId)
-      return performAction(targetedAction)
+      try {
+        return await performAction(targetedAction)
+      } finally {
+        return setIsLoading(false)
+      }
     },
     [gameId, playerId]
   )
 
   const performUntargetedAction = useCallback(
-    (actionType: UntargetedActionType) => {
+    async (actionType: UntargetedActionType) => {
+      setIsLoading(true)
       const untargetedAction = getActionFromType(playerId, actionType)
-      return performAction(untargetedAction)
+      try {
+        return await performAction(untargetedAction)
+      } finally {
+        return setIsLoading(false)
+      }
     },
     [gameId, playerId]
   )
 
   const sendResponse = useCallback(
     async (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => {
+      setIsLoading(true)
       try {
         const res = await fetch(`/api/games/${gameId}/responses`, {
           method: 'POST',
@@ -225,6 +232,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         if (!res.ok) throw new Error('Failed to send response')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      } finally {
+        return setIsLoading(false)
       }
     },
     [gameId, playerId]
@@ -232,6 +241,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
   const selectCard = useCallback(
     async (cardId: string) => {
+      setIsLoading(true)
       try {
         const res = await fetch(`/api/games/${gameId}/cards`, {
           method: 'POST',
@@ -241,12 +251,15 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         if (!res.ok) throw new Error('Failed to select card')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      } finally {
+        return setIsLoading(false)
       }
     },
     [gameId, playerId]
   )
 
   const startGame = useCallback(async () => {
+    setIsLoading(true)
     try {
       const res = await fetch(`/api/games/${gameId}/start`, {
         method: 'POST',
@@ -256,10 +269,13 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
       if (!res.ok) throw new Error('Failed to start game')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    } finally {
+      return setIsLoading(false)
     }
   }, [gameId, playerId])
 
   const leaveGame = useCallback(async () => {
+    setIsLoading(true)
     try {
       const res = await fetch(`/api/games/${gameId}/leave`, {
         method: 'POST',
@@ -269,11 +285,14 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
       if (!res.ok) throw new Error('Failed to leave game')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    } finally {
+      return setIsLoading(false)
     }
   }, [gameId, playerId])
 
   const exchangeCards = useCallback(
     async (cardIds: string[]) => {
+      setIsLoading(true)
       try {
         const res = await fetch(`/api/games/${gameId}/exchange`, {
           method: 'POST',
@@ -283,6 +302,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         if (!res.ok) throw new Error('Failed to start game')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      } finally {
+        return setIsLoading(false)
       }
     },
     [gameId, playerId]
@@ -290,6 +311,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
   const updatePlayer = useCallback(
     async (update: Partial<Player>) => {
+      setIsLoading(true)
       try {
         const res = await fetch(`/api/games/${gameId}/players/${playerId}`, {
           method: 'POST',
@@ -299,6 +321,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         if (!res.ok) throw new Error('Failed to start game')
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error occurred')
+      } finally {
+        return setIsLoading(false)
       }
     },
     [gameId, playerId]
@@ -341,7 +365,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         exchangeCards,
         updatePlayer,
         players: { myself, actor, blocker, challenger, target },
-        playerMessages
+        playerMessages,
+        isLoading
       }}
     >
       {children}

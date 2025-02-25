@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
+import cn from 'classnames'
 import { useCoupContext } from '~/context/CoupContext'
 import type { Player, TargetedActionType } from '~/types'
 import { Button } from './Button'
 import { Drawer, DrawerContent } from './Drawer'
-import cn from 'classnames'
-import { PlayerNameTag } from './PlayerNameTag'
-import { Sprite } from './Sprite'
 
 const SHARED_STYLES = 'transition-transform duration-200 ease-in-out w-full grid gap-3 grid-cols-1'
 
@@ -15,7 +13,7 @@ interface ActionControlsProps {
 }
 
 export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }) => {
-  const { performTargetedAction, performUntargetedAction } = useCoupContext()
+  const { performTargetedAction, performUntargetedAction, isLoading } = useCoupContext()
   const [targetedAction, setTargetedAction] = useState<TargetedActionType>()
   const forceCoup = coins >= 10
 
@@ -41,6 +39,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               }}
               coinStack={1}
               disabled={forceCoup}
+              isLoading={isLoading}
             >
               INCOME
             </Button>
@@ -52,6 +51,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               }}
               coinStack={2}
               disabled={forceCoup}
+              isLoading={isLoading}
             >
               FOREIGN AID
             </Button>
@@ -63,6 +63,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               }}
               coinStack={3}
               disabled={forceCoup}
+              isLoading={isLoading}
             >
               TAX
             </Button>
@@ -72,6 +73,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               onClick={() => performUntargetedAction('EXCHANGE')}
               sprite='exchange'
               disabled={forceCoup}
+              isLoading={isLoading}
             >
               EXCHANGE
             </Button>
@@ -81,6 +83,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               onClick={() => setTargetedAction('STEAL')}
               sprite='steal'
               disabled={forceCoup}
+              isLoading={isLoading}
             >
               STEAL
             </Button>
@@ -91,6 +94,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               sprite='sword'
               disabled={coins < 3 || forceCoup}
               coinCost={3}
+              isLoading={isLoading}
             >
               ASSASINATE
             </Button>
@@ -101,6 +105,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               sprite='skull'
               disabled={coins < 7}
               coinCost={7}
+              isLoading={isLoading}
             >
               COUP
             </Button>
@@ -147,6 +152,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
                       cardCount: unrevealedCardCount,
                       className: 'text-lg'
                     }}
+                    isLoading={isLoading}
                   />
                 )
               })}

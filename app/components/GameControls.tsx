@@ -46,8 +46,9 @@ export const GameControls: React.FC<GameControlsProps> = ({
     return null
   }
 
-  const { phase, action, timeoutAt, respondedPlayers = [], opponentResponses } = game.currentTurn
+  const { phase, action, timeoutAt, respondedPlayers = [], opponentResponses, challengeResult } = game.currentTurn
   const { blockableBy = [] } = action
+  const { challengedCaracter } = challengeResult || {}
 
   const { heading = '', subheading } = getResponseMenuProps(game, myself)
 
@@ -116,7 +117,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       if (!challenger || actor.id !== myself.id) {
         return null
       }
-      const defenseCard = myself.influence.find(c => !c.isRevealed && c.type === action.requiredCharacter)
+      const defenseCard = myself.influence.find(c => !c.isRevealed && c.type === challengedCaracter)
       return (
         <CardSelector
           heading={heading}
@@ -134,15 +135,15 @@ export const GameControls: React.FC<GameControlsProps> = ({
       if (!blocker || blocker.id !== myself.id) {
         return null
       }
-      const defenseCards = myself.influence.filter(c => !c.isRevealed && (action.blockableBy || []).includes(c.type!))
+      const defenseCard = myself.influence.find(c => !c.isRevealed && c.type === challengedCaracter)
       return (
         <CardSelector
           heading={heading}
-          subheading={defenseCards.length ? subheading : 'Choose a card to lose'}
+          subheading={defenseCard ? subheading : 'Choose a card to lose'}
           cards={myself.influence}
-          intent={defenseCards.length ? 'success' : 'danger'}
+          intent={defenseCard ? 'success' : 'danger'}
           onSubmit={([cardId]) => selectCard(cardId)}
-          selectedCardIds={defenseCards.length ? defenseCards.map(c => c.id).slice(0, 1) : []}
+          selectedCardIds={defenseCard ? [defenseCard.id] : []}
         />
       )
     }

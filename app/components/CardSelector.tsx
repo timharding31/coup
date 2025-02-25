@@ -14,6 +14,7 @@ interface CardSelectorProps {
   minCards?: number
   maxCards?: number
   selectedCardIds?: string[]
+  isLoading?: boolean
 }
 
 export const CardSelector: React.FC<CardSelectorProps> = ({
@@ -24,9 +25,19 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
   intent = 'primary',
   minCards = 1,
   maxCards = 1,
-  selectedCardIds: initialSelectedCardIds = []
+  selectedCardIds: initialSelectedCardIds = [],
+  isLoading
 }) => {
-  const [selectedCardIds, setSelectedCardIds] = useState<string[]>(initialSelectedCardIds)
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>(() => {
+    if (initialSelectedCardIds?.length) {
+      return initialSelectedCardIds
+    }
+    const unrevealedCards = cards.filter(card => !card.isRevealed)
+    if (unrevealedCards.length === 1) {
+      return [unrevealedCards[0].id]
+    }
+    return []
+  })
 
   const toggleCard = (cardId: string) => {
     setSelectedCardIds(prev => {
@@ -98,6 +109,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
               onClick={() => onSubmit(selectedCardIds)}
               disabled={!canSubmit}
               className='w-full mt-4'
+              isLoading={isLoading}
             >
               Confirm
             </Button>
