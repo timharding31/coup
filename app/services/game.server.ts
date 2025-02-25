@@ -53,6 +53,13 @@ export class GameService implements IGameService {
       throw new Error('Host player not found')
     }
 
+    if (host.currentGameId) {
+      const { game: existingGame } = await this.getGame(host.currentGameId)
+      if (existingGame?.status === 'WAITING') {
+        return { gameId: host.currentGameId, pin: existingGame.pin }
+      }
+    }
+
     const pin = await this.pinService.generateUniquePin()
     const newGameRef = this.gamesRef.push()
     const gameId = newGameRef.key!
@@ -103,24 +110,28 @@ export class GameService implements IGameService {
       throw new Error('No active turn')
     }
 
-    const turn = game.currentTurn
+    const { phase, action } = game.currentTurn
 
-    switch (turn.phase) {
+    switch (phase) {
       case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
-        if (playerId !== turn.action.playerId) {
+        if (playerId !== action.playerId) {
           throw new Error('Not your turn to respond')
         }
         if (response === 'block') {
           throw new Error('Invalid response. You cannot block a block')
         }
-        return this.turnService.handleBlockResponse(gameId, playerId, response)
+        await this.turnService.handleBlockResponse(gameId, playerId, response)
+        break
 
       case 'AWAITING_OPPONENT_RESPONSES':
-        return this.turnService.handleActionResponse(gameId, playerId, response, claimedCardForBlock)
+        await this.turnService.handleActionResponse(gameId, playerId, response, claimedCardForBlock)
+        break
 
       default:
-        throw new Error(`Invalid phase for response: ${turn.phase}`)
+        throw new Error(`Invalid phase for response: ${phase}`)
     }
+
+    return this.getGame(gameId)
   }
 
   async handleCardSelection(gameId: string, playerId: string, cardId: string) {
@@ -131,14 +142,14 @@ export class GameService implements IGameService {
       throw new Error('No active turn')
     }
 
-    const turn = game.currentTurn
+    const { phase, action, opponentResponses, challengeResult } = game.currentTurn
 
     // Handle card selection based on current waiting phase
-    switch (turn.phase) {
+    switch (phase) {
       case 'AWAITING_ACTOR_DEFENSE': {
         // If blocking player exists, they must prove their block
         // Otherwise, the action player must prove their action
-        if (playerId !== turn.action.playerId) {
+        if (playerId !== action.playerId) {
           throw new Error('Not your turn to reveal a card')
         }
         await this.turnService.handleChallengeDefenseCard(gameId, playerId, cardId)
@@ -146,7 +157,7 @@ export class GameService implements IGameService {
       }
 
       case 'AWAITING_BLOCKER_DEFENSE': {
-        if (playerId !== turn.opponentResponses?.block) {
+        if (playerId !== opponentResponses?.block) {
           throw new Error('Not your turn to reveal a card')
         }
         await this.turnService.handleChallengeDefenseCard(gameId, playerId, cardId)
@@ -154,7 +165,7 @@ export class GameService implements IGameService {
       }
 
       case 'AWAITING_CHALLENGE_PENALTY_SELECTION': {
-        if (playerId !== turn.challengeResult?.challengerId) {
+        if (playerId !== challengeResult?.challengerId) {
           throw new Error('Not your turn to reveal a card')
         }
         await this.turnService.handleFailedChallengerCard(gameId, playerId, cardId)
@@ -163,15 +174,15 @@ export class GameService implements IGameService {
 
       case 'AWAITING_TARGET_SELECTION': {
         // Handle revealing a card when targeted by assassination or coup
-        if (!turn.action.targetPlayerId) {
+        if (!action.targetPlayerId) {
           throw new Error('No target player')
         }
 
-        if (playerId !== turn.action.targetPlayerId) {
+        if (playerId !== action.targetPlayerId) {
           throw new Error('Not your turn to reveal a card')
         }
 
-        if (!['ASSASSINATE', 'COUP'].includes(turn.action.type)) {
+        if (!['ASSASSINATE', 'COUP'].includes(action.type)) {
           throw new Error('Invalid action type for losing influence')
         }
 
@@ -180,7 +191,7 @@ export class GameService implements IGameService {
       }
 
       default:
-        throw new Error(`Invalid phase for card selection: ${turn.phase}`)
+        throw new Error(`Invalid phase for card selection: ${phase}`)
     }
 
     return this.getGame(gameId)
@@ -191,8 +202,9 @@ export class GameService implements IGameService {
     return this.getGame(gameId)
   }
 
-  startGameTurn(gameId: string, action: Action) {
-    return this.turnService.startTurn(gameId, action)
+  async startGameTurn(gameId: string, action: Action) {
+    await this.turnService.startTurn(gameId, action)
+    return this.getGame(gameId)
   }
 
   async joinGameByPin(playerId: string, pin: string): Promise<{ gameId: string }> {
@@ -253,7 +265,9 @@ export class GameService implements IGameService {
       const updatedPlayers = game.players.filter(p => p.id !== playerId)
 
       // If no players left, clean up the game
-      if (updatedPlayers.length === 0) return null
+      if (updatedPlayers.length === 0) {
+        return null
+      }
 
       return {
         ...game,

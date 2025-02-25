@@ -4,8 +4,8 @@ import { ACTION_REQUIREMENTS } from '~/utils/action'
 
 export interface IActionService {
   validateAction(game: Game, action: Action): boolean
-  resolveCoinUpdates(gameId: string, action: Action): Promise<void>
-  updatePlayerCoins(gameId: string, playerId: string, amount: number): Promise<void>
+  resolveCoinUpdates(game: Game, action: Action): Promise<void>
+  updatePlayerCoins(gameId: string, updates: { [playerId: string]: number }): Promise<void>
   revealInfluence(gameId: string, playerId: string, cardId: string): Promise<void>
   withRevealedInfluence(game: Game, playerId: string, revealedCardId: string): Game
 }
@@ -48,22 +48,20 @@ export class ActionService implements IActionService {
     return player.influence.every(card => card.isRevealed)
   }
 
-  async updatePlayerCoins(gameId: string, playerId: string, amount: number): Promise<void> {
-    if (!amount) return
-
+  async updatePlayerCoins(gameId: string, updates: { [playerId: string]: number }): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
     const result = await gameRef.transaction((game: Game | null): Game | null => {
-      if (!game || !game.players) return game
-
-      const playerIndex = game.players.findIndex(p => p.id === playerId)
-      if (playerIndex === -1) {
-        console.error('Player not found while updating coins')
+      if (!game || !game.players?.length) {
         return game
       }
-
-      const updatedPlayers = game.players.slice()
-      const currentCoins = game.players[playerIndex]!.coins
-      updatedPlayers[playerIndex].coins = Math.max(0, currentCoins + amount)
+      const updatedPlayers = game.players.map(p => {
+        if (this.isDeadPlayer(p)) return p
+        const amount = updates[p.id] || 0
+        return {
+          ...p,
+          coins: Math.max(0, p.coins + amount)
+        }
+      })
 
       return {
         ...game,
@@ -77,7 +75,7 @@ export class ActionService implements IActionService {
     }
   }
 
-  async resolveCoinUpdates(gameId: string, action: Action): Promise<void> {
+  async resolveCoinUpdates(game: Game, action: Action): Promise<void> {
     const coinEffects = new Map<string, number>()
     switch (action.type) {
       case 'INCOME':
@@ -93,7 +91,7 @@ export class ActionService implements IActionService {
         break
 
       case 'STEAL':
-        const targetCoins = await this.getPlayerCoins(gameId, action.targetPlayerId)
+        const targetCoins = this.getPlayerCoins(game, action.targetPlayerId)
         const stealAmount = Math.min(2, targetCoins)
         coinEffects.set(action.targetPlayerId, -stealAmount)
         coinEffects.set(action.playerId, stealAmount)
@@ -102,14 +100,16 @@ export class ActionService implements IActionService {
       default:
         break
     }
-    await Promise.all(Array.from(coinEffects.entries()).map(entry => this.updatePlayerCoins(gameId, ...entry)))
+
+    await this.updatePlayerCoins(game.id, Object.fromEntries(coinEffects.entries()))
   }
 
-  async getPlayerCoins(gameId: string, playerId: string): Promise<number> {
-    const snapshot = await this.gamesRef.child(`${gameId}/players`).orderByChild('id').equalTo(playerId).once('value')
-
-    const player = Object.values(snapshot.val())[0] as Player
-    return player?.coins || 0
+  getPlayerCoins(game: Game, playerId: string): number {
+    const player = game.players.find(p => p.id === playerId)
+    if (!player) {
+      throw new Error('Player not found')
+    }
+    return player.coins || 0
   }
 
   withRevealedInfluence(game: Game, playerId: string, revealedCardId: string): Game {

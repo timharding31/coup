@@ -19,13 +19,6 @@ import _ from 'lodash'
 export interface CoupContextType {
   game: Game<'client'>
   error: string | null
-  startGame: () => void
-  leaveGame: () => void
-  performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => void
-  performUntargetedAction: (actionType: UntargetedActionType) => void
-  selectCard: (cardId: string) => void
-  sendResponse: (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => void
-  exchangeCards: (selectedCardIds: string[]) => void
   players: {
     myself: Player<'client'>
     actor: Player<'client'>
@@ -34,6 +27,13 @@ export interface CoupContextType {
     target?: Player<'client'>
   }
   playerMessages: Map<string, PlayerMessage>
+  startGame: () => Promise<void>
+  leaveGame: () => Promise<void>
+  performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => Promise<void>
+  performUntargetedAction: (actionType: UntargetedActionType) => Promise<void>
+  selectCard: (cardId: string) => Promise<void>
+  sendResponse: (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => Promise<void>
+  exchangeCards: (selectedCardIds: string[]) => Promise<void>
   updatePlayer: (update: Partial<Player>) => Promise<void>
 }
 
@@ -45,7 +45,7 @@ interface CoupContextProviderProps extends React.PropsWithChildren {
 
 export const CoupContext = createContext<CoupContextType | null>(null)
 
-const THROTTLE_DELAY_MS = 500
+const MESSAGE_DELAY_MS = 500
 
 export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   children,
@@ -57,8 +57,43 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
+  const messageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [playerMessages, setPlayerMessages] = useState(new Map<string, PlayerMessage>())
+  const messageQueueRef = useRef<Array<() => void>>([])
+  const processingQueueRef = useRef(false)
+
+  // Function to process the message queue with delay between messages
+  const processMessageQueue = useCallback(() => {
+    if (messageQueueRef.current.length === 0) {
+      processingQueueRef.current = false
+      return
+    }
+
+    processingQueueRef.current = true
+    const updateFn = messageQueueRef.current.shift()
+
+    if (updateFn) {
+      updateFn()
+    }
+
+    messageUpdateTimeoutRef.current = setTimeout(() => {
+      messageUpdateTimeoutRef.current = null
+      processMessageQueue()
+    }, MESSAGE_DELAY_MS)
+  }, [])
+
+  // Function to schedule a message update
+  const scheduleMessageUpdate = useCallback(
+    (updateFn: () => void) => {
+      messageQueueRef.current.push(updateFn)
+
+      if (!processingQueueRef.current) {
+        processMessageQueue()
+      }
+    },
+    [processMessageQueue]
+  )
 
   useEffect(() => {
     const db = getFirebaseDatabase()
@@ -66,78 +101,89 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
     const gameRef = ref(db, `games/${gameId}`)
 
-    const throttledOnSnapshotCallback = _.throttle((snapshot: any): void => {
-      const game = snapshot.val() as Game<'server'> | null
-      if (game) {
-        const preparedGame = prepareGameForClient(game, playerId)
-        setGame(preparedGame)
+    const onSnapshotCallback = (snapshot: any): void => {
+      const serverGameValue = snapshot.val() as Game<'server'> | null
+      if (serverGameValue) {
+        const game = prepareGameForClient(serverGameValue, playerId)
+        setGame(game)
 
-        const { currentTurn: turn, players } = preparedGame
-        const { respondedPlayers = [] } = turn || {}
-        const { block: blockerId, challenge: challengerId } = turn?.opponentResponses || {}
+        const { currentTurn: turn, players } = game
+        const { respondedPlayers = [], opponentResponses } = turn || {}
+        const { block: blockerId, challenge: challengerId } = opponentResponses || {}
 
+        // Process responded players messages with delay
         if (!_.isEqual(respondedPlayers, respondedPlayersRef.current)) {
-          for (const responderId of respondedPlayers) {
-            setPlayerMessages(prev => {
-              const existing = prev.get(responderId)
-
-              const next: PlayerMessage =
-                responderId === blockerId
-                  ? { message: '✗', type: 'block' }
-                  : responderId === challengerId
-                    ? { message: '⁉️', type: 'challenge' }
-                    : { message: '✓', type: 'success' }
-
-              return existing?.message === next.message ? prev : new Map(prev).set(responderId, next)
-            })
-          }
-        }
-
-        if (turn?.phase !== turnPhaseRef.current) {
-          const newMessages = getPlayerActionMessages(preparedGame)
-          if (newMessages) {
-            setPlayerMessages(prev => {
-              const next = turn?.phase ? new Map(prev) : new Map()
-              for (const [playerId, message] of Object.entries(newMessages)) {
-                next.set(playerId, message)
-              }
-              return next
-            })
-          }
-        }
-
-        if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
-          const challengeDefender = players.find(
-            player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
-          )
-          if (challengeDefender) {
-            const challengeDefenseCard = challengeDefender?.influence.find(card => card.isChallengeDefenseCard)
-            if (challengeDefenseCard) {
-              setPlayerMessages(prev =>
-                prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, type: 'info' })
-              )
-            } else {
+          scheduleMessageUpdate(() => {
+            for (const responderId of respondedPlayers) {
               setPlayerMessages(prev => {
-                const next = new Map(prev)
-                next.delete(challengeDefender.id)
-                return next
+                const existing = prev.get(responderId)
+
+                const next: PlayerMessage =
+                  responderId === blockerId
+                    ? { message: '✗', type: 'block' }
+                    : responderId === challengerId
+                      ? { message: '⁉️', type: 'challenge' }
+                      : { message: '✓', type: 'success' }
+
+                return existing?.message === next.message ? prev : new Map(prev).set(responderId, next)
               })
             }
+          })
+        }
+
+        // Process turn phase messages with delay
+        if (turn?.phase !== turnPhaseRef.current) {
+          const newMessages = getPlayerActionMessages(game)
+          if (newMessages) {
+            scheduleMessageUpdate(() => {
+              setPlayerMessages(prev => {
+                const next = turn?.phase ? new Map(prev) : new Map()
+                for (const [playerId, message] of Object.entries(newMessages)) {
+                  next.set(playerId, message)
+                }
+                return next
+              })
+            })
           }
+        }
+
+        // Process challenge penalty messages with delay
+        if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
+          scheduleMessageUpdate(() => {
+            const challengeDefender = players.find(
+              player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
+            )
+            if (challengeDefender) {
+              const challengeDefenseCard = challengeDefender?.influence.find(card => card.isChallengeDefenseCard)
+              if (challengeDefenseCard) {
+                setPlayerMessages(prev =>
+                  prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, type: 'info' })
+                )
+              } else {
+                setPlayerMessages(prev => {
+                  const next = new Map(prev)
+                  next.delete(challengeDefender.id)
+                  return next
+                })
+              }
+            }
+          })
         }
 
         turnPhaseRef.current = turn?.phase || null
         respondedPlayersRef.current = respondedPlayers
       }
-    }, THROTTLE_DELAY_MS)
+    }
 
-    const unsubscribe = onValue(gameRef, throttledOnSnapshotCallback)
+    const unsubscribe = onValue(gameRef, onSnapshotCallback)
 
     return () => {
       unsubscribe()
-      throttledOnSnapshotCallback.cancel()
+      if (messageUpdateTimeoutRef.current) {
+        clearTimeout(messageUpdateTimeoutRef.current)
+      }
     }
-  }, [gameId, playerId])
+  }, [gameId, playerId, scheduleMessageUpdate])
 
   const performAction = async (action: any) => {
     try {
@@ -155,7 +201,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const performTargetedAction = useCallback(
     (actionType: TargetedActionType, targetPlayerId: string) => {
       const targetedAction = getActionFromType(playerId, actionType, targetPlayerId)
-      performAction(targetedAction)
+      return performAction(targetedAction)
     },
     [gameId, playerId]
   )
@@ -163,7 +209,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const performUntargetedAction = useCallback(
     (actionType: UntargetedActionType) => {
       const untargetedAction = getActionFromType(playerId, actionType)
-      performAction(untargetedAction)
+      return performAction(untargetedAction)
     },
     [gameId, playerId]
   )
@@ -298,7 +344,6 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         playerMessages
       }}
     >
-      {/* <pre>{JSON.stringify(playerMessages)}</pre> */}
       {children}
     </CoupContext.Provider>
   )

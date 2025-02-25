@@ -5,6 +5,7 @@ import { Button } from '~/components/Button'
 import { IdentityPopover } from '~/components/IdentityPopover'
 import { PinInput } from '~/components/PinInput'
 import { PlayingCard } from '~/components/PlayingCard'
+import { Sprite } from '~/components/Sprite'
 import { TextInput } from '~/components/TextInput'
 import { gameService, playerService, sessionService } from '~/services/index.server'
 import { Card, CardType, Player } from '~/types'
@@ -29,6 +30,7 @@ export const action: ActionFunction = async ({ request }) => {
 
   const intent = formData.get('intent')?.toString()
   const pin = formData.get('pin')?.toString()
+  const currentGameId = formData.get('currentGameId')?.toString()
 
   let gameId: string | null = null
 
@@ -51,6 +53,13 @@ export const action: ActionFunction = async ({ request }) => {
         return { error: 'Invalid PIN' }
       }
       break
+
+    case 'delete':
+      if (!currentGameId) {
+        return { error: 'No game to delete' }
+      }
+      await gameService.leaveGame(playerId, currentGameId)
+      return { gameId: null }
   }
 
   if (gameId) {
@@ -76,24 +85,51 @@ export default function Index() {
       <h1 className='font-robotica text-6xl'>polar coup</h1>
 
       <div className='flex flex-col items-stretch mt-16 gap-6 w-full'>
-        <Form method='post' className='contents'>
-          <input type='hidden' name='intent' value='create' />
-          <Button variant='primary' type='submit' size='lg'>
-            Create New Game
-          </Button>
-        </Form>
+        {player.currentGameId ? (
+          <>
+            <div className='bg-nord-8 p-4 border border-nord-0 rounded-lg grid grid-cols-[auto_1fr] gap-4'>
+              <div className='flex items-center justify-center'>
+                <Sprite id='exclamation' color='nord-0' size='sm' />
+              </div>
+              <span className='text-lg text-nord-0'>You're in an active game</span>
+            </div>
+            <div className='grid gap-2 grid-cols-[auto_1fr]'>
+              <Form method='post'>
+                <input type='hidden' name='intent' value='delete' />
+                <input type='hidden' name='currentGameId' value={player.currentGameId} />
+                <Button variant='danger' type='submit' size='base' className='w-full'>
+                  Abandon Game
+                </Button>
+              </Form>
+              <Link className='contents' to={`/games/${player.currentGameId}`}>
+                <Button variant='primary' size='base'>
+                  Resume Game
+                </Button>
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <Form method='post' className='contents'>
+              <input type='hidden' name='intent' value='create' />
+              <Button variant='primary' type='submit' size='lg'>
+                Create New Game
+              </Button>
+            </Form>
 
-        <div className='text-nord-4 text-center text-base'>— or —</div>
+            <div className='text-nord-4 text-center text-base'>— or —</div>
 
-        <Form method='post'>
-          <input type='hidden' name='intent' value='join' />
-          <div className='flex flex-col items-stretch gap-2'>
-            <PinInput name='pin' value={pin} onChange={setPin} required errorMessage={errorMessage} />
-            <Button variant='secondary' type='submit' size='lg'>
-              Join by PIN
-            </Button>
-          </div>
-        </Form>
+            <Form method='post'>
+              <input type='hidden' name='intent' value='join' />
+              <div className='flex flex-col items-stretch gap-2'>
+                <PinInput name='pin' value={pin} onChange={setPin} required errorMessage={errorMessage} />
+                <Button variant='secondary' type='submit' size='lg'>
+                  Join by PIN
+                </Button>
+              </div>
+            </Form>
+          </>
+        )}
       </div>
     </div>
   )

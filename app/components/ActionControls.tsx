@@ -90,12 +90,9 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               onClick={() => setTargetedAction('ASSASSINATE')}
               sprite='sword'
               disabled={coins < 3 || forceCoup}
+              coinCost={3}
             >
-              <>ASSASINATE</>
-              <p className='absolute top-3 right-2 flex gap-1 text-xs text-nord-4'>
-                <span className='translate-y-[0.125em]'>-3</span>
-                <Sprite id='chip' size='sm' color='nord-4' />
-              </p>
+              ASSASINATE
             </Button>
             <Button
               size='lg'
@@ -103,12 +100,9 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins }
               onClick={() => setTargetedAction('COUP')}
               sprite='skull'
               disabled={coins < 7}
+              coinCost={7}
             >
-              <>COUP</>
-              <p className='absolute top-3 right-2 flex gap-1 text-xs text-nord-4'>
-                <span className='translate-y-[0.125em]'>-7</span>
-                <Sprite id='chip' size='sm' color='nord-4' />
-              </p>
+              COUP
             </Button>
           </div>
 

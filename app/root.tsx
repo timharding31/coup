@@ -59,8 +59,8 @@ export default function App() {
         />
         <div id='root'>
           <Outlet />
-          <LoadingSpinner loading={navigationState !== 'idle'} />
         </div>
+        <LoadingSpinner loading={navigationState !== 'idle'} />
         <ScrollRestoration />
         <Scripts />
         <script

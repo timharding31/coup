@@ -37,6 +37,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   sprite?: SpriteId | 'arrow-left' | null
   coinStack?: 1 | 2 | 3
   nameTag?: React.ComponentProps<typeof PlayerNameTag>
+  coinCost?: number
 }
 
 const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: keyof typeof variantStyles }) => {
@@ -116,6 +117,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       coinStack = null,
       children = null,
       nameTag = null,
+      coinCost = null,
       ...props
     },
     forwardedRef
@@ -183,8 +185,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           <PlayerNameTag {...nameTag} />
         ) : children ? (
           <span
-            className={cn('relative font-sansation font-bold', {
-              'translate-y-[0.125em]': false,
+            className={cn('relative font-sansation font-bold translate-y-[0.0625em]', {
               'flex flex-auto': hasIcon,
               'leading-[2.25rem]': size === 'sm',
               'leading-[2.5rem]': size === 'base',
@@ -194,6 +195,12 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             {children}
           </span>
         ) : null}
+        {coinCost && (
+          <div className='absolute top-[14px] right-6 flex flex-row-reverse items-center gap-1 text-xs text-nord-11'>
+            <Sprite id='chip' size='sm' color='nord-11' />
+            <span className='translate-y-[0.125em] font-robotica'>-{coinCost}</span>
+          </div>
+        )}
       </button>
     )
   }

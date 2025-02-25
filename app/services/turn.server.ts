@@ -5,18 +5,14 @@ import { VALID_TRANSITIONS, haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
 
 export interface ITurnService {
-  startTurn(gameId: string, action: Action): Promise<{ game: Game | null }>
+  startTurn(gameId: string, action: Action): Promise<void>
   handleActionResponse(
     gameId: string,
     playerId: string,
     response: 'accept' | 'block' | 'challenge',
     claimedCardForBlock?: CardType
-  ): Promise<{ game: Game | null }>
-  handleBlockResponse(
-    gameId: string,
-    playerId: string,
-    response: 'accept' | 'challenge'
-  ): Promise<{ game: Game | null }>
+  ): Promise<void>
+  handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge'): Promise<void>
   handleChallengeDefenseCard(gameId: string, defenderId: string, cardId: string): Promise<void>
   handleFailedChallengerCard(gameId: string, challengerId: string, cardId: string): Promise<void>
   handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void>
@@ -47,10 +43,9 @@ export class TurnService implements ITurnService {
     const gameRef = this.gamesRef.child(gameId)
     const gameSnapshot = await gameRef.get()
     const game = gameSnapshot.val() as Game
-    const turn = game?.currentTurn
 
-    let defenseSuccessful: boolean | null = null,
-      revealedCard: Card | null = null
+    let revealedCard: Card | null = null,
+      defenseSuccessful: boolean | null = null
 
     const result = await gameRef.transaction((game: Game | null): Game | null => {
       if (!game || !game.currentTurn) {
@@ -58,22 +53,32 @@ export class TurnService implements ITurnService {
         return game
       }
 
-      const turn = game.currentTurn
+      const turn = { ...game.currentTurn }
 
-      // Only allow this method when waiting for a defense reveal.
-      if (turn.phase !== 'AWAITING_ACTOR_DEFENSE' && turn.phase !== 'AWAITING_BLOCKER_DEFENSE') {
-        console.error('Not in defense reveal phase')
+      if (!turn.challengeResult) {
+        console.error('Challenger not recorded')
         return game
       }
 
-      // Ensure the proper defender is responding.
-      if (turn.phase === 'AWAITING_BLOCKER_DEFENSE' && turn.opponentResponses?.block !== defenderId) {
-        console.error("Player's block was not challenged or not the defender")
-        return game
-      }
-      if (turn.phase === 'AWAITING_ACTOR_DEFENSE' && turn.action.playerId !== defenderId) {
-        console.error('Player was not challenged')
-        return game
+      switch (turn.phase) {
+        case 'AWAITING_ACTOR_DEFENSE':
+          if (turn.action.playerId !== defenderId) {
+            console.error('Player was not challenged')
+            return game
+          }
+          break
+
+        case 'AWAITING_BLOCKER_DEFENSE':
+          if (turn.opponentResponses?.block !== defenderId) {
+            console.error("Player's block was not challenged or not the defender")
+            return game
+          }
+          break
+
+        // Only allow this method when waiting for a defense reveal.
+        default:
+          console.error('Not in defense reveal phase')
+          return game
       }
 
       const player = game.players.find(p => p.id === defenderId)
@@ -88,50 +93,12 @@ export class TurnService implements ITurnService {
         return game
       }
 
-      if (!turn.challengeResult) {
-        console.error('Challenger not recorded')
-        return game
-      }
-
-      let nextPhase: TurnPhase
-
-      // Determine what card type constitutes a successful defense.
-      if (turn.phase === 'AWAITING_BLOCKER_DEFENSE') {
-        // When defending a block challenge, compare against the card types allowed to block.
-        switch (turn.action.type) {
-          case 'FOREIGN_AID':
-            defenseSuccessful = revealedCard.type === 'DUKE'
-            break
-          case 'ASSASSINATE':
-            defenseSuccessful = revealedCard.type === 'CONTESSA'
-            break
-          case 'STEAL':
-            defenseSuccessful = revealedCard.type === 'AMBASSADOR' || revealedCard.type === 'CAPTAIN'
-            break
-          default:
-            throw new Error('Invalid action type for block defense')
-        }
-        nextPhase = defenseSuccessful ? 'AWAITING_CHALLENGE_PENALTY_SELECTION' : 'ACTION_EXECUTION'
-      } else {
-        // AWAITING_ACTOR_DEFENSE: the actor defends against a direct challenge.
-        switch (turn.action.type) {
-          case 'ASSASSINATE':
-            defenseSuccessful = revealedCard.type === 'ASSASSIN'
-            break
-          case 'STEAL':
-            defenseSuccessful = revealedCard.type === 'CAPTAIN'
-            break
-          case 'EXCHANGE':
-            defenseSuccessful = revealedCard.type === 'AMBASSADOR'
-            break
-          case 'TAX':
-            defenseSuccessful = revealedCard.type === 'DUKE'
-            break
-          default:
-            throw new Error('Invalid action type for actor defense')
-        }
-        nextPhase = defenseSuccessful ? 'AWAITING_CHALLENGE_PENALTY_SELECTION' : 'ACTION_FAILED'
-      }
+      defenseSuccessful = revealedCard.type === turn.challengeResult.challengedCaracter
+      const nextPhase = defenseSuccessful
+        ? 'AWAITING_CHALLENGE_PENALTY_SELECTION'
+        : turn.phase === 'AWAITING_BLOCKER_DEFENSE'
+          ? 'ACTION_EXECUTION'
+          : 'ACTION_FAILED'
 
       const updatedPlayers = defenseSuccessful
         ? game.players.slice()
@@ -406,12 +373,10 @@ export class TurnService implements ITurnService {
     }
 
     if (action.coinCost) {
-      await this.actionService.updatePlayerCoins(gameId, action.playerId, -action.coinCost)
+      await this.actionService.updatePlayerCoins(gameId, { [action.playerId]: -action.coinCost })
     }
 
     await this.progressToNextPhase(gameId)
-
-    return { game }
   }
 
   async handleActionResponse(
@@ -482,8 +447,6 @@ export class TurnService implements ITurnService {
     // If a block was recorded, transition to AWAITING_ACTIVE_RESPONSE_TO_BLOCK.
     // If a challenge is recorded, transition to AWAITING_ACTOR_DEFENSE.
     await this.progressToNextPhase(gameId)
-
-    return { game: result.snapshot.val() as Game | null }
   }
 
   async handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge') {
@@ -534,8 +497,6 @@ export class TurnService implements ITurnService {
     }
 
     await this.progressToNextPhase(gameId)
-
-    return { game: result.snapshot.val() as Game | null }
   }
 
   // Processes all auto-acceptances, to be run on timeout expiration after action/block declared
@@ -696,9 +657,6 @@ export class TurnService implements ITurnService {
         break
 
       case 'ACTION_FAILED':
-        await this.transitionState(gameId, currentPhase, 'TURN_COMPLETE')
-        break
-
       case 'TURN_COMPLETE':
         await this.endTurn(gameId)
         break
@@ -760,7 +718,7 @@ export class TurnService implements ITurnService {
     }
 
     // Apply coin effects
-    await this.actionService.resolveCoinUpdates(gameId, action)
+    await this.actionService.resolveCoinUpdates(game, action)
 
     switch (action.type) {
       case 'EXCHANGE':
@@ -780,7 +738,7 @@ export class TurnService implements ITurnService {
         break
 
       default:
-        await this.transitionState(gameId, turn.phase, 'TURN_COMPLETE')
+        await this.endTurn(gameId)
         break
     }
   }

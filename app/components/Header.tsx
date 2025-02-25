@@ -11,9 +11,9 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ showIdentityPopoverTrigger = true }) => {
   const { myself = null } = usePlayers() || {}
   return (
-    <header className='relative flex items-center justify-between gap-2 bg-nord-0 p-1 border-b border-nord-3'>
+    <header className='relative flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3'>
       <Link to='/' className='flex items-end'>
-        <Button variant='primary' size='sm' sprite='arrow-left' />
+        {/* <Button variant='primary' size='sm' sprite='arrow-left' /> */}
         <h1 className='text-3xl'>polar coup</h1>
       </Link>
       {showIdentityPopoverTrigger && myself && <IdentityPopover {...myself} />}

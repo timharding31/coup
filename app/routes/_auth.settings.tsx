@@ -1,5 +1,6 @@
 import { ActionFunction, LoaderFunction } from '@remix-run/node'
 import { Form, Link, useActionData, useLoaderData, useNavigate } from '@remix-run/react'
+import { useRef, useState } from 'react'
 import { Button } from '~/components/Button'
 import { Header } from '~/components/Header'
 import { TextInput } from '~/components/TextInput'
@@ -38,33 +39,41 @@ export const action: ActionFunction = async ({ request }) => {
 
 export default function Settings() {
   const navigate = useNavigate()
+  const [isBackButtonDisabled, setIsBackButtonDisabled] = useState(false)
   const { username } = useLoaderData<{ username: string; currentGameId?: string }>()
   const { error: errorMessage, success } = useActionData<{ error?: string; success?: boolean }>() || {}
 
   return (
-    <>
-      <Header showIdentityPopoverTrigger={false} />
-      <div className='mt-16 px-6'>
-        <h1 className='font-robotica text-5xl'>Settings</h1>
-        <Form method='post' className='mt-12 flex flex-col items-stretch gap-6 w-full'>
-          <TextInput
-            name='username'
-            label='Username'
-            defaultValue={username}
-            required
-            size='lg'
-            errorMessage={errorMessage}
-          />
-          <div className='grid grid-cols-[auto_1fr] gap-2'>
-            <Button variant='secondary' type='button' size='base' onClick={() => navigate(-1)} sprite='arrow-left'>
-              Back
-            </Button>
-            <Button variant='primary' type='submit' size='base' sprite={success ? 'check' : undefined}>
-              {success ? 'Saved' : 'Save'}
-            </Button>
-          </div>
-        </Form>
-      </div>
-    </>
+    <div className='mt-16 px-6'>
+      <h1 className='font-robotica text-4xl'>Settings</h1>
+      <Form method='post' className='mt-12 flex flex-col items-stretch gap-6 w-full'>
+        <TextInput
+          name='username'
+          label='Username'
+          defaultValue={username}
+          required
+          size='lg'
+          errorMessage={errorMessage}
+          onBlur={e => {
+            setIsBackButtonDisabled(e.target.value !== username)
+          }}
+        />
+        <div className='grid grid-cols-[auto_1fr] gap-2'>
+          <Button
+            variant='secondary'
+            type='button'
+            size='base'
+            onClick={() => navigate(-1)}
+            sprite='arrow-left'
+            disabled={isBackButtonDisabled && !success}
+          >
+            Back
+          </Button>
+          <Button variant='primary' type='submit' size='base' sprite={success ? 'check' : undefined}>
+            {success ? 'Saved' : 'Save'}
+          </Button>
+        </div>
+      </Form>
+    </div>
   )
 }
