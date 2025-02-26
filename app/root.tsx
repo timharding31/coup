@@ -9,7 +9,7 @@ export const meta: MetaFunction = () => {
     { title: 'Polar Coup' },
     { property: 'og:title', content: 'Polar Coup' },
     { property: 'og:description', content: 'Play Coup online' },
-    { property: 'og:image', content: 'https://polarcoup.app/og-image.png' }
+    { property: 'og:image', content: '/og-image.png' }
   ]
 }
 
