@@ -229,7 +229,9 @@ export class TurnService implements ITurnService {
   async handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
     const result = await gameRef.transaction((game: Game | null): Game | null => {
-      if (!game || !game.currentTurn || game.currentTurn.action.type !== 'EXCHANGE') return game
+      if (!game || game.currentTurn?.action.type !== 'EXCHANGE') {
+        return game
+      }
 
       const player = game.players.find(p => p.id === playerId)
       const exchangedCards = player?.influence.filter(c => cardIds.includes(c.id)) || []
