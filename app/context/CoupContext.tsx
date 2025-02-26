@@ -107,20 +107,20 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         // Process responded players messages with delay
         if (!_.isEqual(respondedPlayers, respondedPlayersRef.current)) {
           scheduleMessageUpdate(() => {
-            for (const responderId of respondedPlayers) {
-              setPlayerMessages(prev => {
-                const existing = prev.get(responderId)
-
-                const next: PlayerMessage =
+            setPlayerMessages(prev => {
+              const next = new Map(prev)
+              for (const responderId of respondedPlayers) {
+                const message: PlayerMessage =
                   responderId === blockerId
                     ? { message: '✗', type: 'block' }
                     : responderId === challengerId
                       ? { message: '⁉️', type: 'challenge' }
                       : { message: '✓', type: 'success' }
 
-                return existing?.message === next.message ? prev : new Map(prev).set(responderId, next)
-              })
-            }
+                next.set(responderId, message)
+              }
+              return next
+            })
           })
         }
 
@@ -142,25 +142,23 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
         // Process challenge penalty messages with delay
         if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
-          scheduleMessageUpdate(() => {
-            const challengeDefender = players.find(
-              player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
-            )
-            if (challengeDefender) {
-              const challengeDefenseCard = challengeDefender?.influence.find(card => card.isChallengeDefenseCard)
-              if (challengeDefenseCard) {
-                setPlayerMessages(prev =>
-                  prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, type: 'info' })
-                )
-              } else {
-                setPlayerMessages(prev => {
-                  const next = new Map(prev)
-                  next.delete(challengeDefender.id)
-                  return next
-                })
-              }
+          const challengeDefender = players.find(
+            player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
+          )
+          if (challengeDefender) {
+            const challengeDefenseCard = challengeDefender.influence.find(card => card.isChallengeDefenseCard)
+            if (challengeDefenseCard) {
+              setPlayerMessages(prev =>
+                prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, type: 'info' })
+              )
+            } else {
+              setPlayerMessages(prev => {
+                const next = new Map(prev)
+                next.delete(challengeDefender.id)
+                return next
+              })
             }
-          })
+          }
         }
 
         turnPhaseRef.current = turn?.phase || null

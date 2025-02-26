@@ -84,7 +84,7 @@ export default function Index() {
 
       <h1 className='font-robotica text-6xl'>polar coup</h1>
 
-      <div className='flex flex-col items-stretch mt-16 gap-6 w-full'>
+      <div className='flex flex-col items-stretch mt-20 gap-4 w-full'>
         {player.currentGameId ? (
           <>
             <div className='bg-nord-8 p-4 border border-nord-0 rounded-lg grid grid-cols-[auto_1fr] gap-4'>
@@ -93,17 +93,17 @@ export default function Index() {
               </div>
               <span className='text-lg text-nord-0'>You're in an active game</span>
             </div>
-            <div className='grid gap-2 grid-cols-[auto_1fr]'>
+            <div className='grid gap-2 grid-cols-[1fr_2fr]'>
               <Form method='post'>
                 <input type='hidden' name='intent' value='delete' />
                 <input type='hidden' name='currentGameId' value={player.currentGameId} />
                 <Button variant='danger' type='submit' size='base' className='w-full'>
-                  Abandon Game
+                  Quit
                 </Button>
               </Form>
               <Link className='contents' to={`/games/${player.currentGameId}`}>
                 <Button variant='primary' size='base'>
-                  Resume Game
+                  Resume
                 </Button>
               </Link>
             </div>

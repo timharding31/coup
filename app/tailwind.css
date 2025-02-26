@@ -105,6 +105,18 @@ h4 {
   }
 }
 
+.text-shadow-1 {
+  text-shadow:
+    -1px -1px 0 var(--text-shadow-color),
+    1px -1px 0 var(--text-shadow-color),
+    -1px 1px 0 var(--text-shadow-color),
+    1px 1px 0 var(--text-shadow-color),
+    1px 0px 0 var(--text-shadow-color),
+    -1px 0px 0 var(--text-shadow-color),
+    0px 1px 0 var(--text-shadow-color),
+    0px -1px 0 var(--text-shadow-color);
+}
+
 /* .tooltip-content::after {
   content: '';
   position: absolute;

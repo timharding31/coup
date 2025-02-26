@@ -25,11 +25,11 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
   intent = 'primary',
   minCards = 1,
   maxCards = 1,
-  selectedCardIds: initialSelectedCardIds = [],
+  selectedCardIds: initialSelectedCardIds,
   isLoading
 }) => {
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>(() => {
-    if (initialSelectedCardIds?.length) {
+    if (initialSelectedCardIds) {
       return initialSelectedCardIds
     }
     const unrevealedCards = cards.filter(card => !card.isRevealed)
@@ -53,68 +53,63 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
 
   const canSubmit = selectedCardIds.length >= minCards && selectedCardIds.length <= maxCards
 
+  const bgClassName = {
+    primary: 'bg-nord-6',
+    success: 'bg-nord-14',
+    danger: 'bg-nord-11',
+    warning: 'bg-nord-13'
+  }[intent]
+
   return (
     <Drawer open>
       <DrawerContent className='p-4'>
-        <AnimatePresence mode='wait'>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className='grid gap-4'
-          >
-            <div className='px-2'>
-              <h3 className='text-xl font-bold'>{heading}</h3>
-              {subheading && <p className='text-base text-nord-4'>{subheading}</p>}
-            </div>
+        <div className='grid gap-4'>
+          <div className='px-2'>
+            <h3 className='text-xl font-bold'>{heading}</h3>
+            {subheading && <p className='text-base text-nord-4'>{subheading}</p>}
+          </div>
 
-            <div className='flex justify-center gap-2'>
-              {cards.map(card => {
-                if (card.isRevealed) {
-                  return null
-                }
-                const bgClassName = {
-                  primary: 'bg-nord-6',
-                  success: 'bg-nord-14',
-                  danger: 'bg-nord-11',
-                  warning: 'bg-nord-13'
-                }[intent]
-                return (
-                  <div
-                    key={card.id}
-                    className={`relative cursor-pointer transition-transform ${
-                      selectedCardIds.includes(card.id) ? 'scale-95' : ''
-                    }`}
-                    style={{ width: `${100 / Math.min(4, cards.length)}%`, maxWidth: '180px' }}
-                    onClick={() => toggleCard(card.id)}
-                  >
-                    <PlayingCard {...card} />
-                    {selectedCardIds.includes(card.id) && (
-                      <div
-                        className={`absolute inset-0 ${bgClassName} rounded-lg flex items-center justify-center bg-opacity-50`}
-                      >
-                        <div className='w-8 h-8 rounded-full bg-nord-6 flex items-center justify-center font-bold text-nord-0'>
-                          ✓
-                        </div>
+          <div className='flex justify-center gap-2'>
+            {cards.map(card => {
+              if (card.isRevealed) {
+                return null
+              }
+              return (
+                <button
+                  key={card.id}
+                  type='button'
+                  className={`appearance-none relative cursor-pointer transition-transform ${
+                    selectedCardIds.includes(card.id) ? 'scale-95' : ''
+                  }`}
+                  style={{ width: `${100 / Math.min(4, cards.length)}%`, maxWidth: '180px' }}
+                  onClick={() => toggleCard(card.id)}
+                >
+                  <PlayingCard {...card} />
+                  {selectedCardIds.includes(card.id) && (
+                    <div
+                      className={`absolute inset-0 ${bgClassName} rounded-lg flex items-center justify-center bg-opacity-50`}
+                    >
+                      <div className='w-8 h-8 rounded-full bg-nord-6 flex items-center justify-center font-bold text-nord-0'>
+                        ✓
                       </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
 
-            <Button
-              size='lg'
-              variant={intent}
-              onClick={() => onSubmit(selectedCardIds)}
-              disabled={!canSubmit}
-              className='w-full mt-4'
-              isLoading={isLoading}
-            >
-              Confirm
-            </Button>
-          </motion.div>
-        </AnimatePresence>
+          <Button
+            size='lg'
+            variant={intent}
+            onClick={() => onSubmit(selectedCardIds)}
+            disabled={!canSubmit}
+            className='w-full mt-4'
+            isLoading={isLoading}
+          >
+            Confirm
+          </Button>
+        </div>
       </DrawerContent>
     </Drawer>
   )

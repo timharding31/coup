@@ -36,7 +36,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
               )
 
             case 'COMPLETED':
-              return <GameOver game={game} />
+              return <GameOver game={game} leaveGame={leaveGame} />
           }
         })()}
       </GameTable>

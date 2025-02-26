@@ -58,8 +58,13 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   }
 
   return (
-    <GameTableOverlay heading='Game Lobby'>
-      <div className='ml-1 text-sm font-sansation text-nord-4 absolute top-1 right-4'>
+    <GameTableOverlay
+      heading='Game Lobby'
+      buttonProps={
+        isHost ? { variant: 'success', onClick: startGame, disabled: !canStart, children: 'Start Game' } : null
+      }
+    >
+      <div className='ml-1 text-xs font-sansation text-nord-4 absolute top-0 right-4'>
         <span
           onClick={() => {
             navigator.clipboard.writeText(pin).then(() => {
@@ -70,7 +75,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             })
           }}
         >
-          PIN: <strong className='text-nord-6'>{pin}</strong>
+          PIN: <strong className='text-nord-6 text-base tracking-wider'>{pin}</strong>
         </span>
         {wasPinCopied && (
           <div className='tooltip-content absolute -left-10 right-0 text-center top-[100%] text-sm rounded-md bg-nord-8 text-nord-0 z-50'>
@@ -78,7 +83,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           </div>
         )}
       </div>
-      <div className='grid grid-cols-[auto_1fr] items-center gap-2 mt-3 mb-6'>
+      <div className='grid grid-cols-[auto_1fr] items-center gap-2 mt-1 mb-6'>
         <Button
           size='sm'
           sprite='arrow-left'
@@ -113,12 +118,8 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         </ul>
       </div>
 
-      {isHost ? (
-        <Button size='lg' variant='success' onClick={startGame} disabled={!canStart} className='sticky bottom-0'>
-          Start Game
-        </Button>
-      ) : (
-        <div className='text-lg leading-16 sticky bottom-0 text-center bg-nord-1'>
+      {!isHost && (
+        <div className='text-lg leading-16 sticky bottom-0 text-center bg-ui pb-6 pt-4'>
           Waiting for host
           <WaitingEllipsis size='lg' />
         </div>
