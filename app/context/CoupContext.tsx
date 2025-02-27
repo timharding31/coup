@@ -5,7 +5,6 @@ import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, Play
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { getPlayerActionMessages, prepareGameForClient } from '~/utils/game'
-import _ from 'lodash'
 
 export interface CoupContextType {
   game: Game<'client'>
@@ -102,22 +101,46 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
         const { currentTurn: turn, players } = game
         const { respondedPlayers = [], opponentResponses } = turn || {}
+        const { playerId: actorId } = turn?.action || {}
         const { block: blockerId, challenge: challengerId } = opponentResponses || {}
 
         // Process responded players messages with delay
-        if (!_.isEqual(respondedPlayers, respondedPlayersRef.current)) {
+        if (!isEqual(respondedPlayers, respondedPlayersRef.current)) {
+          const getMessage = (playerId: string): PlayerMessage | null => {
+            switch (turn?.phase) {
+              case 'AWAITING_OPPONENT_RESPONSES':
+                if (playerId === actorId) {
+                  return null
+                }
+                if (playerId === blockerId) {
+                  return { message: '✗', type: 'block' }
+                }
+                if (playerId === challengerId) {
+                  return { message: '⁉️', type: 'challenge' }
+                }
+                return { message: '✓', type: 'success' }
+
+              default:
+                if (playerId !== actorId) {
+                  return null
+                }
+                if (playerId === challengerId) {
+                  return { message: '⁉️', type: 'challenge' }
+                }
+                return { message: '✓', type: 'success' }
+            }
+          }
+
           scheduleMessageUpdate(() => {
             setPlayerMessages(prev => {
               const next = new Map(prev)
               for (const responderId of respondedPlayers) {
-                const message: PlayerMessage =
-                  responderId === blockerId
-                    ? { message: '✗', type: 'block' }
-                    : responderId === challengerId
-                      ? { message: '⁉️', type: 'challenge' }
-                      : { message: '✓', type: 'success' }
-
-                next.set(responderId, message)
+                const message = getMessage(responderId)
+                if (message) {
+                  next.set(responderId, message)
+                } else {
+                  next.delete(responderId)
+                }
               }
               return next
             })
@@ -392,4 +415,12 @@ export function usePlayers() {
 export function usePlayerMessage(playerId: string): PlayerMessage | null {
   const { playerMessages } = useContext(CoupContext) || {}
   return playerMessages?.get(playerId) || null
+}
+
+function isEqual<T = string>(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
 }

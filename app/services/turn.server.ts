@@ -212,7 +212,7 @@ export class TurnService implements ITurnService {
         ...game,
         currentTurn: {
           ...game.currentTurn,
-          timeoutAt: 0,
+          timeoutAt: 0, // No timeout for exchange return phase
           respondedPlayers: [],
           phase: 'AWAITING_EXCHANGE_RETURN'
         },
@@ -233,9 +233,11 @@ export class TurnService implements ITurnService {
         return game
       }
 
+      // Validate the exchange
       const player = game.players.find(p => p.id === playerId)
-      const exchangedCards = player?.influence.filter(c => cardIds.includes(c.id)) || []
+      if (!player) return game
 
+      const exchangedCards = player.influence.filter(c => cardIds.includes(c.id)) || []
       if (exchangedCards.length !== 2) return game
 
       // Update player's cards and return selected cards to deck
@@ -247,10 +249,18 @@ export class TurnService implements ITurnService {
         }
       })
 
+      // Important: We're ONLY updating the game state here, not ending the turn
+      // This ensures the progressToNextPhase can properly handle the state transition
       return {
         ...game,
         players: updatedPlayers,
-        deck: game.deck.concat(exchangedCards.map(c => ({ ...c, isRevealed: false, isChallengeDefenseCard: false }))),
+        deck: game.deck.concat(
+          exchangedCards.map(c => ({
+            ...c,
+            isRevealed: false,
+            isChallengeDefenseCard: false
+          }))
+        ),
         currentTurn: {
           ...game.currentTurn,
           phase: 'TURN_COMPLETE',
@@ -260,9 +270,14 @@ export class TurnService implements ITurnService {
       }
     })
 
-    if (result.committed) {
-      await this.progressToNextPhase(gameId)
+    if (!result.committed) {
+      throw new Error('Failed to process exchange return')
     }
+
+    // Now the turn is marked as TURN_COMPLETE, explicitly call endTurn to ensure
+    // it moves to the next player. This is a more direct approach than progressToNextPhase
+    // to ensure the turn is properly ended.
+    await this.endTurn(gameId)
   }
 
   async selectCardToLose(gameId: string, playerId: string, cardId: string): Promise<void> {
@@ -272,6 +287,10 @@ export class TurnService implements ITurnService {
       if (!game || !game.currentTurn) return game
 
       const turn = game.currentTurn
+
+      // Ensure we're in the right phase
+      if (turn.phase !== 'AWAITING_TARGET_SELECTION') return game
+
       const player = game.players.find(p => p.id === playerId)
       if (!player || turn.action.targetPlayerId !== playerId) return game
 
@@ -304,9 +323,12 @@ export class TurnService implements ITurnService {
       }
     })
 
-    if (result.committed) {
-      await this.progressToNextPhase(gameId)
+    if (!result.committed) {
+      throw new Error('Failed to select card to lose')
     }
+
+    // Directly end the turn for more reliability
+    await this.endTurn(gameId)
   }
 
   async startTurn(gameId: string, action: Action) {
@@ -330,7 +352,7 @@ export class TurnService implements ITurnService {
         newTurn = {
           phase: 'ACTION_DECLARED',
           action,
-          timeoutAt: 0,
+          timeoutAt: 0, // No timeout for auto-resolve actions
           respondedPlayers: [],
           opponentResponses: null,
           challengeResult: null,
@@ -368,8 +390,7 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to start turn')
     }
 
-    const game = result.snapshot.val() as Game | null
-
+    // Start the timer for opponent responses if this action can be blocked or challenged
     if (timeoutAt && timeoutAt > Date.now() && (action.canBeBlocked || action.canBeChallenged)) {
       this.startTimer(gameId, timeoutAt - Date.now())
     }
@@ -410,7 +431,9 @@ export class TurnService implements ITurnService {
           console.error('Block response without claimed card')
           return game
         }
+        // When a block is recorded, clear the current timeout and set a new one for actor to respond to block
         updatedTurn.opponentResponses = { block: playerId, claimedCard: claimedCardForBlock }
+
         // New timeout for actor to respond to block
         timeoutAt = Date.now() + this.RESPONSE_TIMEOUT
         updatedTurn.timeoutAt = timeoutAt
@@ -419,8 +442,9 @@ export class TurnService implements ITurnService {
           console.error('Challenge response without required character')
           return game
         }
+        // When a challenge is recorded, no timeout is needed because the actor must defend immediately
         updatedTurn.opponentResponses = { challenge: playerId }
-        updatedTurn.timeoutAt = 0
+        updatedTurn.timeoutAt = 0 // No timeout for challenge response
         updatedTurn.challengeResult = {
           challengerId: playerId,
           defenseSuccessful: null,
@@ -441,10 +465,10 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle action response')
     }
 
+    // Start timer for actor response to block
     if (timeoutAt && timeoutAt > Date.now()) {
       this.startTimer(gameId, timeoutAt - Date.now())
     }
-
     // Progress phase based on responses.
     // If a block was recorded, transition to AWAITING_ACTIVE_RESPONSE_TO_BLOCK.
     // If a challenge is recorded, transition to AWAITING_ACTOR_DEFENSE.
@@ -463,9 +487,12 @@ export class TurnService implements ITurnService {
       if (playerId !== turn.action.playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
+      // Create updated turn state - we're setting timeout to 0 for all block responses
+      // because either the action is accepted (ending the turn) or challenged (no timeout needed)
       const updatedTurn: TurnState = {
         ...turn,
-        respondedPlayers: (turn.respondedPlayers || []).concat(playerId)
+        respondedPlayers: (turn.respondedPlayers || []).concat(playerId),
+        timeoutAt: 0 // Always clear timeout for block response as we'll be moving to a non-timeout phase
       }
 
       if (response === 'accept') {
@@ -473,7 +500,6 @@ export class TurnService implements ITurnService {
         updatedTurn.phase = 'ACTION_FAILED'
       } else if (response === 'challenge') {
         if (!turn.opponentResponses?.claimedCard) {
-          console.error('Challenge response without claimed card')
           return game
         }
         // Challenging the block sets the phase so that the blocker must now defend.
@@ -498,6 +524,8 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle block response')
     }
 
+    // Only progress to next phase, don't clear timer unless all responses are received
+    // or a special response changes the phase (handled in progressToNextPhase)
     await this.progressToNextPhase(gameId)
   }
 
@@ -509,20 +537,31 @@ export class TurnService implements ITurnService {
       if (!game?.currentTurn) return game
       const turn = game.currentTurn
 
-      // Only handle timeouts for reaction phases
+      // Don't process timeouts for phases that don't support them
       if (!this.isWaitingPhase(turn.phase)) {
         return game
       }
 
-      const updatedTurn = { ...turn, timeoutAt: 0 }
+      // Don't process timeouts that haven't actually expired
+      if (turn.timeoutAt > Date.now()) {
+        return game
+      }
+
+      // Create updated turn state - only clear the timeout when completing the timeout action
+      const updatedTurn = { ...turn }
 
       // Get list of players who haven't responded yet
       const respondedPlayers = turn.respondedPlayers?.slice() || []
       const nonRespondedPlayers = game.players
         .map(p => p.id)
         .filter(playerId => {
-          // Exclude the action player
-          if (playerId === turn.action.playerId) return false
+          // Exclude the player who started the action
+          if (turn.phase === 'AWAITING_OPPONENT_RESPONSES' && playerId === turn.action.playerId) {
+            return false
+          }
+          if (turn.phase === 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK' && playerId === turn.opponentResponses?.block) {
+            return false
+          }
           // Exclude players who have already responded
           if (respondedPlayers.includes(playerId)) return false
           // Exclude eliminated players
@@ -534,11 +573,25 @@ export class TurnService implements ITurnService {
       // Add all non-responded players as implicit accepts
       updatedTurn.respondedPlayers = respondedPlayers.concat(nonRespondedPlayers)
 
-      // Progress the phase if everyone has now responded
-      if (turn.phase === 'AWAITING_OPPONENT_RESPONSES' && haveAllPlayersResponded(game, updatedTurn)) {
-        updatedTurn.phase = 'ACTION_EXECUTION'
-      } else if (turn.phase === 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK') {
-        updatedTurn.phase = 'ACTION_FAILED'
+      // Progress the phase based on current waiting phase
+      switch (turn.phase) {
+        case 'AWAITING_OPPONENT_RESPONSES':
+          // If everyone has responded or timeout has been reached, progress to execution
+          if (haveAllPlayersResponded(game, updatedTurn)) {
+            updatedTurn.phase = 'ACTION_EXECUTION'
+            updatedTurn.timeoutAt = 0 // Clear timeoutAt when changing phase to action execution
+          }
+          break
+
+        case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+          // On timeout, active player is considered to have accepted the block
+          updatedTurn.phase = 'ACTION_FAILED'
+          updatedTurn.timeoutAt = 0 // Clear timeoutAt when changing phase to action failed
+          break
+
+        // No other phases should have timeouts, but if they do, don't change state
+        default:
+          return game
       }
 
       return {
@@ -558,9 +611,28 @@ export class TurnService implements ITurnService {
     // Clear any existing timer
     this.clearTimer(gameId)
 
-    const timer = setTimeout(() => {
-      this.handleTimeout(gameId).then(() => this.activeTimers.delete(gameId))
-    }, timeoutMs)
+    // Add a buffer to ensure the server has time to process the timeout
+    // This helps with race conditions where timeouts might be processed too early
+    const bufferMs = 500
+    const actualTimeoutMs = timeoutMs + bufferMs
+
+    const timer = setTimeout(async () => {
+      try {
+        // Double-check the game state before handling timeout to prevent race conditions
+        const gameRef = this.gamesRef.child(gameId)
+        const gameSnapshot = await gameRef.get()
+        const game = gameSnapshot.val() as Game | null
+
+        // Only process timeout if it's still needed
+        if (game?.currentTurn?.timeoutAt && game.currentTurn.timeoutAt <= Date.now()) {
+          await this.handleTimeout(gameId)
+        }
+      } catch (error) {
+        console.error(`Error handling timeout for game ${gameId}:`, error)
+      } finally {
+        this.activeTimers.delete(gameId)
+      }
+    }, actualTimeoutMs)
 
     this.activeTimers.set(gameId, timer)
   }
@@ -599,6 +671,7 @@ export class TurnService implements ITurnService {
   }
 
   private isWaitingPhase(phase: TurnPhase): boolean {
+    // Only these two phases should have timeouts that auto-progress the game
     return ['AWAITING_OPPONENT_RESPONSES', 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK'].includes(phase)
   }
 
@@ -623,11 +696,16 @@ export class TurnService implements ITurnService {
       case 'AWAITING_OPPONENT_RESPONSES':
         // If a block was recorded, let the active player decide how to respond.
         if (game.currentTurn.opponentResponses?.block) {
+          // Don't clear the timer - a new timeout was already set in handleActionResponse
           await this.transitionState(gameId, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
         } else if (game.currentTurn.opponentResponses?.challenge) {
           // A direct challenge: actor must defend.
+          // Clear timer as no timeout is needed for defense
+          this.clearTimer(gameId)
           await this.transitionState(gameId, currentPhase, 'AWAITING_ACTOR_DEFENSE')
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
+          // All players have responded (possibly due to timeout), clear timer
+          this.clearTimer(gameId)
           await this.transitionState(gameId, currentPhase, 'ACTION_EXECUTION')
           await this.resolveAction(gameId, game.currentTurn.action)
         }
@@ -659,8 +737,14 @@ export class TurnService implements ITurnService {
         break
 
       case 'ACTION_FAILED':
+        await this.endTurn(gameId)
+        break
+
       case 'TURN_COMPLETE':
         await this.endTurn(gameId)
+        break
+
+      default:
         break
     }
   }

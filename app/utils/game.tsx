@@ -40,7 +40,7 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
   const challenger = getChallenger(game)
 
   const turn = game.currentTurn
-  const { action, phase = null, challengeResult } = turn || {}
+  const { action, phase = null, challengeResult, opponentResponses } = turn || {}
 
   switch (phase) {
     case null:
@@ -86,9 +86,12 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
       if (!blocker || !action) {
         throw new Error('Blocker or Action not found')
       }
+      if (!opponentResponses?.claimedCard) {
+        throw new Error('Required card not found')
+      }
       return {
         [blocker.id]: {
-          message: `Block ${getActionObject(action)}`,
+          message: `Block (${opponentResponses.claimedCard})`,
           type: 'block'
         },
         [actor.id]: {
