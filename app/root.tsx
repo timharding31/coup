@@ -9,7 +9,15 @@ export const meta: MetaFunction = () => {
     { title: 'Polar Coup' },
     { property: 'og:title', content: 'Polar Coup' },
     { property: 'og:description', content: 'Play Coup online' },
-    { property: 'og:image', content: '/og-image.png' }
+    { property: 'og:image', content: '/og-image.png' },
+    { property: 'og:url', content: 'https://polarcoup.app/' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { property: 'twitter:domain', content: 'polarcoup.app' },
+    { property: 'twitter:url', content: 'https://polarcoup.app/' },
+    { name: 'twitter:title', content: 'Polar Coup' },
+    { name: 'twitter:description', content: 'Play Coup online' },
+    { name: 'twitter:image', content: '/og-image.png' }
   ]
 }
 
