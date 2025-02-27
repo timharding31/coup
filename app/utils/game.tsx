@@ -91,7 +91,7 @@ export function getPlayerActionMessages(game: Game<'client'>): { [playerId: stri
       }
       return {
         [blocker.id]: {
-          message: `Block (${opponentResponses.claimedCard})`,
+          message: `Block with ${opponentResponses.claimedCard}`,
           type: 'block'
         },
         [actor.id]: {

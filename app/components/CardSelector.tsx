@@ -3,7 +3,6 @@ import type { Card } from '~/types'
 import { Button, ButtonProps } from './Button'
 import { Drawer, DrawerContent } from './Drawer'
 import { PlayingCard } from './PlayingCard'
-import { motion, AnimatePresence } from 'framer-motion'
 
 interface CardSelectorProps {
   heading: React.ReactNode

@@ -106,36 +106,36 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
         // Process responded players messages with delay
         if (!isEqual(respondedPlayers, respondedPlayersRef.current)) {
-          const getMessage = (playerId: string): PlayerMessage | null => {
-            switch (turn?.phase) {
-              case 'AWAITING_OPPONENT_RESPONSES':
-                if (playerId === actorId) {
-                  return null
-                }
-                if (playerId === blockerId) {
-                  return { message: '✗', type: 'block' }
-                }
-                if (playerId === challengerId) {
-                  return { message: '⁉️', type: 'challenge' }
-                }
-                return { message: '✓', type: 'success' }
-
-              default:
-                if (playerId !== actorId) {
-                  return null
-                }
-                if (playerId === challengerId) {
-                  return { message: '⁉️', type: 'challenge' }
-                }
-                return { message: '✓', type: 'success' }
+          const getResponderMessage = (playerId: string): PlayerMessage | null => {
+            if (!turn?.phase) {
+              return null
             }
+            if (turn.phase === 'AWAITING_OPPONENT_RESPONSES') {
+              if (playerId === actorId) {
+                return null
+              }
+              if (playerId === blockerId) {
+                return { message: '✗', type: 'block' }
+              }
+              if (playerId === challengerId) {
+                return { message: '⁉️', type: 'challenge' }
+              }
+              return { message: '✓', type: 'success' }
+            }
+            if (playerId !== actorId) {
+              return null
+            }
+            if (playerId === challengerId) {
+              return { message: '⁉️', type: 'challenge' }
+            }
+            return { message: '✓', type: 'success' }
           }
 
           scheduleMessageUpdate(() => {
             setPlayerMessages(prev => {
               const next = new Map(prev)
               for (const responderId of respondedPlayers) {
-                const message = getMessage(responderId)
+                const message = getResponderMessage(responderId)
                 if (message) {
                   next.set(responderId, message)
                 } else {
@@ -163,7 +163,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
           }
         }
 
-        // Process challenge penalty messages with delay
+        // Process challenge penalty messages without delay
         if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
           const challengeDefender = players.find(
             player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
