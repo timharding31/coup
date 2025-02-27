@@ -251,7 +251,7 @@ export class GameService implements IGameService {
 
   async leaveGame(playerId: string, gameId: string) {
     const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
-      if (!game || game.status !== GameStatus.WAITING) {
+      if (!game) {
         return game
       }
 
