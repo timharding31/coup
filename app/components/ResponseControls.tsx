@@ -61,8 +61,8 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
                   timeoutAt={timeoutAt}
                   isLoading={isLoading}
                 >
-                  Block {label}
-                  <span className='absolute -right-1 text-[11px]'>(claim {card})</span>
+                  Block with {card}
+                  {/* <span className='absolute -right-1 text-[11px]'>(claim {card})</span> */}
                 </Button>
               ))}
             </>

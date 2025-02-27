@@ -25,8 +25,8 @@ export const variantStyles = {
 
 // Size styles remain the same
 export const sizeStyles = {
-  base: 'h-10 px-6 py-2 text-sm',
-  sm: 'h-9 px-4 text-base',
+  base: 'h-10 px-6 py-2 text-base',
+  sm: 'h-9 px-4 text-sm',
   lg: 'h-11 pl-8 pr-4 text-lg'
 }
 
@@ -35,7 +35,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   size?: keyof typeof sizeStyles
   timeoutAt?: number
   sprite?: SpriteId | 'arrow-left' | null
-  coinStack?: 1 | 2 | 3
+  coinStack?: number
   nameTag?: React.ComponentProps<typeof PlayerNameTag>
   coinCost?: number
   isLoading?: boolean
@@ -186,7 +186,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : null}
 
         {nameTag ? (
-          <PlayerNameTag {...nameTag} />
+          <PlayerNameTag {...nameTag} userClassName={props.disabled ? 'font-normal line-through' : undefined} />
         ) : children ? (
           <span
             className={cn('relative font-sansation font-bold translate-y-[0.0625em]', {

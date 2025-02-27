@@ -1,6 +1,5 @@
-import { Card, Game, NordColor, Player, PlayerMessage } from '~/types'
+import { Card, Game, Player } from '~/types'
 import { getActionObject, getActionVerb } from './action'
-import { WaitingEllipsis } from '~/components/WaitingEllipsis'
 
 export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: string): Game<'client'> {
   const player = game.status === 'WAITING' ? null : game.players.find(p => p.id === playerId)
@@ -33,208 +32,12 @@ function prepareCardForClient(card: Card<'server' | 'client'>, player: Player | 
   return { ...card, type: null }
 }
 
-export function getPlayerActionMessages(game: Game<'client'>): { [playerId: string]: PlayerMessage } | null {
-  const actor = getActor(game)
-  const target = getTarget(game)
-  const blocker = getBlocker(game)
-  const challenger = getChallenger(game)
-
-  const turn = game.currentTurn
-  const { action, phase = null, challengeResult, opponentResponses } = turn || {}
-
-  switch (phase) {
-    case null:
-      return {
-        [actor.id]: {
-          message: (
-            <>
-              Starting turn
-              <WaitingEllipsis />
-            </>
-          ),
-          type: 'info'
-        }
-      }
-
-    case 'ACTION_DECLARED':
-      if (!action) {
-        throw new Error('No action found')
-      }
-      return {
-        [actor.id]: {
-          message: getActionVerb(actor.id, action, 'infinitive', target),
-          type: 'info'
-        }
-      }
-
-    case 'AWAITING_OPPONENT_RESPONSES':
-      return Object.assign(
-        {},
-        ...game.players.map(opponent => {
-          if (opponent.id !== actor.id) {
-            return {
-              [opponent.id]: {
-                message: <WaitingEllipsis />,
-                type: 'info'
-              }
-            }
-          }
-        })
-      )
-
-    case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
-      if (!blocker || !action) {
-        throw new Error('Blocker or Action not found')
-      }
-      if (!opponentResponses?.claimedCard) {
-        throw new Error('Required card not found')
-      }
-      return {
-        [blocker.id]: {
-          message: `Block with ${opponentResponses.claimedCard}`,
-          type: 'block'
-        },
-        [actor.id]: {
-          message: (
-            <>
-              Responding to block
-              <WaitingEllipsis />
-            </>
-          ),
-          type: 'info'
-        }
-      }
-
-    case 'AWAITING_ACTOR_DEFENSE':
-      if (!challenger || !action) {
-        throw new Error('Challenger or Action not found')
-      }
-      if (!challengeResult?.challengedCaracter) {
-        throw new Error('Required character not found')
-      }
-      return {
-        [challenger.id]: {
-          message: `Challenge ${action.requiredCharacter}`,
-          type: 'challenge'
-        },
-        [actor.id]: {
-          message: (
-            <>
-              Proving {challengeResult.challengedCaracter}
-              <WaitingEllipsis />
-            </>
-          ),
-          type: 'info'
-        }
-      }
-
-    case 'AWAITING_BLOCKER_DEFENSE':
-      if (!challenger || !blocker) {
-        throw new Error('Challenger or Blocker not found')
-      }
-      if (!challengeResult?.challengedCaracter) {
-        throw new Error('Required character not found')
-      }
-      return {
-        [challenger.id]: {
-          message: `Challenge ${challengeResult.challengedCaracter}`,
-          type: 'challenge'
-        },
-        [blocker.id]: {
-          message: (
-            <>
-              Proving {challengeResult.challengedCaracter}
-              <WaitingEllipsis />
-            </>
-          ),
-          type: 'info'
-        }
-      }
-
-    case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
-      const defender = turn?.opponentResponses?.block ? blocker : actor
-      if (!challenger || !defender) {
-        throw new Error('Challenger and/or defender not found')
-      }
-      return {
-        [challenger.id]: {
-          message: (
-            <>
-              Selecting challenge penalty
-              <WaitingEllipsis />
-            </>
-          ),
-          type: 'failure'
-        }
-      }
-
-    case 'ACTION_EXECUTION':
-      if (!action) {
-        throw new Error('Action not found')
-      }
-      return {
-        [actor.id]: {
-          message: `${getActionObject(action)} succeeded`,
-          type: 'success'
-        }
-      }
-
-    case 'AWAITING_TARGET_SELECTION':
-      if (!target || !action) {
-        throw new Error('Target and/or action not found')
-      }
-      return {
-        [actor.id]: {
-          message: <>{getActionVerb(actor.id, action, 'past', target)}</>,
-          type: 'success'
-        },
-        [target.id]: {
-          message: (
-            <>
-              Choosing card to reveal
-              <WaitingEllipsis />
-            </>
-          ),
-          type: 'failure'
-        }
-      }
-    // return `Waiting for ${target?.username} to reveal card`
-
-    case 'AWAITING_EXCHANGE_RETURN':
-      return {
-        [actor.id]: {
-          message: (
-            <>
-              Exchanging cards
-              <WaitingEllipsis />
-            </>
-          ),
-          type: 'info'
-        }
-      }
-
-    case 'ACTION_FAILED':
-      if (!action) {
-        throw new Error('Action not found')
-      }
-      return {
-        [actor.id]: {
-          message: `${getActionObject(action)} failed`,
-          type: 'failure'
-        }
-      }
-
-    case 'TURN_COMPLETE':
-      return null
-  }
-}
-
 export function getResponseMenuProps(
   game: Game<'client'>,
   myself: Player<'client'>
-): Partial<{ heading: React.ReactNode; subheading: React.ReactNode }> {
+): Partial<{ heading: string; subheading: string }> {
   const actor = getActor(game)
-  const target = getTarget(game)
+  const targetPlayer = getTarget(game)
   const blocker = getBlocker(game)
   const challenger = getChallenger(game)
 
@@ -251,12 +54,9 @@ export function getResponseMenuProps(
       return {}
 
     case 'AWAITING_OPPONENT_RESPONSES':
+      const { content: infinitiveVerb, target } = getActionVerb(myself.id, action, 'infinitive', targetPlayer)
       return {
-        heading: (
-          <>
-            {actor.username} chose to {getActionVerb(myself.id, action, 'infinitive', target)}
-          </>
-        ),
+        heading: `${actor.username} chose to ${infinitiveVerb}${target ? ` ${target}` : ''}`,
         subheading: 'How will you respond?'
       }
 
@@ -288,12 +88,9 @@ export function getResponseMenuProps(
       }
 
     case 'AWAITING_TARGET_SELECTION':
+      const pastTenseVerb = getActionVerb(myself.id, action, 'past', targetPlayer).content
       return {
-        heading: (
-          <>
-            {actor.username} {getActionVerb(myself.id, action, 'past', target)}
-          </>
-        ),
+        heading: `${actor.username} ${pastTenseVerb} you`,
         subheading: 'Choose a card to lose'
       }
 

@@ -38,6 +38,7 @@ const config: Config = {
     'text-nord-14',
     'text-nord-15',
     'text-nord--1',
+    'text-nord-14-dark',
     'text-purple-400',
     'text-emerald-400',
     'text-amber-400',
@@ -100,6 +101,17 @@ const config: Config = {
           'Segoe UI Symbol',
           'Noto Color Emoji'
         ]
+      },
+      keyframes: {
+        'coin-change': {
+          '0%': { opacity: '0', transform: 'translate(-50%, 0)' },
+          '15%': { opacity: '1', transform: 'translate(-50%, -10px)' },
+          '85%': { opacity: '1', transform: 'translate(-50%, -10px)' },
+          '100%': { opacity: '0', transform: 'translate(-50%, -20px)' }
+        }
+      },
+      animation: {
+        'coin-change': 'coin-change 2s ease-out forwards'
       }
     }
   },

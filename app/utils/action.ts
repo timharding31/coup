@@ -66,12 +66,14 @@ export function getActionObject(action: Action): string {
 
 export type ActionVerbTense = 'present' | 'past' | 'infinitive'
 
+export type ActionVerbValue = { content: string; target?: string }
+
 export function getActionVerb(
   playerId: string,
   action: Action,
   tense: ActionVerbTense,
   target: Player<'server' | 'client'> | null = null
-): React.ReactNode {
+): ActionVerbValue {
   if (action.type in UNTARGETED_ACTION_VERBS) {
     return UNTARGETED_ACTION_VERBS[action.type as UntargetedActionType][tense]
   } else if (!target) {
@@ -79,91 +81,57 @@ export function getActionVerb(
   }
   return TARGETED_ACTION_VERBS[action.type as TargetedActionType][tense].call(
     null,
-    target.id === playerId ? 'you' : `@${target.username}`
+    target.id === playerId ? 'you' : target.username
   )
 }
 
 const TARGETED_ACTION_VERBS: Record<
   TargetedActionType,
-  Record<ActionVerbTense, (targetUsername: string) => React.ReactNode>
+  Record<ActionVerbTense, (target: string) => ActionVerbValue>
 > = {
   STEAL: {
-    present: targetUsername => (
-      <>
-        STEALS from&nbsp;<strong>{targetUsername}</strong>
-      </>
-    ),
-    past: targetUsername => (
-      <>
-        STOLE from <strong>{targetUsername}</strong>
-      </>
-    ),
-    infinitive: targetUsername => (
-      <>
-        STEAL from <strong>{targetUsername}</strong>
-      </>
-    )
+    present: target => ({ content: 'STEALS from', target }),
+    past: target => ({ content: 'STOLE from', target }),
+    infinitive: target => ({ content: 'STEAL from', target })
   },
   ASSASSINATE: {
-    present: targetUsername => (
-      <>
-        ASSASSINATES <strong>{targetUsername}</strong>
-      </>
-    ),
-    past: targetUsername => (
-      <>
-        ASSASSINATED <strong>{targetUsername}</strong>
-      </>
-    ),
-    infinitive: targetUsername => (
-      <>
-        ASSASSINATE <strong>{targetUsername}</strong>
-      </>
-    )
+    present: target => ({ content: 'ASSASSINATES', target }),
+    past: target => ({ content: 'ASSASSINATED', target }),
+    infinitive: target => ({ content: 'ASSASSINATE', target })
   },
   COUP: {
-    present: targetUsername => (
-      <>
-        COUPS <strong>{targetUsername}</strong>
-      </>
-    ),
-    past: targetUsername => (
-      <>
-        COUPED <strong>{targetUsername}</strong>
-      </>
-    ),
-    infinitive: targetUsername => (
-      <>
-        COUP <strong>{targetUsername}</strong>
-      </>
-    )
+    present: target => ({ content: 'COUPS', target }),
+    past: target => ({ content: 'COUPED', target }),
+    infinitive: target => ({ content: 'COUP', target })
   }
 }
 
-const UNTARGETED_ACTION_VERBS: Record<UntargetedActionType, Record<ActionVerbTense, string>> = {
+const UNTARGETED_ACTION_VERBS: Record<UntargetedActionType, Record<ActionVerbTense, ActionVerbValue>> = {
   INCOME: {
-    present: 'takes INCOME',
-    past: 'took INCOME',
-    infinitive: 'INCOME'
+    present: { content: 'takes INCOME' },
+    past: { content: 'took INCOME' },
+    infinitive: { content: 'INCOME' }
   },
   FOREIGN_AID: {
-    present: 'takes FOREIGN AID',
-    past: 'took FOREIGN AID',
-    infinitive: 'FOREIGN AID'
+    present: { content: 'takes FOREIGN AID' },
+    past: { content: 'took FOREIGN AID' },
+    infinitive: { content: 'FOREIGN AID' }
   },
   TAX: {
-    present: 'claims DUKE (tax)',
-    past: 'claimed DUKE (tax)',
-    infinitive: 'TAX'
+    present: { content: 'claims DUKE (tax)' },
+    past: { content: 'claimed DUKE (tax)' },
+    infinitive: { content: 'TAX' }
   },
   EXCHANGE: {
-    present: 'claims AMBASSADOR',
-    past: 'claimed AMBASSADOR',
-    infinitive: 'EXCHANGE'
+    present: { content: 'claims AMBASSADOR' },
+    past: { content: 'claimed AMBASSADOR' },
+    infinitive: { content: 'EXCHANGE' }
   }
 }
 
-export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | 'type'>> = {
+export interface ActionRequirements extends Omit<Action, 'playerId' | 'type'> {}
+
+export const ACTION_REQUIREMENTS: Record<ActionType, ActionRequirements> = {
   INCOME: {
     coinCost: 0,
     canBeBlocked: false,
@@ -179,6 +147,13 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
   TAX: {
     coinCost: 0,
     requiredCharacter: CardType.DUKE,
+    canBeBlocked: false,
+    canBeChallenged: true,
+    blockableBy: []
+  },
+  EXCHANGE: {
+    coinCost: 0,
+    requiredCharacter: CardType.AMBASSADOR,
     canBeBlocked: false,
     canBeChallenged: true,
     blockableBy: []
@@ -201,13 +176,6 @@ export const ACTION_REQUIREMENTS: Record<ActionType, Omit<Action, 'playerId' | '
     coinCost: 7,
     canBeBlocked: false,
     canBeChallenged: false,
-    blockableBy: []
-  },
-  EXCHANGE: {
-    coinCost: 0,
-    requiredCharacter: CardType.AMBASSADOR,
-    canBeBlocked: false,
-    canBeChallenged: true,
     blockableBy: []
   }
 }

@@ -4,6 +4,15 @@ import { ActionService } from './action.server'
 import { VALID_TRANSITIONS, haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
 
+interface DataSnapshot<T = Game> {
+  val(): T | null
+}
+
+interface TransactionResult<T = Game> {
+  committed: boolean
+  snapshot: DataSnapshot<T>
+}
+
 export interface ITurnService {
   startTurn(gameId: string, action: Action): Promise<void>
   handleActionResponse(
@@ -121,21 +130,26 @@ export class TurnService implements ITurnService {
       }
     })
 
-    if (result.committed) {
-      if (defenseSuccessful && revealedCard) {
-        let card: Card | undefined
-        try {
-          // Replace the revealed card.
-          card = await this.revealChallengeDefenseCardTemporarily(gameId, defenderId, revealedCard)
-          // Sleep for 5s before replacing the card with a new one from the deck
-          await new Promise(res => setTimeout(res, 3_000))
-        } catch (e) {
-          console.error(e)
-        }
-        await this.returnAndReplaceCard(gameId, defenderId, card || revealedCard)
-      }
-      await this.progressToNextPhase(gameId)
+    if (!result.committed) {
+      throw new Error('Failed to handle challenge defense card')
     }
+
+    let challengeDefenseResult: TransactionResult | undefined
+
+    if (defenseSuccessful && revealedCard) {
+      let card: Card | undefined
+      try {
+        // Replace the revealed card.
+        card = await this.revealChallengeDefenseCardTemporarily(gameId, defenderId, revealedCard)
+        // Sleep for 5s before replacing the card with a new one from the deck
+        await new Promise(res => setTimeout(res, 3_000))
+      } catch (e) {
+        console.error(e)
+      }
+      challengeDefenseResult = await this.returnAndReplaceCard(gameId, defenderId, card || revealedCard)
+    }
+
+    await this.progressToNextPhase(challengeDefenseResult || result)
   }
 
   private async revealChallengeDefenseCardTemporarily(
@@ -195,9 +209,7 @@ export class TurnService implements ITurnService {
       }
     })
 
-    if (result.committed) {
-      await this.progressToNextPhase(gameId)
-    }
+    await this.progressToNextPhase(result)
   }
 
   private async dealExchangeCards(gameId: string, playerId: string) {
@@ -399,7 +411,7 @@ export class TurnService implements ITurnService {
       await this.actionService.updatePlayerCoins(gameId, { [action.playerId]: -action.coinCost })
     }
 
-    await this.progressToNextPhase(gameId)
+    await this.progressToNextPhase(result)
   }
 
   async handleActionResponse(
@@ -472,7 +484,7 @@ export class TurnService implements ITurnService {
     // Progress phase based on responses.
     // If a block was recorded, transition to AWAITING_ACTIVE_RESPONSE_TO_BLOCK.
     // If a challenge is recorded, transition to AWAITING_ACTOR_DEFENSE.
-    await this.progressToNextPhase(gameId)
+    await this.progressToNextPhase(result)
   }
 
   async handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge') {
@@ -526,7 +538,7 @@ export class TurnService implements ITurnService {
 
     // Only progress to next phase, don't clear timer unless all responses are received
     // or a special response changes the phase (handled in progressToNextPhase)
-    await this.progressToNextPhase(gameId)
+    await this.progressToNextPhase(result)
   }
 
   // Processes all auto-acceptances, to be run on timeout expiration after action/block declared
@@ -601,9 +613,7 @@ export class TurnService implements ITurnService {
       }
     })
 
-    if (result.committed && result.snapshot.val()) {
-      await this.progressToNextPhase(gameId)
-    }
+    await this.progressToNextPhase(result)
   }
 
   private startTimer(gameId: string, timeoutMs: number) {
@@ -664,10 +674,6 @@ export class TurnService implements ITurnService {
     if (transition.onTransition) {
       await transition.onTransition(game.currentTurn, game)
     }
-
-    if (toPhase === 'TURN_COMPLETE') {
-      await this.progressToNextPhase(gameId)
-    }
   }
 
   private isWaitingPhase(phase: TurnPhase): boolean {
@@ -675,10 +681,15 @@ export class TurnService implements ITurnService {
     return ['AWAITING_OPPONENT_RESPONSES', 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK'].includes(phase)
   }
 
-  private async progressToNextPhase(gameId: string): Promise<void> {
-    const gameSnapshot = await this.gamesRef.child(gameId).get()
-    const game = gameSnapshot.val() as Game
+  private async progressToNextPhase(result: TransactionResult): Promise<void> {
+    if (!result.committed) {
+      console.error('Transaction not committed')
+      return
+    }
+
+    const game = result.snapshot.val()
     if (!game?.currentTurn) {
+      console.error('No active turn')
       return
     }
     const currentPhase = game.currentTurn.phase
@@ -686,10 +697,10 @@ export class TurnService implements ITurnService {
     switch (currentPhase) {
       case 'ACTION_DECLARED':
         if (game.currentTurn.action.canBeBlocked || game.currentTurn.action.canBeChallenged) {
-          await this.transitionState(gameId, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
+          await this.transitionState(game.id, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
         } else {
-          await this.transitionState(gameId, currentPhase, 'ACTION_EXECUTION')
-          await this.resolveAction(gameId, game.currentTurn.action)
+          await this.transitionState(game.id, currentPhase, 'ACTION_EXECUTION')
+          await this.resolveAction(game.id, game.currentTurn.action)
         }
         break
 
@@ -697,17 +708,17 @@ export class TurnService implements ITurnService {
         // If a block was recorded, let the active player decide how to respond.
         if (game.currentTurn.opponentResponses?.block) {
           // Don't clear the timer - a new timeout was already set in handleActionResponse
-          await this.transitionState(gameId, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
+          await this.transitionState(game.id, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
         } else if (game.currentTurn.opponentResponses?.challenge) {
           // A direct challenge: actor must defend.
           // Clear timer as no timeout is needed for defense
-          this.clearTimer(gameId)
-          await this.transitionState(gameId, currentPhase, 'AWAITING_ACTOR_DEFENSE')
+          this.clearTimer(game.id)
+          await this.transitionState(game.id, currentPhase, 'AWAITING_ACTOR_DEFENSE')
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
           // All players have responded (possibly due to timeout), clear timer
-          this.clearTimer(gameId)
-          await this.transitionState(gameId, currentPhase, 'ACTION_EXECUTION')
-          await this.resolveAction(gameId, game.currentTurn.action)
+          this.clearTimer(game.id)
+          await this.transitionState(game.id, currentPhase, 'ACTION_EXECUTION')
+          await this.resolveAction(game.id, game.currentTurn.action)
         }
         break
 
@@ -725,7 +736,7 @@ export class TurnService implements ITurnService {
         break
 
       case 'ACTION_EXECUTION':
-        await this.resolveAction(gameId, game.currentTurn.action)
+        await this.resolveAction(game.id, game.currentTurn.action)
         break
 
       case 'AWAITING_TARGET_SELECTION':
@@ -737,11 +748,11 @@ export class TurnService implements ITurnService {
         break
 
       case 'ACTION_FAILED':
-        await this.endTurn(gameId)
+        await this.endTurn(game.id)
         break
 
       case 'TURN_COMPLETE':
-        await this.endTurn(gameId)
+        await this.endTurn(game.id)
         break
 
       default:
@@ -854,7 +865,7 @@ export class TurnService implements ITurnService {
     return turn.phase === 'TURN_COMPLETE'
   }
 
-  async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<void> {
+  private async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<TransactionResult> {
     // Return card to deck
     const newDeck = await this.deckService.returnCardsToDeck(gameId, card)
 
@@ -884,6 +895,8 @@ export class TurnService implements ITurnService {
     if (!result.committed) {
       throw new Error('Failed to return and replace card')
     }
+
+    return result
   }
 
   private async updateGameState(gameId: string, updateFn: (game: Game) => Partial<Game>) {

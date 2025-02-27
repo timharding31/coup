@@ -1,10 +1,12 @@
 import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
-import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, PlayerMessage, CardType } from '~/types'
+import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, CardType } from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
-import { getPlayerActionMessages, prepareGameForClient } from '~/utils/game'
+import { prepareGameForClient } from '~/utils/game'
+import { useMessageQueue } from '~/hooks/useMessageQueue'
+import { getPlayerActionMessages, getResponderMessage, MessageData } from '~/store/messageStore'
 
 export interface CoupContextType {
   game: Game<'client'>
@@ -17,7 +19,7 @@ export interface CoupContextType {
     challenger?: Player<'client'>
     target?: Player<'client'>
   }
-  playerMessages: Map<string, PlayerMessage>
+  playerMessages: Map<string, MessageData>
   startGame: () => Promise<void>
   leaveGame: () => Promise<void>
   performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => Promise<void>
@@ -36,8 +38,6 @@ interface CoupContextProviderProps extends React.PropsWithChildren {
 
 export const CoupContext = createContext<CoupContextType | null>(null)
 
-const MESSAGE_DELAY_MS = 500
-
 export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   children,
   gameId,
@@ -49,43 +49,9 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
-  const messageUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const [playerMessages, setPlayerMessages] = useState(new Map<string, PlayerMessage>())
-  const messageQueueRef = useRef<Array<() => void>>([])
-  const processingQueueRef = useRef(false)
-
-  // Function to process the message queue with delay between messages
-  const processMessageQueue = useCallback(() => {
-    if (messageQueueRef.current.length === 0) {
-      processingQueueRef.current = false
-      return
-    }
-
-    processingQueueRef.current = true
-    const updateFn = messageQueueRef.current.shift()
-
-    if (updateFn) {
-      updateFn()
-    }
-
-    messageUpdateTimeoutRef.current = setTimeout(() => {
-      messageUpdateTimeoutRef.current = null
-      processMessageQueue()
-    }, MESSAGE_DELAY_MS)
-  }, [])
-
-  // Function to schedule a message update
-  const scheduleMessageUpdate = useCallback(
-    (updateFn: () => void) => {
-      messageQueueRef.current.push(updateFn)
-
-      if (!processingQueueRef.current) {
-        processMessageQueue()
-      }
-    },
-    [processMessageQueue]
-  )
+  // Use our new message queue hook
+  const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessageQueue()
 
   useEffect(() => {
     const db = getFirebaseDatabase()
@@ -104,66 +70,28 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         const { playerId: actorId } = turn?.action || {}
         const { block: blockerId, challenge: challengerId } = opponentResponses || {}
 
-        // Process responded players messages with delay
+        // Process responded players messages
         if (!isEqual(respondedPlayers, respondedPlayersRef.current)) {
-          const getResponderMessage = (playerId: string): PlayerMessage | null => {
-            if (!turn?.phase) {
-              return null
+          // Create a map of responder messages using our new data structure
+          const responderMessages: Record<string, MessageData> = {}
+          for (const playerId of respondedPlayers) {
+            const message = getResponderMessage(playerId, actorId || '', turn?.phase, blockerId, challengerId)
+            if (message) {
+              responderMessages[playerId] = message
             }
-            if (turn.phase === 'AWAITING_OPPONENT_RESPONSES') {
-              if (playerId === actorId) {
-                return null
-              }
-              if (playerId === blockerId) {
-                return { message: '✗', type: 'block' }
-              }
-              if (playerId === challengerId) {
-                return { message: '⁉️', type: 'challenge' }
-              }
-              return { message: '✓', type: 'success' }
-            }
-            if (playerId !== actorId) {
-              return null
-            }
-            if (playerId === challengerId) {
-              return { message: '⁉️', type: 'challenge' }
-            }
-            return { message: '✓', type: 'success' }
           }
-
-          scheduleMessageUpdate(() => {
-            setPlayerMessages(prev => {
-              const next = new Map(prev)
-              for (const responderId of respondedPlayers) {
-                const message = getResponderMessage(responderId)
-                if (message) {
-                  next.set(responderId, message)
-                } else {
-                  next.delete(responderId)
-                }
-              }
-              return next
-            })
-          })
+          updateMessages(responderMessages)
         }
 
-        // Process turn phase messages with delay
+        // Process turn phase messages
         if (turn?.phase !== turnPhaseRef.current) {
           const newMessages = getPlayerActionMessages(game)
           if (newMessages) {
-            scheduleMessageUpdate(() => {
-              setPlayerMessages(prev => {
-                const next = turn?.phase ? new Map(prev) : new Map()
-                for (const [playerId, message] of Object.entries(newMessages)) {
-                  next.set(playerId, message)
-                }
-                return next
-              })
-            })
+            updateMessages(newMessages, { clear: !turn?.phase })
           }
         }
 
-        // Process challenge penalty messages without delay
+        // Process challenge penalty messages
         if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
           const challengeDefender = players.find(
             player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
@@ -171,15 +99,14 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
           if (challengeDefender) {
             const challengeDefenseCard = challengeDefender.influence.find(card => card.isChallengeDefenseCard)
             if (challengeDefenseCard) {
-              setPlayerMessages(prev =>
-                prev.set(challengeDefender.id, { message: `Replacing ${challengeDefenseCard?.type}`, type: 'info' })
-              )
-            } else {
-              setPlayerMessages(prev => {
-                const next = new Map(prev)
-                next.delete(challengeDefender.id)
-                return next
+              updateMessages({
+                [challengeDefender.id]: {
+                  text: `Replacing ${challengeDefenseCard?.type}`,
+                  type: 'info'
+                }
               })
+            } else {
+              clearPlayerMessages([challengeDefender.id])
             }
           }
         }
@@ -193,11 +120,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
     return () => {
       unsubscribe()
-      if (messageUpdateTimeoutRef.current) {
-        clearTimeout(messageUpdateTimeoutRef.current)
-      }
     }
-  }, [gameId, playerId, scheduleMessageUpdate])
+  }, [gameId, playerId, updateMessages, clearPlayerMessages])
 
   const performAction = async (action: any) => {
     setIsLoading(true)
@@ -412,7 +336,7 @@ export function usePlayers() {
   return players
 }
 
-export function usePlayerMessage(playerId: string): PlayerMessage | null {
+export function usePlayerMessage(playerId: string): MessageData | null {
   const { playerMessages } = useContext(CoupContext) || {}
   return playerMessages?.get(playerId) || null
 }

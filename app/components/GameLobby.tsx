@@ -85,7 +85,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
       </div>
       <div className='grid grid-cols-[auto_1fr] items-center gap-2 mt-1 mb-6'>
         <Button
-          size='sm'
+          size='base'
           sprite='arrow-left'
           variant='danger'
           onClick={() => {
@@ -94,7 +94,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         >
           Leave
         </Button>
-        <Button size='sm' variant='primary' onClick={handleShare} sprite='link'>
+        <Button size='base' variant='primary' onClick={handleShare} sprite='link'>
           {shareButtonText || 'Invite Players'}
         </Button>
       </div>

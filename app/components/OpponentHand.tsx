@@ -1,16 +1,10 @@
 import React from 'react'
 import { PlayingCard } from './PlayingCard'
 import { useGame, usePlayerMessage } from '~/context/CoupContext'
-import { Player, PlayerMessage } from '~/types'
+import { Player } from '~/types'
 import { PlayerNameTag } from './PlayerNameTag'
-
-const MESSAGE_STYLE: Record<PlayerMessage['type'], string> = {
-  info: 'bg-nord-8 text-nord-0',
-  challenge: 'bg-nord-11 text-nord-6',
-  block: 'bg-nord-13 text-nord-0',
-  failure: 'bg-nord-11-dark text-nord-6',
-  success: 'bg-nord-14 text-nord-0'
-}
+import { TooltipGameMessage } from './GameMessage'
+import { MessageData } from '~/store/messageStore'
 
 interface OpponentHandProps extends Player<'client'> {
   isActor?: boolean
@@ -26,9 +20,8 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   ...nameTagProps
 }) => {
   const game = useGame()
-
-  const opponentMessage = usePlayerMessage(nameTagProps.id)
-  const isPopoverOpen = game?.status === 'IN_PROGRESS' && opponentMessage
+  const message: MessageData | null = usePlayerMessage(nameTagProps.id)
+  const isPopoverOpen = game?.status === 'IN_PROGRESS' && message
 
   return (
     <div className='relative flex flex-col items-center justify-center gap-2'>
@@ -40,15 +33,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
         ))}
       </div>
 
-      {isPopoverOpen && (
-        <div className='tooltip-content z-20'>
-          <span
-            className={`whitespace-nowrap w-fit text-center px-3 py-0 rounded-md absolute bottom-[100%] left-[50%] -mb-1 translate-x-[-50%] ${MESSAGE_STYLE[opponentMessage.type]}`}
-          >
-            {opponentMessage.message}
-          </span>
-        </div>
-      )}
+      {isPopoverOpen && <TooltipGameMessage message={message} />}
     </div>
   )
 }

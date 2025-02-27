@@ -8,6 +8,7 @@ interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
   textColor?: NordColor
   bgColor?: NordColor
   className?: string
+  userClassName?: string
   cardCount?: number
   isHost?: boolean
 }
@@ -19,15 +20,12 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   bgColor = 'nord-1',
   cardCount,
   isHost = false,
-  className
+  className,
+  userClassName
 }) => {
   return (
     <div className={cn(`text-${textColor} flex justify-between items-center relative gap-4 w-full px-1`, className)}>
-      <span
-        className={cn('overflow-hidden whitespace-nowrap text-ellipsis font-bold', {
-          'font-normal line-through': cardCount === 0
-        })}
-      >
+      <span className={cn('overflow-hidden whitespace-nowrap text-ellipsis font-bold', userClassName)}>
         {username}
         {isHost && (
           <span className='font-normal ml-2' style={{ fontSize: 'smaller' }}>
@@ -36,14 +34,17 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
         )}
       </span>
       <div className='flex items-center gap-1 flex-row-reverse'>
-        {cardCount == null ? null : cardCount > 0 ? (
+        {cardCount != null && (
           <div className='flex flex-row-reverse justify-start min-w-9'>
             {Array.from({ length: cardCount }).map((_, i) => (
               <Sprite key={`card-${i}`} id='card' color='nord-8' size='base' className='-mr-1.5' />
             ))}
+            {Array.from({ length: 2 - cardCount }).map((_, i) => (
+              <Sprite key={`card-${i}`} id='card' color='nord-3' size='base' className='-mr-1.5' />
+            ))}
           </div>
-        ) : null}
-        <CoinStack count={coins} size='base' color='nord-14' bgColor={bgColor} />
+        )}
+        <CoinStack count={coins} size='base' color='nord-14' bgColor={bgColor} watchChanges={true} />
       </div>
     </div>
   )

@@ -43,17 +43,18 @@ export const GameOver: React.FC<GameOverProps> = ({
         <div className='w-full max-w-md flex-auto flex flex-col items-stretch'>
           <Sprite id='crown' size={120} color='nord-13' className='h-[120px]' />
           <h2 className='text-center text-lg -mt-2'>Winner</h2>
-          <div className='w-full rounded-full pr-4 pl-6 pb-1 pt-[6px] bg-nord-12 text-lg mt-2'>
+          <div className='w-full rounded-full px-4 pb-1 pt-[6px] bg-nord-12 text-lg mt-2 grid grid-cols-[auto_1fr] gap-1'>
+            <span>🥇</span>
             <PlayerNameTag {...winner} cardCount={cardCount} textColor='nord-0' bgColor='nord-0' />
           </div>
           {eliminationOrder != null && (
-            <ul className='mt-6 pr-2 pb-4 pl-1 list-reset flex flex-col items-stretch gap-2'>
+            <ul className='mt-6 pb-4 list-reset flex flex-col items-stretch gap-2'>
               {losersRef.current.slice(0, 2).map((loserId, i) => {
                 const loser = allPlayers.get(loserId)
                 return loser ? (
-                  <li key={loser.id} className='flex items-center justify-between gap-1'>
-                    <span className='flex-none translate-y-[0.125em]'>{i === 0 ? '🥈' : i === 1 ? '🥉' : null}</span>
-                    <PlayerNameTag {...loser} className='inline-flex flex-auto' textColor='nord-4' bgColor='nord-1' />
+                  <li key={loser.id} className='grid grid-cols-[auto_1fr] gap-1 px-4'>
+                    <span>{i === 0 ? '🥈' : i === 1 ? '🥉' : null}</span>
+                    <PlayerNameTag {...loser} cardCount={0} textColor='nord-4' bgColor='nord-1' />
                   </li>
                 ) : null
               })}
