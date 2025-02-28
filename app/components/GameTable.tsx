@@ -22,7 +22,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
   }
 
   return (
-    <div className='relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-x-8 gap-y-4 pb-[var(--deck-height)]'>
+    <div className='relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 pb-[var(--deck-height)]'>
       {game.status === 'IN_PROGRESS' && (
         <>
           {opponents.map((opponent, index) => (

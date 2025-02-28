@@ -31,7 +31,7 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deckCount }) => {
 
       const timer = setTimeout(() => {
         setIsShuffling(false)
-      }, 500)
+      }, 1_000)
 
       // Update ref for next comparison
       prevDeckCountRef.current = deckCount
@@ -43,9 +43,9 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deckCount }) => {
 
   return (
     <div
-      className={cn('absolute bottom-[var(--deck-height)] left-[50%] -z-10')}
+      className={cn('absolute bottom-0 left-[50%] -z-10')}
       style={{
-        transform: `translateX(calc(-50% - ${(OFFSET_X * deckCount) / 2}px))`,
+        transform: `translate(calc(-50% - ${(OFFSET_X * deckCount) / 2}px), calc(-1 * var(--deck-height)))`,
         width: 'calc(var(--deck-height) * (2 / 3))'
       }}
     >

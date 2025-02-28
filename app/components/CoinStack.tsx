@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import cn from 'classnames'
 import { Sprite, SpriteProps, SpriteSize } from './Sprite'
 import { NordColor } from '~/types'
+import cn from 'classnames'
 
 const HORIZONTAL_OFFSET: Record<SpriteSize, number> = {
   sm: 3,
@@ -43,7 +43,7 @@ const CoinStack: React.FC<CoinStackProps> = ({
 
       timeoutRef.current = setTimeout(() => {
         setShowAnimation(false)
-      }, 2000)
+      }, 2_000)
 
       prevCountRef.current = count
     }
@@ -107,14 +107,16 @@ const CoinStack: React.FC<CoinStackProps> = ({
       </div>
 
       {showAnimation && (
-        <div className='absolute -top-8 left-1/2 transform -translate-x-1/2 font-robotica font-normal rounded-full shadow-lg z-10 aspect-square grid place-content-center animate-coin-change'>
-          <span className='text-sm text-center inline-block w-[28px] whitespace-nowrap translate-y-[0.125em] text-nord-4'>
+        <div className='absolute -top-4 right-0.5 transform font-robotica font-normal shadow-lg z-10 animate-coin-change'>
+          <span
+            className={cn('text-sm text-right whitespace-nowrap translate-y-[0.125em]', {
+              'text-nord-14': changeAmount > 0,
+              'text-nord-11': changeAmount < 0
+            })}
+          >
             {changeAmount > 0 ? '+' : ''}
             {changeAmount}
           </span>
-          <div className='-z-10 absolute inset-0 rounded-full bg-nord-0'>
-            <Sprite id='chip' size={28} color={changeAmount > 0 ? 'nord-14-dark' : 'nord-11'} className='scale-95' />
-          </div>
         </div>
       )}
     </div>

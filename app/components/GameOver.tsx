@@ -48,7 +48,7 @@ export const GameOver: React.FC<GameOverProps> = ({
             <PlayerNameTag {...winner} cardCount={cardCount} textColor='nord-0' bgColor='nord-0' />
           </div>
           {eliminationOrder != null && (
-            <ul className='mt-6 pb-4 list-reset flex flex-col items-stretch gap-2'>
+            <ul className='mt-2 pb-4 list-reset flex flex-col items-stretch gap-2'>
               {losersRef.current.slice(0, 2).map((loserId, i) => {
                 const loser = allPlayers.get(loserId)
                 return loser ? (

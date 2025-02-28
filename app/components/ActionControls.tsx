@@ -126,7 +126,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
                         performTargetedAction(targetedAction, target.id)
                       }
                     }}
-                    disabled={unrevealedCardCount < 1 || (targetedAction === 'STEAL' && target.coins < 2)}
+                    disabled={unrevealedCardCount < 1 || (targetedAction === 'STEAL' && target.coins < 1)}
                     nameTag={{
                       ...target,
                       cardCount: unrevealedCardCount,

@@ -21,6 +21,8 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 }) => {
   const game = useGame()
   const message: MessageData | null = usePlayerMessage(nameTagProps.id)
+
+  const isPlayerDead = influence.every(card => card.isRevealed)
   const isPopoverOpen = game?.status === 'IN_PROGRESS' && message
 
   return (
@@ -33,7 +35,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
         ))}
       </div>
 
-      {isPopoverOpen && <TooltipGameMessage message={message} />}
+      {isPopoverOpen && !isPlayerDead && <TooltipGameMessage message={message} />}
     </div>
   )
 }

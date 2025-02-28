@@ -104,10 +104,10 @@ const config: Config = {
       },
       keyframes: {
         'coin-change': {
-          '0%': { opacity: '0', transform: 'translate(-50%, 0)' },
-          '15%': { opacity: '1', transform: 'translate(-50%, -10px)' },
-          '85%': { opacity: '1', transform: 'translate(-50%, -10px)' },
-          '100%': { opacity: '0', transform: 'translate(-50%, -20px)' }
+          '0%': { opacity: '0', transform: 'translateY(0)' },
+          '15%': { opacity: '1', transform: 'translateY(-8px)' },
+          '85%': { opacity: '1', transform: 'translateY(-8px)' },
+          '100%': { opacity: '0', transform: 'translateY(-16px)' }
         }
       },
       animation: {

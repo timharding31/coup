@@ -147,6 +147,7 @@ h4 {
 
 .court-deck-card.shuffling {
   animation: shuffle-card 0.5s ease-in-out;
+  animation-iteration-count: 2;
 }
 
 @keyframes shuffle-card {
