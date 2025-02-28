@@ -1,6 +1,7 @@
 import {
   Action,
   ActionType,
+  Card,
   CardType,
   Game,
   Player,
@@ -19,7 +20,7 @@ interface ICoupRobot {
     blockCard?: CardType
   }>
   decideCardSelection(phase: TurnPhase): Promise<string>
-  decideExchangeCards(cardIds: string[]): Promise<string[]>
+  decideExchangeCards(): Promise<string[]>
 }
 
 export class CoupRobot implements ICoupRobot {
@@ -138,6 +139,14 @@ export class CoupRobot implements ICoupRobot {
     this.game = game
   }
 
+  static isBotPlayer(player: Player | null = null): boolean {
+    return !!player?.id.startsWith('bot-')
+  }
+
+  static isBotGame(game: Game | null = null): boolean {
+    return !!game?.players.some(p => p.id.startsWith('bot-'))
+  }
+
   static fromPlayer(player: Player, game: Game): CoupRobot {
     return new CoupRobot(player, game)
   }
@@ -145,7 +154,7 @@ export class CoupRobot implements ICoupRobot {
   static getRandomUsername(existingBots: string[] = []): string {
     let n = 0
     while (n < 10) {
-      const username = '🤖' + CoupRobot.USERNAMES[Math.floor(Math.random() * CoupRobot.USERNAMES.length)]
+      const username = '🤖 ' + CoupRobot.USERNAMES[Math.floor(Math.random() * CoupRobot.USERNAMES.length)]
       if (!existingBots.includes(username)) return username
       n++
     }
@@ -231,6 +240,7 @@ export class CoupRobot implements ICoupRobot {
     const unrevealedCards = this.player.influence.filter(card => !card.isRevealed)
 
     if (unrevealedCards.length === 0) {
+      console.error('No cards available to select')
       throw new Error('No cards available to select')
     }
 
@@ -240,6 +250,7 @@ export class CoupRobot implements ICoupRobot {
       this.game.currentTurn?.challengeResult?.challengedCaracter
     ) {
       const challengedCardType = this.game.currentTurn.challengeResult.challengedCaracter
+
       const defenseCard = unrevealedCards.find(card => card.type === challengedCardType)
 
       if (defenseCard) {
@@ -247,22 +258,42 @@ export class CoupRobot implements ICoupRobot {
       }
     }
 
-    // Otherwise, choose a random card to lose
+    // Simple strategy: if we're losing a card due to assassination or coup,
+    // check if we have valuable cards to preserve
+    if (phase === 'AWAITING_TARGET_SELECTION') {
+      // Priority order for cards to keep (lose the lower priority ones first)
+      const cardPriorities: Record<CardType, number> = {
+        DUKE: 3, // Tax ability is valuable
+        ASSASSIN: 2, // Attack ability
+        CAPTAIN: 2, // Stealing is good
+        CONTESSA: 1, // Only blocks assassination
+        AMBASSADOR: 1 // Exchange is situational
+      }
+
+      // Sort by priority (lowest first - these are the ones we'll lose)
+      unrevealedCards.sort((a, b) => {
+        const priorityA = a.type ? cardPriorities[a.type as CardType] || 0 : 0
+        const priorityB = b.type ? cardPriorities[b.type as CardType] || 0 : 0
+        return priorityA - priorityB
+      })
+
+      const cardToLose = unrevealedCards[0]
+      return cardToLose.id
+    }
+
+    // For other cases, choose a random card
     const randomIndex = Math.floor(Math.random() * unrevealedCards.length)
-    return unrevealedCards[randomIndex].id
+    const selectedCard = unrevealedCards[randomIndex]
+    return selectedCard.id
   }
 
   /**
    * Choose which cards to keep after an exchange
    */
-  async decideExchangeCards(cardIds: string[]): Promise<string[]> {
-    // Need to return 2 cards to keep
-    if (cardIds.length <= 2) {
-      return cardIds
-    }
-
+  async decideExchangeCards(): Promise<string[]> {
+    const eligibleCards = this.player.influence.filter(card => !card.isRevealed)
     // Shuffle the cards and pick the first 2
-    const shuffled = [...cardIds]
+    const shuffled = eligibleCards.map(card => card.id)
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]

@@ -3,8 +3,7 @@ import { Game } from '~/types'
 import { useNavigate } from '@remix-run/react'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'
-import { Button } from './Button'
-import { GameTableOverlay } from './GameTableOverlay'
+import { GameTableDialog } from './GameTableDialog'
 
 interface GameOverProps {
   game: Game<'client'>
@@ -28,15 +27,17 @@ export const GameOver: React.FC<GameOverProps> = ({
   const cardCount = winner?.influence.reduce<number>((ct, card) => ct + Number(!card.isRevealed), 0) || 0
 
   return (
-    <GameTableOverlay
+    <GameTableDialog
       heading='Game Over'
       className='gap-1'
-      buttonProps={{
-        variant: 'secondary',
-        onClick: () => {
-          leaveGame().then(() => navigate('/'))
-        },
-        children: 'Exit'
+      actions={{
+        primary: {
+          variant: 'secondary',
+          onClick: () => {
+            leaveGame().then(() => navigate('/'))
+          },
+          children: 'Exit'
+        }
       }}
     >
       {winner ? (
@@ -64,6 +65,6 @@ export const GameOver: React.FC<GameOverProps> = ({
       ) : (
         <div className='pt-16 text-center text-lg flex-auto'>The host left the game</div>
       )}
-    </GameTableOverlay>
+    </GameTableDialog>
   )
 }

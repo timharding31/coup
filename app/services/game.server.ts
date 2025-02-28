@@ -266,8 +266,10 @@ export class GameService implements IGameService {
       const updatedDeck = this.deckService.shuffleDeck([...game.deck, ...playerCards])
       const updatedPlayers = game.players.filter(p => p.id !== playerId)
 
-      // If no players left, clean up the game
-      if (updatedPlayers.length === 0) {
+      const humanPlayerCount = game.players.reduce((ct, p) => ct + (CoupRobot.isBotPlayer(p) ? 0 : 1), 0)
+
+      // If no human players left, clean up the game
+      if (humanPlayerCount < 1) {
         return null
       }
 
@@ -316,7 +318,14 @@ export class GameService implements IGameService {
       throw new Error('Failed to start game')
     }
 
-    return { game: result.snapshot.val() as Game | null }
+    const game = result.snapshot.val() as Game | null
+
+    // If the first player is a bot, start their turn for them
+    if (game?.status === GameStatus.IN_PROGRESS && CoupRobot.isBotPlayer(game.players[game.currentPlayerIndex])) {
+      await this.turnService.handleBotTurn(game)
+    }
+
+    return { game }
   }
 
   async getGame(gameId?: string | null) {

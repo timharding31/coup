@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { Game } from '~/types'
 import { Button } from './Button'
 import { useCoupContext } from '~/context/CoupContext'
 import { Link, useNavigate } from '@remix-run/react'
 import { WaitingEllipsis } from './WaitingEllipsis'
 import { PlayerNameTag } from './PlayerNameTag'
-import { GameTableOverlay } from './GameTableOverlay'
+import { GameTableDialog } from './GameTableDialog'
 import { useIsMobile } from '~/hooks/useIsMobile'
 
 interface GameLobbyProps {
@@ -60,10 +60,19 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   }
 
   return (
-    <GameTableOverlay
+    <GameTableDialog
       heading='Game Lobby'
-      buttonProps={
-        isHost ? { variant: 'success', onClick: startGame, disabled: !canStart, children: 'Start Game' } : null
+      actions={
+        isHost
+          ? {
+              primary: {
+                variant: 'success',
+                onClick: startGame,
+                disabled: !canStart,
+                children: 'Start Game'
+              }
+            }
+          : null
       }
     >
       <div className='ml-1 text-xs font-sansation text-nord-4 absolute top-0 right-4'>
@@ -103,9 +112,9 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
       <div className='w-full max-w-md flex-auto'>
         <h3 className='text-lg mb-2'>Players ({players.length})</h3>
-        <ul className='list-reset space-y-2 pb-6'>
+        <ul className='list-reset pb-6 flex flex-col items-stretch gap-2'>
           {players.map((player, i) => (
-            <li key={player.id} className='inline-flex w-full rounded-full px-2 pb-[2px] pt-[3px] bg-nord-15 text-base'>
+            <li key={player.id} className='flex w-full rounded-full px-2 pb-[2px] pt-[3px] bg-nord-15 text-base'>
               <span className='mr-2 pl-1 text-nord-1'>&bull;</span>
               <PlayerNameTag
                 {...player}
@@ -117,14 +126,13 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               />
             </li>
           ))}
-          {/* Disabling this temporarily while the bot gameplay loop is being worked on:
-          {isHost && players.length < 6 && (
-            <li>
-              <Button size='sm' variant='secondary' onClick={addBot}>
-                Add 🤖
+          {isHost && (
+            <li className='self-start mt-8'>
+              <Button size='sm' onClick={addBot} disabled={players.length > 5}>
+                +🤖
               </Button>
             </li>
-          )} */}
+          )}
         </ul>
       </div>
 
@@ -134,6 +142,6 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           <WaitingEllipsis size='lg' />
         </div>
       )}
-    </GameTableOverlay>
+    </GameTableDialog>
   )
 }

@@ -18,30 +18,60 @@ export class ActionService implements IActionService {
   }
 
   validateAction(game: Game, action: Action): boolean {
+    console.log(`Validating action: ${action.type} by player ${action.playerId}`);
+    
     const player = game.players.find(p => p.id === action.playerId)
-    if (!player) return false
+    if (!player) {
+      console.log(`Player ${action.playerId} not found in game`);
+      return false;
+    }
 
     // Force coup at 10+ coins
-    if (player.coins >= 10 && action.type !== 'COUP') return false
+    if (player.coins >= 10 && action.type !== 'COUP') {
+      console.log(`Player has ${player.coins} coins but isn't using COUP`);
+      return false;
+    }
 
     // Check basic requirements
     const requirements = ACTION_REQUIREMENTS[action.type]
-    if (!requirements) return false
-    if (player.coins < requirements.coinCost) return false
+    if (!requirements) {
+      console.log(`No requirements found for action type ${action.type}`);
+      return false;
+    }
+    
+    if (player.coins < requirements.coinCost) {
+      console.log(`Player has ${player.coins} coins but needs ${requirements.coinCost} for ${action.type}`);
+      return false;
+    }
 
     // Check if player is eliminated
-    if (this.isDeadPlayer(player)) return false
+    if (this.isDeadPlayer(player)) {
+      console.log(`Player ${player.username} is eliminated, cannot take actions`);
+      return false;
+    }
 
     // Validate target if required
     if (action.targetPlayerId) {
       const targetPlayer = game.players.find(p => p.id === action.targetPlayerId)
-      if (!targetPlayer || this.isDeadPlayer(targetPlayer)) return false
+      if (!targetPlayer) {
+        console.log(`Target player ${action.targetPlayerId} not found`);
+        return false;
+      }
+      
+      if (this.isDeadPlayer(targetPlayer)) {
+        console.log(`Target player ${targetPlayer.username} is eliminated`);
+        return false;
+      }
 
       // Additional target-specific validation
-      if (action.type === 'STEAL' && targetPlayer.coins === 0) return false
+      if (action.type === 'STEAL' && targetPlayer.coins === 0) {
+        console.log(`Cannot steal from ${targetPlayer.username} - they have 0 coins`);
+        return false;
+      }
     }
 
-    return true
+    console.log(`Action ${action.type} validation passed for ${player.username}`);
+    return true;
   }
 
   private isDeadPlayer(player: Player): boolean {
