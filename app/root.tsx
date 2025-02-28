@@ -17,7 +17,8 @@ export const meta: MetaFunction = () => {
     { property: 'twitter:url', content: 'https://polarcoup.app/' },
     { name: 'twitter:title', content: 'Polar Coup' },
     { name: 'twitter:description', content: 'Play Coup online' },
-    { name: 'twitter:image', content: '/og-image.png' }
+    { name: 'twitter:image', content: '/og-image.png' },
+    { name: 'theme-color', content: '#2E3440' }
   ]
 }
 

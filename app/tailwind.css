@@ -35,11 +35,11 @@ body {
 }
 
 .left-max {
-  left: max(0px, 50cqi - 240px);
+  left: max(0px, 50vw - 240px);
 }
 
 .right-max {
-  right: max(0px, 50cqi - 240px);
+  right: max(0px, 50vw - 240px);
 }
 
 .playing-card {

@@ -19,7 +19,7 @@ export const GameOver: React.FC<GameOverProps> = ({
   const allPlayers = useMemo(() => new Map(players.map(player => [player.id, player])), [players])
   const losersRef = useRef(eliminationOrder?.reverse().filter(id => id !== winnerId) || [])
 
-  const winner = winnerId ? allPlayers.get(winnerId) : undefined
+  const winner = winnerId ? allPlayers.get(winnerId) : null
 
   if (status !== 'COMPLETED') {
     return null
@@ -53,7 +53,7 @@ export const GameOver: React.FC<GameOverProps> = ({
                 const loser = allPlayers.get(loserId)
                 return loser ? (
                   <li key={loser.id} className='grid grid-cols-[auto_1fr] gap-1 px-4'>
-                    <span>{i === 0 ? '🥈' : i === 1 ? '🥉' : null}</span>
+                    <span>{['🥈', '🥉'][i]}</span>
                     <PlayerNameTag {...loser} cardCount={0} textColor='nord-4' bgColor='nord-1' />
                   </li>
                 ) : null
