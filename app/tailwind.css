@@ -30,8 +30,8 @@ body {
   container-type: inline-size;
   container-name: root;
 
-  --deck-height: 15vw;
-  --deck-height: 15cqi;
+  --deck-height: 18vw;
+  --deck-height: 18cqi;
 }
 
 .left-max {

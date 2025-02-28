@@ -6,6 +6,7 @@ import { db } from './firebase.server'
 import { ActionService } from './action.server'
 import { DeckService } from './deck.server'
 import { TurnService } from './turn.server'
+import { CoupRobot } from './robot.server'
 
 export interface IGameService {
   createGame(hostId: string): Promise<{ gameId: string; pin: string }>
@@ -28,6 +29,7 @@ export interface IGameService {
   ): Promise<{ game: Game | null }>
   handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<{ game: Game | null }>
   updatePlayer(playerId: string, data: Partial<Omit<Player, 'influence' | 'coins'>>): Promise<{ player: Player | null }>
+  addBot(gameId: string): Promise<{ botId: string }>
 }
 
 export class GameService implements IGameService {
@@ -374,5 +376,61 @@ export class GameService implements IGameService {
       }
     }
     return { player }
+  }
+
+  /**
+   * Adds a bot player to the game
+   */
+  async addBot(gameId: string): Promise<{ botId: string }> {
+    // Get the current game to check existing bots
+    const { game } = await this.getGame(gameId)
+
+    if (!game) {
+      throw new Error('Game not found')
+    }
+
+    if (game.status !== GameStatus.WAITING) {
+      throw new Error('Cannot add bots after game has started')
+    }
+
+    if (game.players.length >= 6) {
+      throw new Error('Game is full')
+    }
+
+    // Generate unique bot username
+    const botUsername = CoupRobot.getRandomUsername(game.players.map(p => p.username))
+
+    // Create a unique ID for the bot
+    const botId = `bot-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+
+    // Add the bot to the game
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
+      if (!game) return null
+      if (game.status !== GameStatus.WAITING) return game
+      if (game.players.length >= 6) return game
+
+      const [influence, remainingDeck] = this.deckService.dealCards(game.deck, 2)
+
+      return {
+        ...game,
+        players: [
+          ...game.players,
+          {
+            id: botId,
+            username: botUsername,
+            influence,
+            coins: 2
+          }
+        ],
+        deck: remainingDeck,
+        updatedAt: Date.now()
+      }
+    })
+
+    if (!result.committed) {
+      throw new Error('Failed to add bot to game')
+    }
+
+    return { botId }
   }
 }

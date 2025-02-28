@@ -13,13 +13,15 @@ interface GameLobbyProps {
   playerId: string
   startGame: () => Promise<void>
   leaveGame: () => Promise<void>
+  addBot?: () => Promise<void>
 }
 
 export const GameLobby: React.FC<GameLobbyProps> = ({
   game: { hostId, status, pin, players },
   playerId,
   startGame,
-  leaveGame
+  leaveGame,
+  addBot
 }) => {
   const isHost = playerId === hostId
   const canStart = players.length >= 2 && isHost
@@ -83,7 +85,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           </div>
         )}
       </div>
-      <div className='grid grid-cols-[auto_1fr] items-center gap-2 mt-1 mb-6'>
+      <div className='grid grid-cols-[auto_1fr_auto] items-center gap-2 mt-1 mb-6'>
         <Button
           size='base'
           sprite='arrow-left'
@@ -115,6 +117,14 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               />
             </li>
           ))}
+          {/* Disabling this temporarily while the bot gameplay loop is being worked on:
+          {isHost && players.length < 6 && (
+            <li>
+              <Button size='sm' variant='secondary' onClick={addBot}>
+                Add 🤖
+              </Button>
+            </li>
+          )} */}
         </ul>
       </div>
 

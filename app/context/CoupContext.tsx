@@ -28,6 +28,7 @@ export interface CoupContextType {
   sendResponse: (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => Promise<void>
   exchangeCards: (selectedCardIds: string[]) => Promise<void>
   updatePlayer: (update: Partial<Player>) => Promise<void>
+  addBot: () => Promise<void>
 }
 
 interface CoupContextProviderProps extends React.PropsWithChildren {
@@ -273,6 +274,21 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
     [gameId, playerId]
   )
 
+  const addBot = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(`/api/games/${gameId}/bots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      if (!res.ok) throw new Error('Failed to start game')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred')
+    } finally {
+      return setIsLoading(false)
+    }
+  }, [gameId])
+
   const actor = useMemo(() => game.players[game.currentPlayerIndex], [game.players, game.currentPlayerIndex])
 
   const myself = useMemo(() => game.players.find(p => p.id === playerId), [game.players, playerId])
@@ -309,6 +325,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         selectCard,
         exchangeCards,
         updatePlayer,
+        addBot,
         players: { myself, actor, blocker, challenger, target },
         playerMessages,
         isLoading

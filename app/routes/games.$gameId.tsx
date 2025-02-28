@@ -1,12 +1,12 @@
 import type { Game } from '~/types'
 import { redirect, LoaderFunction } from '@remix-run/node'
 import { Outlet, useLoaderData } from '@remix-run/react'
-import { CoupContextProvider } from '~/context/CoupContext'
+import { CoupContextProvider, useCoupContext } from '~/context/CoupContext'
 import { gameService, sessionService } from '~/services/index.server'
 import { prepareGameForClient } from '~/utils/game'
 import { GameBoard } from '~/components/GameBoard'
 
-export const loader: LoaderFunction = async ({ request, context, params }) => {
+export const loader: LoaderFunction = async ({ request, params }) => {
   const { playerId } = await sessionService.requirePlayerSession(request)
   const gameId = params.gameId!
   const { game } = await gameService.getGame(gameId)

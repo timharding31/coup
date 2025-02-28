@@ -22,7 +22,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
   }
 
   return (
-    <div className='relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto] gap-4 pb-[var(--deck-height)]'>
+    <div className='relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto_16cqi] gap-4'>
       {game.status === 'IN_PROGRESS' && (
         <>
           {opponents.map((opponent, index) => (
@@ -41,9 +41,6 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
               />
             </div>
           ))}
-          {/* <div className='flex items-center justify-center z-10' style={{ gridRow: '1 / 5', gridColumn: '1 / 5' }}>
-            <CourtDeck deckCount={game.deck.length} />
-          </div> */}
         </>
       )}
       {children}

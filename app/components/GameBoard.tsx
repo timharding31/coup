@@ -13,29 +13,41 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, players, startGame, leaveGame, sendResponse, selectCard, exchangeCards, isLoading } = useCoupContext()
+  const { game, players, startGame, leaveGame, sendResponse, selectCard, exchangeCards, addBot, isLoading } =
+    useCoupContext()
 
   return (
     <>
       <Header />
       <GameTable playerId={playerId} game={game} players={players}>
-        <CourtDeck deckCount={game.deck.length} />
-
         {(() => {
           switch (game.status) {
             case 'WAITING':
-              return <GameLobby game={game} playerId={playerId} startGame={startGame} leaveGame={leaveGame} />
+              return (
+                <GameLobby
+                  game={game}
+                  playerId={playerId}
+                  startGame={startGame}
+                  leaveGame={leaveGame}
+                  addBot={addBot}
+                />
+              )
 
             case 'IN_PROGRESS':
               return (
-                <GameControls
-                  game={game}
-                  players={players}
-                  sendResponse={sendResponse}
-                  selectCard={selectCard}
-                  exchangeCards={exchangeCards}
-                  isLoading={isLoading}
-                />
+                <>
+                  <GameControls
+                    game={game}
+                    players={players}
+                    sendResponse={sendResponse}
+                    selectCard={selectCard}
+                    exchangeCards={exchangeCards}
+                    isLoading={isLoading}
+                  />
+                  <div className='flex items-center justify-center row-start-4 col-start-1 col-span-4'>
+                    <CourtDeck deckCount={game.deck.length} />
+                  </div>
+                </>
               )
 
             case 'COMPLETED':
@@ -43,6 +55,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
           }
         })()}
       </GameTable>
+
       <PlayerHand game={game} {...players.myself} />
     </>
   )

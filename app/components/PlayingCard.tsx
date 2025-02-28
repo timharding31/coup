@@ -30,8 +30,6 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFac
   let className = 'card-container'
   if (isRevealed) {
     className += ' rotate-180 grayscale-[80%] transform-origin-center'
-  } else {
-    className += ' z-10'
   }
 
   return (

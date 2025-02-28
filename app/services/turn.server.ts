@@ -3,6 +3,7 @@ import { Action, Card, CardType, Game, GameStatus, Player, TurnPhase, TurnState 
 import { ActionService } from './action.server'
 import { VALID_TRANSITIONS, haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
+import { CoupRobot } from './robot.server'
 
 interface DataSnapshot<T = Game> {
   val(): T | null
@@ -698,6 +699,8 @@ export class TurnService implements ITurnService {
       case 'ACTION_DECLARED':
         if (game.currentTurn.action.canBeBlocked || game.currentTurn.action.canBeChallenged) {
           await this.transitionState(game.id, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
+          // Process bot responses after transitioning to the waiting phase
+          await this.processBotResponses(game)
         } else {
           await this.transitionState(game.id, currentPhase, 'ACTION_EXECUTION')
           await this.resolveAction(game.id, game.currentTurn.action)
@@ -709,11 +712,15 @@ export class TurnService implements ITurnService {
         if (game.currentTurn.opponentResponses?.block) {
           // Don't clear the timer - a new timeout was already set in handleActionResponse
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
+          // Handle bot active response to block
+          await this.processBotBlockerResponse(game)
         } else if (game.currentTurn.opponentResponses?.challenge) {
           // A direct challenge: actor must defend.
           // Clear timer as no timeout is needed for defense
           this.clearTimer(game.id)
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTOR_DEFENSE')
+          // Handle bot defense
+          await this.processBotDefense(game)
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
           // All players have responded (possibly due to timeout), clear timer
           this.clearTimer(game.id)
@@ -724,15 +731,18 @@ export class TurnService implements ITurnService {
 
       case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
         // Waiting for the active player's decision via handleBlockResponse.
+        // Bot response is handled by processBotBlockerResponse
         break
 
       case 'AWAITING_ACTOR_DEFENSE':
       case 'AWAITING_BLOCKER_DEFENSE':
         // Waiting for the defender to select and reveal a card.
+        // Bot defense is handled by processBotDefense
         break
 
       case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
         // Waiting for failed challenger to select card.
+        await this.processBotCardSelection(game)
         break
 
       case 'ACTION_EXECUTION':
@@ -741,10 +751,12 @@ export class TurnService implements ITurnService {
 
       case 'AWAITING_TARGET_SELECTION':
         // Waiting for the target to select a card to lose (handled via selectCardToLose).
+        await this.processBotCardSelection(game)
         break
 
       case 'AWAITING_EXCHANGE_RETURN':
         // Waiting for the active player to select cards to return (handled via handleExchangeReturn).
+        await this.processBotExchangeReturn(game)
         break
 
       case 'ACTION_FAILED':
@@ -758,6 +770,219 @@ export class TurnService implements ITurnService {
       default:
         break
     }
+  }
+
+  /**
+   * Processes bot responses to actions
+   */
+  private async processBotResponses(game: Game): Promise<void> {
+    if (!game.currentTurn) return
+
+    const { action, respondedPlayers = [] } = game.currentTurn
+
+    // Get all bot players who need to respond
+    const respondingBots = game.players.filter(
+      p =>
+        // Bot check
+        p.id.startsWith('bot-') &&
+        // Not the actor
+        p.id !== action.playerId &&
+        // Not already responded
+        !respondedPlayers.includes(p.id) &&
+        // Not eliminated
+        p.influence.some(card => !card.isRevealed)
+    )
+
+    // Process bot responses one by one with a small delay between each
+    for (const bot of respondingBots) {
+      try {
+        // Small random delay to make it seem more human-like
+        const delay = 1000 + Math.random() * 2000
+        await new Promise(resolve => setTimeout(resolve, delay))
+
+        // Get latest game state before making decision
+        const { game: updatedGame } = await this.getGame(game.id)
+        if (!updatedGame?.currentTurn) continue
+
+        // Create robot instance
+        const robot = new CoupRobot(bot, updatedGame)
+
+        // Let bot decide response
+        const { response, blockCard } = await robot.decideResponse(
+          updatedGame.currentTurn.phase,
+          updatedGame.currentTurn.action
+        )
+
+        // Submit the bot's response
+        await this.handleActionResponse(game.id, bot.id, response, blockCard)
+      } catch (error) {
+        console.error(`Error processing bot response: ${error}`)
+      }
+    }
+  }
+
+  /**
+   * Processes bot response to a block
+   */
+  private async processBotBlockerResponse(game: Game): Promise<void> {
+    if (!game.currentTurn) return
+
+    const { action, opponentResponses } = game.currentTurn
+
+    // Check if the active player is a bot and needs to respond to a block
+    if (action.playerId.startsWith('bot-') && opponentResponses?.block) {
+      try {
+        // Small delay to simulate thinking
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        // Get the bot player
+        const botPlayer = game.players.find(p => p.id === action.playerId)
+        if (!botPlayer) return
+
+        // Create robot instance
+        const robot = new CoupRobot(botPlayer, game)
+
+        // Let bot decide response to block
+        const { response } = await robot.decideResponse('AWAITING_ACTIVE_RESPONSE_TO_BLOCK', action)
+
+        if (response === 'block') {
+          throw new Error('Bot cannot block a bot')
+        }
+
+        // Handle the bot's response to the block
+        await this.handleBlockResponse(game.id, botPlayer.id, response)
+      } catch (error) {
+        console.error(`Error processing bot block response: ${error}`)
+      }
+    }
+  }
+
+  /**
+   * Processes bot defense against a challenge
+   */
+  private async processBotDefense(game: Game): Promise<void> {
+    if (!game.currentTurn) return
+
+    const { phase, action, opponentResponses, challengeResult } = game.currentTurn
+
+    let defenderId: string | undefined
+
+    if (phase === 'AWAITING_ACTOR_DEFENSE') {
+      defenderId = action.playerId
+    } else if (phase === 'AWAITING_BLOCKER_DEFENSE' && opponentResponses?.block) {
+      defenderId = opponentResponses.block
+    }
+
+    // Check if the defender is a bot
+    if (defenderId && defenderId.startsWith('bot-') && challengeResult) {
+      try {
+        // Small delay to simulate thinking
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        // Get the bot player
+        const botPlayer = game.players.find(p => p.id === defenderId)
+        if (!botPlayer) return
+
+        // Create robot instance
+        const robot = new CoupRobot(botPlayer, game)
+
+        // Let bot decide which card to reveal for defense
+        const cardId = await robot.decideCardSelection(phase)
+
+        // Handle the bot's card selection
+        await this.handleChallengeDefenseCard(game.id, defenderId, cardId)
+      } catch (error) {
+        console.error(`Error processing bot defense: ${error}`)
+      }
+    }
+  }
+
+  /**
+   * Processes bot card selection (for losing influence, etc.)
+   */
+  private async processBotCardSelection(game: Game): Promise<void> {
+    if (!game.currentTurn) return
+
+    const { phase, action, challengeResult } = game.currentTurn
+
+    let botId: string | undefined
+
+    if (phase === 'AWAITING_TARGET_SELECTION' && action.targetPlayerId) {
+      botId = action.targetPlayerId
+    } else if (phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION' && challengeResult?.challengerId) {
+      botId = challengeResult.challengerId
+    }
+
+    // Check if the player who needs to select a card is a bot
+    if (botId && botId.startsWith('bot-')) {
+      try {
+        // Small delay to simulate thinking
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        // Get the bot player
+        const botPlayer = game.players.find(p => p.id === botId)
+        if (!botPlayer) return
+
+        // Create robot instance
+        const robot = new CoupRobot(botPlayer, game)
+
+        // Let bot decide which card to select
+        const cardId = await robot.decideCardSelection(phase)
+
+        if (phase === 'AWAITING_TARGET_SELECTION') {
+          // Handle target selection
+          await this.selectCardToLose(game.id, botId, cardId)
+        } else {
+          // Handle challenge penalty selection
+          await this.handleFailedChallengerCard(game.id, botId, cardId)
+        }
+      } catch (error) {
+        console.error(`Error processing bot card selection: ${error}`)
+      }
+    }
+  }
+
+  /**
+   * Processes bot exchange card selection
+   */
+  private async processBotExchangeReturn(game: Game): Promise<void> {
+    if (!game.currentTurn) return
+
+    const { action } = game.currentTurn
+
+    // Check if the player doing the exchange is a bot
+    if (action.playerId.startsWith('bot-')) {
+      try {
+        // Small delay to simulate thinking
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        // Get the bot player
+        const botPlayer = game.players.find(p => p.id === action.playerId)
+        if (!botPlayer) return
+
+        // Create robot instance
+        const robot = new CoupRobot(botPlayer, game)
+
+        // Get all card IDs the bot can choose from
+        const cardIds = botPlayer.influence.map(card => card.id)
+
+        // Let bot decide which cards to keep
+        const selectedCards = await robot.decideExchangeCards(cardIds)
+
+        // Handle the exchange
+        await this.handleExchangeReturn(game.id, action.playerId, selectedCards)
+      } catch (error) {
+        console.error(`Error processing bot exchange: ${error}`)
+      }
+    }
+  }
+
+  /**
+   * Helper method to get the current game
+   */
+  private async getGame(gameId: string): Promise<{ game: Game | null }> {
+    const snapshot = await this.gamesRef.child(gameId).get()
+    return { game: snapshot.val() as Game | null }
   }
 
   private async endTurn(gameId: string): Promise<void> {
@@ -782,6 +1007,37 @@ export class TurnService implements ITurnService {
     if (game) {
       // Check game completion
       await this.checkGameStatus(game)
+
+      // If game is still in progress, check if the next player is a bot
+      if (game.status === GameStatus.IN_PROGRESS) {
+        await this.handleBotTurn(game)
+      }
+    }
+  }
+
+  /**
+   * Checks if the current player is a bot and handles their turn if needed
+   */
+  private async handleBotTurn(game: Game): Promise<void> {
+    const currentPlayer = game.players[game.currentPlayerIndex]
+
+    // Check if current player is a bot (bot IDs start with 'bot-')
+    if (currentPlayer && currentPlayer.id.startsWith('bot-')) {
+      try {
+        // Give a small delay to make the bot seem like it's thinking
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        // Create a robot instance for this bot
+        const robot = new CoupRobot(currentPlayer, game)
+
+        // Let the bot decide on an action
+        const action = await robot.decideAction()
+
+        // Start the turn with the bot's chosen action
+        await this.startTurn(game.id, action)
+      } catch (error) {
+        console.error(`Error handling bot turn: ${error}`)
+      }
     }
   }
 
