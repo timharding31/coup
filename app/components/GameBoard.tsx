@@ -6,6 +6,7 @@ import { GameOver } from './GameOver'
 import { GameControls } from './GameControls'
 import { Header } from './Header'
 import { PlayerHand } from './PlayerHand'
+import { CourtDeck } from './CourtDeck'
 
 interface GameBoardProps {
   playerId: string
@@ -18,6 +19,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
     <>
       <Header />
       <GameTable playerId={playerId} game={game} players={players}>
+        <CourtDeck deckCount={game.deck.length} />
+
         {(() => {
           switch (game.status) {
             case 'WAITING':

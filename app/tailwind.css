@@ -26,6 +26,12 @@ body {
 #root {
   @apply fixed top-0 bottom-0 mx-auto h-full w-full bg-nord-1 left-max right-max;
   max-width: 480px;
+
+  container-type: inline-size;
+  container-name: root;
+
+  --deck-height: 15vw;
+  --deck-height: 15cqi;
 }
 
 .left-max {
@@ -36,10 +42,15 @@ body {
   right: max(0px, 50cqi - 240px);
 }
 
-.card-container {
+.playing-card {
   @apply w-full;
 
   aspect-ratio: 3 / 4;
+}
+
+.card-container {
+  @apply playing-card;
+
   container-type: inline-size;
   container-name: card-container;
 }
@@ -48,12 +59,6 @@ body {
   @apply ring-nord-0 ring-1;
   border-radius: clamp(8px, 5%, 24px);
   border-radius: clamp(8px, 5cqmin, 24px);
-
-  @container (max-width: 120px) {
-    & > [data-hide-lt-sm] {
-      display: none;
-    }
-  }
 }
 
 .nord-shadow {
@@ -127,3 +132,37 @@ h4 {
   border-right: 4px solid transparent;
   border-top: 4px solid var(--accent-color);
 } */
+
+.court-deck-card {
+  @apply playing-card absolute brightness-100;
+
+  left: var(--l, 0px);
+  top: var(--t, 0px);
+  transform: rotate(var(--yaw, 0deg));
+  transition:
+    transform 0.3s ease-in-out,
+    left 0.3s ease-in-out,
+    top 0.3s ease-in-out;
+}
+
+.court-deck-card.shuffling {
+  animation: shuffle-card 0.5s ease-in-out;
+}
+
+@keyframes shuffle-card {
+  0% {
+    transform: rotate(var(--yaw, 0deg)) translateY(0);
+  }
+  25% {
+    transform: rotate(calc(var(--yaw, 0deg) + 5deg)) translateY(-10px);
+  }
+  50% {
+    transform: rotate(calc(var(--yaw, 0deg) - 3deg)) translateY(5px);
+  }
+  75% {
+    transform: rotate(calc(var(--yaw, 0deg) + 2deg)) translateY(-3px);
+  }
+  100% {
+    transform: rotate(var(--yaw, 0deg)) translateY(0);
+  }
+}

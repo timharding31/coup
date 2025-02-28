@@ -59,9 +59,9 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFac
   )
 }
 
-const FaceDownCard: React.FC = () => {
+export const FaceDownCard: React.FC<React.HTMLAttributes<HTMLDivElement>> = props => {
   return (
-    <div className='card-container'>
+    <div className='card-container' {...props}>
       <div className='rounded-card w-full h-full nord-shadow relative overflow-hidden'>
         <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
           <use href='#card-back' />

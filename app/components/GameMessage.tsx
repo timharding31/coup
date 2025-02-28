@@ -36,11 +36,8 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
 // Tooltip wrapper for GameMessage
 export const TooltipGameMessage: React.FC<GameMessageProps> = props => {
   return (
-    <div className='tooltip-content z-20'>
-      <GameMessage
-        {...props}
-        className={`absolute bottom-[100%] left-[50%] -mb-1 translate-x-[-50%] ${props.className || ''}`}
-      />
+    <div className='tooltip-content absolute left-0 right-0 -bottom-2 flex items-center justify-center'>
+      <GameMessage {...props} className={props.className} />
     </div>
   )
 }
