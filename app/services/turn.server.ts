@@ -839,10 +839,13 @@ export class TurnService implements ITurnService {
         const robot = new CoupRobot(bot, updatedGame)
 
         // Let bot decide response
-        const { response, blockCard } = await robot.decideResponse(
+        const { response, blockCard, memory } = await robot.decideResponse(
           updatedGame.currentTurn.phase,
           updatedGame.currentTurn.action
         )
+
+        // Update the game with the bot's memory
+        await this.updateBotMemory(game.id, memory)
 
         // Submit the bot's response
         await this.handleActionResponse(game.id, bot.id, response, blockCard)
@@ -874,7 +877,10 @@ export class TurnService implements ITurnService {
         const robot = new CoupRobot(botPlayer, game)
 
         // Let bot decide response to block - only 'accept' or 'challenge' are valid
-        const { response } = await robot.decideResponse('AWAITING_ACTIVE_RESPONSE_TO_BLOCK', action)
+        const { response, memory } = await robot.decideResponse('AWAITING_ACTIVE_RESPONSE_TO_BLOCK', action)
+
+        // Update the game with the bot's memory
+        await this.updateBotMemory(game.id, memory)
 
         // Force response to be either 'accept' or 'challenge', never 'block'
         const validResponse = response === 'challenge' ? 'challenge' : 'accept'
@@ -919,7 +925,10 @@ export class TurnService implements ITurnService {
         const robot = new CoupRobot(botPlayer, game)
 
         // Let bot decide which card to reveal for defense
-        const cardId = await robot.decideCardSelection(phase)
+        const { cardId, memory } = await robot.decideCardSelection(phase)
+
+        // Update the game with the bot's memory
+        await this.updateBotMemory(game.id, memory)
 
         // Handle the bot's card selection
         await this.handleChallengeDefenseCard(game.id, defenderId, cardId)
@@ -961,7 +970,10 @@ export class TurnService implements ITurnService {
         const robot = new CoupRobot(botPlayer, game)
 
         // Let bot decide which card to select
-        const cardId = await robot.decideCardSelection(phase)
+        const { cardId, memory } = await robot.decideCardSelection(phase)
+
+        // Update the game with the bot's memory
+        await this.updateBotMemory(game.id, memory)
 
         if (phase === 'AWAITING_TARGET_SELECTION') {
           // Handle target selection
@@ -997,10 +1009,13 @@ export class TurnService implements ITurnService {
         const robot = new CoupRobot(botPlayer, game)
 
         // Let bot decide which cards to keep
-        const selectedCards = await robot.decideExchangeCards()
+        const { cards, memory } = await robot.decideExchangeCards()
+
+        // Update the game with the bot's memory
+        await this.updateBotMemory(game.id, memory)
 
         // Handle the exchange
-        await this.handleExchangeReturn(game.id, action.playerId, selectedCards)
+        await this.handleExchangeReturn(game.id, action.playerId, cards)
       } catch (error) {
         console.error(`Error processing bot exchange: ${error}`)
       }
@@ -1062,13 +1077,35 @@ export class TurnService implements ITurnService {
       const robot = new CoupRobot(currentPlayer, game)
 
       // Let the bot decide on an action
-      const action = await robot.decideAction()
+      const { action, memory } = await robot.decideAction()
+
+      // Update the game with the bot's memory
+      await this.updateBotMemory(game.id, memory)
 
       // Start the turn with the bot's chosen action
       await this.startTurn(game.id, action)
     } catch (error) {
       console.error(`Error handling bot turn: ${error}`)
     }
+  }
+
+  /**
+   * Update the bot memory in the database
+   */
+  private async updateBotMemory(gameId: string, memory: Record<string, any>): Promise<void> {
+    // Update the game's botMemory field
+    await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
+      if (!game) return game
+
+      return {
+        ...game,
+        botMemory: {
+          ...(game.botMemory || {}),
+          ...memory
+        },
+        updatedAt: Date.now()
+      }
+    })
   }
 
   private getNextPlayerIndex(game: Game): number {
