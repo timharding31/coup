@@ -268,14 +268,9 @@ export class GameService implements IGameService {
 
       const humanPlayerCount = game.players.reduce((ct, p) => ct + (CoupRobot.isBotPlayer(p) ? 0 : 1), 0)
 
-      // If no human players left, clean up the game
-      if (humanPlayerCount < 1) {
-        return null
-      }
-
       return {
         ...game,
-        status: playerId === game.hostId ? 'COMPLETED' : game.status,
+        status: playerId === game.hostId || humanPlayerCount < 1 ? 'COMPLETED' : game.status,
         players: updatedPlayers,
         deck: updatedDeck,
         updatedAt: Date.now()
@@ -290,6 +285,12 @@ export class GameService implements IGameService {
 
     if (updatedGame?.status === 'COMPLETED') {
       await this.cleanupGame(gameId)
+    }
+
+    const humanPlayerCount = (updatedGame?.players || []).reduce((ct, p) => ct + (CoupRobot.isBotPlayer(p) ? 0 : 1), 0)
+
+    if (updatedGame && humanPlayerCount < 1) {
+      await this.gamesRef.child(gameId).remove()
     }
 
     await this.playerService.updatePlayer(playerId, { currentGameId: null })

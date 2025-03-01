@@ -110,9 +110,9 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         </Button>
       </div>
 
-      <div className='w-full max-w-md flex-auto'>
+      <div className='w-full max-w-md flex-auto flex flex-col'>
         <h3 className='text-lg mb-2'>Players ({players.length})</h3>
-        <ul className='list-reset pb-6 flex flex-col items-stretch gap-2'>
+        <ul className='list-reset pb-6 flex flex-col items-stretch flex-auto gap-2'>
           {players.map((player, i) => (
             <li key={player.id} className='flex w-full rounded-full px-2 pb-[2px] pt-[3px] bg-nord-15 text-base'>
               <span className='mr-2 pl-1 text-nord-1'>&bull;</span>
@@ -127,9 +127,9 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             </li>
           ))}
           {isHost && (
-            <li className='self-start mt-8'>
-              <Button size='sm' onClick={addBot} disabled={players.length > 5}>
-                +🤖
+            <li className='self-end mt-auto'>
+              <Button size='sm' variant='tertiary' onClick={addBot} disabled={players.length > 5} sprite='plus'>
+                Bot Player
               </Button>
             </li>
           )}

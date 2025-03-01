@@ -26,6 +26,7 @@ export type SpriteId =
   | 'spinner'
   | 'exclamation'
   | 'loading'
+  | 'plus'
 
 export const SpriteSize = {
   sm: 18,
@@ -96,6 +97,10 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
 
     case 'exclamation':
       viewBox = '0 0 45.311 45.311'
+      break
+
+    case 'plus':
+      viewBox = '0 0 45.402 45.402'
       break
   }
 
