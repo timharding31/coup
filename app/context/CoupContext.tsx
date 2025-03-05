@@ -27,6 +27,7 @@ export interface CoupContextType {
     blocker?: Player<'client'>
     challenger?: Player<'client'>
     target?: Player<'client'>
+    all: Array<Player<'client'>>
   }
   playerMessages: Map<string, MessageData>
   startGame: () => Promise<void>
@@ -348,7 +349,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         exchangeCards,
         updatePlayer,
         addBot,
-        players: { myself, actor, blocker, challenger, target },
+        players: { myself, actor, blocker, challenger, target, all: game.players },
         playerMessages,
         isLoading
       }}

@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import cn from 'classnames'
 import { PlayingCard } from './PlayingCard'
 import { useGame, usePlayerMessage } from '~/context/CoupContext'
-import { Player } from '~/types'
+import { Card, Player } from '~/types'
 import { PlayerNameTag } from './PlayerNameTag'
 import { TooltipGameMessage } from './GameMessage'
 import { MessageData } from '~/utils/messages'
-import _, { set } from 'lodash'
-import { useDeckCoordinatesAtom } from '~/hooks/useDeckCoordinates'
+import { AnimatePresence } from 'framer-motion'
+import _ from 'lodash'
 
 interface OpponentHandProps extends Player<'client'> {
   isActor?: boolean
@@ -28,7 +28,24 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   const message: MessageData | null = usePlayerMessage(nameTagProps.id)
   const [maxWidth, setMaxWidth] = useState<number>()
 
-  const [deckCoordinates] = useDeckCoordinatesAtom()
+  const cardsRef = useRef<Card<'client'>[]>(influence)
+  const [newCardIds, setNewCardIds] = useState(new Set<string>())
+
+  useEffect(() => {
+    const prevCardIds = cardsRef.current.map(card => card.id)
+    const newCards = influence.filter(card => !prevCardIds.includes(card.id))
+    let timer: NodeJS.Timeout | undefined
+    if (newCards.length > 0) {
+      setNewCardIds(new Set(newCards.map(card => card.id)))
+      timer = setTimeout(() => {
+        setNewCardIds(new Set())
+      }, 5_000)
+    }
+    return () => {
+      cardsRef.current = influence
+      if (timer) clearTimeout(timer)
+    }
+  }, [influence])
 
   const cardsListRef = useRef<HTMLUListElement>(null)
 
@@ -42,7 +59,6 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 
     debouncedOnResize()
     window.addEventListener('resize', debouncedOnResize)
-
     return () => {
       debouncedOnResize.cancel()
       window.removeEventListener('resize', debouncedOnResize)
@@ -75,9 +91,17 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           aspectRatio: `${influence.length * 10} / 13`
         }}
       >
-        {influence.map(card => (
-          <PlayingCard key={card.id} isFaceDown={!game || game.status === 'WAITING'} {...card} />
-        ))}
+        <AnimatePresence>
+          {influence.map((card, i) => (
+            <PlayingCard
+              key={card.id}
+              isFaceDown={!game || game.status === 'WAITING'}
+              {...card}
+              isAnimated={game?.status === 'IN_PROGRESS' && newCardIds.has(card.id)}
+              animationDelay={i * 0.1}
+            />
+          ))}
+        </AnimatePresence>
       </ul>
     </div>
   )
