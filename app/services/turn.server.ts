@@ -725,7 +725,9 @@ export class TurnService implements ITurnService {
           if (CoupRobot.isBotGame(game)) {
             // Update game before processing bot responses
             const { game: updatedGame } = await this.getGame(game.id)
-            if (updatedGame) await this.processBotResponses(updatedGame)
+            if (updatedGame) {
+              await this.processBotResponses(updatedGame)
+            }
           }
         } else {
           await this.transitionState(game.id, currentPhase, 'ACTION_EXECUTION')
@@ -739,7 +741,13 @@ export class TurnService implements ITurnService {
           // Don't clear the timer - a new timeout was already set in handleActionResponse
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
           // Handle bot active response to block
-          await this.processBotBlockerResponse(game)
+          if (CoupRobot.isBotGame(game)) {
+            // Update game before processing bot response
+            const { game: updatedGame } = await this.getGame(game.id)
+            if (updatedGame) {
+              await this.processBotBlockerResponse(updatedGame)
+            }
+          }
         } else if (game.currentTurn.opponentResponses?.challenge) {
           // A direct challenge: actor must defend.
           // Clear timer as no timeout is needed for defense
@@ -749,7 +757,9 @@ export class TurnService implements ITurnService {
           if (CoupRobot.isBotGame(game)) {
             // Update game before processing bot defense
             const { game: updatedGame } = await this.getGame(game.id)
-            if (updatedGame) await this.processBotDefense(updatedGame)
+            if (updatedGame) {
+              await this.processBotDefense(updatedGame)
+            }
           }
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
           // All players have responded (possibly due to timeout), clear timer
@@ -1125,7 +1135,7 @@ export class TurnService implements ITurnService {
   }
 
   private isPlayerEliminated(player: Player): boolean {
-    return player.influence.every(card => card.isRevealed)
+    return !!player.influence?.every(card => card.isRevealed)
   }
 
   private async resolveAction(gameId: string, action: Action): Promise<void> {

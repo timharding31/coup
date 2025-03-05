@@ -32,13 +32,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ game, influence, ...name
   return (
     <div
       ref={ref}
-      className='grid grid-rows-[auto_auto] px-4 pb-4 flex-none bg-nord-0 border-t border-nord-3 transition-transform duration-500 ease-in-out z-50'
+      className='grid grid-rows-[auto_auto] px-6 pb-4 flex-none bg-nord-0 border-t border-nord-3 transition-transform duration-500 ease-in-out z-50'
       style={{
         transform: `translateY(${translateAmount.toFixed(2)}px)`,
         boxShadow: '0px 300px 0px 0px var(--nord-0)'
       }}
     >
-      <PlayerNameTag {...nameTagProps} className='text-lg my-3' bgColor='nord-0' />
+      <PlayerNameTag {...nameTagProps} className='text-lg my-2' bgColor='nord-0' />
       <div className='grid grid-cols-2 gap-4'>
         {influence.slice(0, 2).map(card => (
           <PlayingCard key={card.id} isFaceDown={game.status === 'WAITING'} {...card} />

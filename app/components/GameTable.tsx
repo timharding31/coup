@@ -21,28 +21,26 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
     return null
   }
 
+  let opponentRows = [0, 1, 1, 2, 2, 3, 3][opponents.length]
+
   return (
-    <div className='relative p-2 flex-auto grid grid-cols-4 grid-rows-[auto_auto_auto_16cqi] gap-4'>
-      {game.status === 'IN_PROGRESS' && (
-        <>
-          {opponents.map((opponent, index) => (
-            <div
-              key={opponent.id}
-              className={cn(
-                'col-span-2 flex flex-col items-stretch justify-center',
-                getOpponentClasses(index, opponents.length)
-              )}
-            >
+    <div className='relative flex flex-col h-full flex-auto'>
+      <div className={`px-4 py-2 flex-auto grid grid-cols-4 grid-rows-${opponentRows} gap-x-8 gap-y-4 min-h-0`}>
+        {game.status === 'IN_PROGRESS' && (
+          <>
+            {opponents.map((opponent, index) => (
               <OpponentHand
+                key={opponent.id}
                 {...opponent}
                 isActor={actor?.id === opponent.id}
                 isBlocker={blocker?.id === opponent.id}
                 isChallenger={challenger?.id === opponent.id}
+                className={cn('col-span-2', getOpponentClasses(index, opponents.length))}
               />
-            </div>
-          ))}
-        </>
-      )}
+            ))}
+          </>
+        )}
+      </div>
       {children}
       {!!drawerHeight && (
         <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord--1/50 z-60 pointer-events-none' />
@@ -67,7 +65,7 @@ function getOpponentClasses(index: number, total: number) {
         'row-start-3', // bottom left
         'row-start-2', // middle left
         'col-start-3 row-start-2', // middle right
-        'col-start-3 row-start-1' // bottom right
+        'col-start-3 row-start-3' // bottom right
       ][index]
 
     case 3:
@@ -79,8 +77,8 @@ function getOpponentClasses(index: number, total: number) {
 
     case 2:
       return [
-        'row-start-2', // middle left
-        'col-start-3 row-start-2' // middle right
+        'row-start-1', // top left
+        'col-start-3 row-start-1' // top right
       ][index]
 
     case 1:

@@ -41,7 +41,7 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deckCount }) => {
 
   return (
     <div
-      className={cn('relative w-[12cqi] aspect-[3/4]')}
+      className={cn('relative w-[6vh] aspect-[3/4]')}
       style={{
         transform: `translateX(calc(-${(OFFSET_X * deckCount) / 2}px))`
       }}

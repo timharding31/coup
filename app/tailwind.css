@@ -55,6 +55,10 @@ body {
   container-name: card-container;
 }
 
+.container-type-inline-size {
+  container-type: inline-size;
+}
+
 .rounded-card {
   @apply ring-nord-0 ring-1;
   border-radius: clamp(8px, 5%, 24px);

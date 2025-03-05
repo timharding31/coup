@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { MessageData, MessageMap } from '~/store/messageStore'
+import { MessageData, MessageMap } from '~/utils/messages'
 
 const DEFAULT_MESSAGE_DELAY_MS = 500
 

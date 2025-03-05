@@ -58,7 +58,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           if (opponent.id !== actor.id) {
             return {
               [opponent.id]: {
-                text: 'Responding',
+                text: '',
                 type: 'info',
                 isWaiting: true
               }
@@ -141,32 +141,13 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
 
     case 'ACTION_EXECUTION':
-      // if (!action) {
-      //   throw new Error('Action not found')
-      // }
-      // actionVerb = getActionVerb(actor.id, action, 'past', target)
-      // return {
-      //   [actor.id]: {
-      //     text: actionVerb.content,
-      //     type: 'success',
-      //     isWaiting: false,
-      //     target: actionVerb.target
-      //   }
-      // }
       return null
 
     case 'AWAITING_TARGET_SELECTION':
       if (!target || !action) {
         throw new Error('Target and/or action not found')
       }
-      actionVerb = getActionVerb(actor.id, action, 'past', target)
       return {
-        [actor.id]: {
-          text: actionVerb.content,
-          type: 'success',
-          isWaiting: false,
-          target: actionVerb.target
-        },
         [target.id]: {
           text: 'Choosing card to reveal',
           type: 'failure',

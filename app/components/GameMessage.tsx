@@ -1,6 +1,6 @@
 import React from 'react'
 import cn from 'classnames'
-import { MessageData, MessageType } from '~/store/messageStore'
+import { MessageData, MessageType } from '~/utils/messages'
 import { WaitingEllipsis } from './WaitingEllipsis'
 
 // Define styles for different message types
@@ -21,7 +21,7 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
   const { text, type, isWaiting, target = null } = message
 
   return (
-    <span className={cn('whitespace-nowrap w-fit text-center px-3 py-0 rounded-md', MESSAGE_STYLE[type], className)}>
+    <span className={cn('text-center px-1 py-0 rounded-md', MESSAGE_STYLE[type], className)}>
       {text}
       {target && (
         <>
@@ -36,7 +36,7 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
 // Tooltip wrapper for GameMessage
 export const TooltipGameMessage: React.FC<GameMessageProps> = props => {
   return (
-    <div className='tooltip-content absolute left-0 right-0 -bottom-2 flex items-center justify-center'>
+    <div className='tooltip-content absolute left-0 right-0 top-10 flex items-center justify-center z-10'>
       <GameMessage {...props} className={props.className} />
     </div>
   )

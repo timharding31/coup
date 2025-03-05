@@ -1,12 +1,21 @@
 import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
 import { redirect } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
-import { Game, TargetedActionType, UntargetedActionType, Player, TurnPhase, CardType } from '~/types'
+import {
+  Game,
+  TargetedActionType,
+  UntargetedActionType,
+  Player,
+  TurnPhase,
+  CardType,
+  OpponentBlockResponse,
+  OpponentChallengeResponse
+} from '~/types'
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { prepareGameForClient } from '~/utils/game'
 import { useMessageQueue } from '~/hooks/useMessageQueue'
-import { getPlayerActionMessages, getResponderMessage, MessageData } from '~/store/messageStore'
+import { getPlayerActionMessages, getResponderMessage, MessageData } from '~/utils/messages'
 
 export interface CoupContextType {
   game: Game<'client'>
@@ -49,6 +58,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const turnPhaseRef = useRef<TurnPhase | null>(null)
+  const opponentResponsesRef = useRef<OpponentBlockResponse | OpponentChallengeResponse | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
 
   // Use our new message queue hook
@@ -84,6 +94,17 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
           updateMessages(responderMessages)
         }
 
+        const isNewBlockOrChallenge =
+          (opponentResponses?.block && !opponentResponsesRef.current?.block) ||
+          (opponentResponses?.challenge && !opponentResponsesRef.current?.challenge)
+        if (isNewBlockOrChallenge) {
+          clearPlayerMessages(
+            respondedPlayers.filter(
+              responder => responder !== opponentResponses.block && responder !== opponentResponses.challenge
+            )
+          )
+        }
+
         // Process turn phase messages
         if (turn?.phase !== turnPhaseRef.current) {
           const newMessages = getPlayerActionMessages(game)
@@ -113,6 +134,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         }
 
         turnPhaseRef.current = turn?.phase || null
+        opponentResponsesRef.current = opponentResponses || null
         respondedPlayersRef.current = respondedPlayers
       }
     }
