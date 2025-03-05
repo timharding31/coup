@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Card, CardType, GameStatus } from '~/types'
 
 const colorSchemes: Record<CardType, string> = {
@@ -19,12 +19,49 @@ const textColors: Record<CardType, string> = {
 
 interface PlayingCardProps extends Card<'client'> {
   isFaceDown?: boolean
+  deckCoordinates?: [number, number] // [x, y] coordinates of deck
 }
 
-export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFaceDown, isRevealed }) => {
+export const PlayingCard: React.FC<PlayingCardProps> = ({
+  type: character,
+  isFaceDown,
+  isRevealed,
+  deckCoordinates
+}) => {
+  const cardRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const card = cardRef.current
+
+    if (!deckCoordinates || !card) return
+
+    const cardRect = card.getBoundingClientRect()
+
+    // Calculate the translation distance
+    const dx = deckCoordinates[0] - cardRect.left
+    const dy = deckCoordinates[1] - cardRect.top
+
+    // Apply the animation
+    card.animate(
+      [
+        {
+          transform: `translate(${dx}px, ${dy}px) scale(0.5)`,
+          opacity: 0
+        },
+        {
+          transform: 'translate(0, 0) scale(1)',
+          opacity: 1
+        }
+      ],
+      {
+        duration: 600,
+        easing: 'ease-out',
+        fill: 'forwards'
+      }
+    )
+  }, [deckCoordinates])
+
   if (!character || isFaceDown) {
-    // Server will omit type for face-down cards
-    return <FaceDownCard />
+    return <FaceDownCard ref={cardRef} />
   }
 
   let className = 'card-container'
@@ -33,7 +70,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFac
   }
 
   return (
-    <div className={className}>
+    <div ref={cardRef} className={className}>
       <div className={`rounded-card w-full h-full nord-shadow relative overflow-hidden ${colorSchemes[character]}`}>
         {/* Card corners */}
         <div className='absolute top-2 left-2 px-[4cqi] flex flex-col items-start z-10'>
@@ -57,14 +94,16 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({ type: character, isFac
   )
 }
 
-export const FaceDownCard: React.FC<React.HTMLAttributes<HTMLDivElement>> = props => {
-  return (
-    <div className='card-container' {...props}>
-      <div className='rounded-card w-full h-full nord-shadow relative overflow-hidden'>
-        <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
-          <use href='#card-back' />
-        </svg>
+export const FaceDownCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  (props, forwardedRef) => {
+    return (
+      <div ref={forwardedRef} className='card-container' {...props}>
+        <div className='rounded-card w-full h-full nord-shadow relative overflow-hidden'>
+          <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
+            <use href='#card-back' />
+          </svg>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
+)

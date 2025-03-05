@@ -48,8 +48,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ game, influence, ...name
   )
 }
 
-const DRAWER_OFFSET_WITH_CARDS = 172
-const DRAWER_OFFSET_WITHOUT_CARDS = 48
+const DRAWER_OFFSET_WITH_CARDS = 164
+const DRAWER_OFFSET_WITHOUT_CARDS = 40
 
 function arePlayerCardsVisible(phase: TurnPhase | null = null) {
   return !phase || ['AWAITING_OPPONENT_RESPONSES', 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK'].includes(phase)
