@@ -8,15 +8,11 @@ interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
   showIdentityPopoverTrigger?: boolean
 }
 
-export const Header: React.FC<HeaderProps> = ({ 
-  showIdentityPopoverTrigger = true, 
-  className = '',
-  ...rest 
-}) => {
+export const Header: React.FC<HeaderProps> = ({ showIdentityPopoverTrigger = true, className = '', ...rest }) => {
   const { myself = null } = usePlayers() || {}
   return (
-    <header 
-      className={`relative flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3 ${className}`}
+    <header
+      className={`relative flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3 nord-shadow ${className}`}
       {...rest}
     >
       <Link to='/' className='flex items-end'>

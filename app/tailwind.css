@@ -32,6 +32,14 @@ body {
 
   --deck-height: 18vw;
   --deck-height: 18cqi;
+
+  background:
+    radial-gradient(var(--nord--1) 15%, transparent 16%) 0 0,
+    radial-gradient(var(--nord--1) 15%, transparent 16%) 2px 2px;
+  /* radial-gradient(rgba(46, 52, 64, 1) 15%, transparent 20%) 0 0.9px,
+    radial-gradient(rgba(46, 52, 64, 1) 15%, transparent 20%) 2px 2.1px; */
+  background-color: var(--nord-1);
+  background-size: 4px 4px;
 }
 
 .left-max {

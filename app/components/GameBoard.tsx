@@ -31,7 +31,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
     <div className='flex flex-col h-full min-h-0 overflow-hidden'>
       <Header className='flex-none' />
       <div className='flex-auto min-h-0 overflow-hidden'>
-        <GameTable playerId={playerId} game={game} players={players}>
+        <GameTable game={game} players={players}>
           {(() => {
             switch (game.status) {
               case 'WAITING':
@@ -56,7 +56,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
                       exchangeCards={exchangeCards}
                       isLoading={isLoading}
                     />
-                    <div className='flex-none py-2 flex items-center justify-center'>
+                    <div className='flex-none pb-4 flex items-center justify-center'>
                       <CourtDeck deck={game.deck} />
                     </div>
                   </>

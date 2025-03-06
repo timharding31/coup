@@ -43,7 +43,7 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deck }) => {
 
   return (
     <div
-      className='relative w-[6vh] aspect-[3/4]'
+      className='relative w-[6vh] aspect-[3/4] nord-shadow'
       style={{
         transform: `translateX(calc(-${(OFFSET_X * deck.length) / 2}px))`
       }}
@@ -68,8 +68,7 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deck }) => {
               })}
               style={{
                 ...cardStylesRef.current[i % cardStylesRef.current.length],
-                animationDelay: `${i * 30}ms`, // Stagger animation for each card
-                zIndex: deck.length - i // Ensure proper stacking order
+                animationDelay: `${i * 30}ms` // Stagger animation for each card
               }}
             >
               <svg className='w-full bg-nord-10 text-nord-9 rounded-card' viewBox='0 0 404 539'>

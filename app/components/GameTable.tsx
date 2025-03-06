@@ -1,31 +1,33 @@
 import React from 'react'
-import cn from 'classnames'
 import { CoupContextType } from '~/context/CoupContext'
 import { OpponentHand } from './OpponentHand'
 import { useDrawerHeight } from './Drawer'
-import { CourtDeck } from './CourtDeck'
+import cn from 'classnames'
 
-interface GameTableProps extends Pick<CoupContextType, 'game' | 'players'>, React.PropsWithChildren {
-  playerId: string
-}
+interface GameTableProps extends Pick<CoupContextType, 'game' | 'players'>, React.PropsWithChildren {}
 
-export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ playerId, game, players, children }) => {
+export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ game, players, children }) => {
   const { myself, actor, blocker, challenger } = players
 
   const drawerHeight = useDrawerHeight()
-
-  const myIndex = game.players.findIndex(p => p.id === playerId)
-  const opponents = game.players.slice(myIndex + 1).concat(game.players.slice(0, myIndex))
 
   if (!myself) {
     return null
   }
 
-  let opponentRows = [0, 1, 1, 2, 2, 3, 3][opponents.length]
+  const myIndex = game.players.findIndex(p => p.id === myself.id)
+  const opponents = game.players.slice(myIndex + 1).concat(game.players.slice(0, myIndex))
+  const opponentsCount = opponents.length
 
   return (
     <div className='relative flex flex-col h-full flex-auto'>
-      <div className={`px-4 py-2 flex-auto grid grid-cols-4 grid-rows-${opponentRows} gap-x-8 gap-y-4 min-h-0`}>
+      <div
+        className={cn('px-4 py-2 flex-auto grid grid-cols-4 gap-x-8 gap-y-4 min-h-0', {
+          'grid-rows-1': opponentsCount <= 2,
+          'grid-rows-2': opponentsCount > 2 && opponentsCount < 5,
+          'grid-rows-3': opponentsCount >= 5
+        })}
+      >
         {game.status === 'IN_PROGRESS' && (
           <>
             {opponents.map((opponent, index) => (
@@ -35,7 +37,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ p
                 isActor={actor?.id === opponent.id}
                 isBlocker={blocker?.id === opponent.id}
                 isChallenger={challenger?.id === opponent.id}
-                className={cn('col-span-2', getOpponentClasses(index, opponents.length))}
+                className={cn('col-span-2', getOpponentClasses(index, opponentsCount))}
               />
             ))}
           </>

@@ -34,7 +34,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
   return (
     <div
       ref={ref}
-      className='grid grid-rows-[auto_auto] px-6 pb-4 flex-none bg-nord-0 border-t border-nord-3 transition-transform duration-500 ease-in-out z-50 container-type-inline-size'
+      className='grid grid-rows-[auto_auto] px-4 pb-4 flex-none bg-nord-0 border-t border-nord-3 transition-transform duration-500 ease-in-out z-50 container-type-inline-size nord-shadow'
       style={{
         transform: `translateY(${translateAmount.toFixed(2)}px)`,
         boxShadow: '0px 300px 0px 0px var(--nord-0)'
