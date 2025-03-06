@@ -60,13 +60,14 @@ body {
 }
 
 .rounded-card {
-  @apply ring-nord-0 ring-1;
+  @apply border-nord--1 border overflow-hidden;
+  box-sizing: content-box;
   border-radius: clamp(8px, 5%, 24px);
   border-radius: clamp(8px, 5cqmin, 24px);
 }
 
 .nord-shadow {
-  --tw-shadow: 0px 4px 6px rgba(15, 17, 21, 0.25), 0px 5px 7px rgba(15, 17, 21, 0.1);
+  filter: drop-shadow(0px 4px 6px rgba(15, 17, 21, 0.25)) drop-shadow(0px 5px 7px rgba(15, 17, 21, 0.1));
 }
 
 .bg-ui {

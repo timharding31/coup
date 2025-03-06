@@ -54,11 +54,11 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
     return (
       <div
-        className={cn('card-container nord-shadow', {
+        className={cn('card-container', {
           'rotate-180 grayscale-[80%] transform-origin-center': isRevealed
         })}
       >
-        <div className={`rounded-card overflow-hidden w-full h-full relative ${colorSchemes[character]}`}>
+        <div className={`rounded-card nord-shadow w-full h-full relative ${colorSchemes[character]}`}>
           {/* Card corners */}
           <div className='absolute top-2 left-2 px-[4cqi] flex flex-col items-start z-10'>
             <span className={`text-[8cqi] font-bold ${textColors[character]} font-robotica`}>{character.slice()}</span>
@@ -69,7 +69,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
             <span className={`text-[8cqi] font-bold ${textColors[character]} font-robotica`}>{character.slice()}</span>
           </div>
 
-          <div className='absolute bottom-0 left-0 w-full rounded-card'>
+          <div className='absolute bottom-0 left-0 w-full'>
             <img
               src={`/images/${character.toLowerCase()}.png`}
               alt={character}
@@ -99,8 +99,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 export const FaceDownCard: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
   return (
     <div className={cn('card-container', className)} {...props}>
-      <div className='w-full h-full relative'>
-        <svg className='absolute inset-0 rounded-card w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
+      <div className='w-full h-full relative rounded-card nord-shadow'>
+        <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
           <use href='#card-back' />
         </svg>
       </div>
