@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
-import { Card, CardType } from '~/types'
+import React, { useCallback } from 'react'
 import cn from 'classnames'
-import { motion, useAnimation } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Card, CardType } from '~/types'
 
 const colorSchemes: Record<CardType, string> = {
   [CardType.AMBASSADOR]: 'bg-gradient-to-br from-amber-200 to-amber-600',
@@ -28,7 +28,6 @@ interface PlayingCardProps extends Card<'client'> {
   onAnimationComplete?: () => void
 }
 
-// Spring animation configuration for consistent feel
 const springTransition = {
   type: 'spring',
   stiffness: 300,
@@ -47,28 +46,6 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   animationDelay,
   onAnimationComplete
 }) => {
-  // const controls = useAnimation()
-
-  // Start animation with delay if specified
-  // useEffect(() => {
-  //   if (isAnimated && animationDelay != null) {
-  //     // Start with hidden state
-  //     controls.set({ opacity: 0, scale: 0.7, rotate: 10 })
-
-  //     // Then animate in after delay
-  //     const timer = setTimeout(() => {
-  //       controls.start({
-  //         opacity: 1,
-  //         scale: 1,
-  //         rotate: 0,
-  //         transition: springTransition
-  //       })
-  //     }, animationDelay * 1000)
-
-  //     return () => clearTimeout(timer)
-  //   }
-  // }, [isAnimated, animationDelay, controls])
-
   // Optimize card rendering based on face state
   const RenderedCard = useCallback(() => {
     if (!character || isFaceDown) {
@@ -105,19 +82,18 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     )
   }, [character, isFaceDown, isRevealed])
 
-  if (isAnimated) {
-    return (
-      <motion.div
-        layout
-        layoutId={layoutId}
-        transition={{ ...springTransition, delay: animationDelay }}
-        onAnimationComplete={onAnimationComplete}
-      >
-        <RenderedCard />
-      </motion.div>
-    )
-  }
-  return <RenderedCard />
+  return isAnimated ? (
+    <motion.div
+      layout
+      layoutId={layoutId}
+      transition={{ ...springTransition, delay: animationDelay }}
+      onAnimationComplete={onAnimationComplete}
+    >
+      <RenderedCard />
+    </motion.div>
+  ) : (
+    <RenderedCard />
+  )
 }
 
 // Simplified FaceDownCard component that works better with animations

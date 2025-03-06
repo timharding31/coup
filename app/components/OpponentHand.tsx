@@ -64,28 +64,28 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
         {isPopoverOpen && <TooltipGameMessage message={message} />}
       </div>
 
-      <ul
-        ref={cardsListRef}
-        className='list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2'
-        style={{
-          gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
-          aspectRatio: `${influence.length * 10} / 13`
-        }}
-      >
-        <AnimatePresence>
+      <AnimatePresence>
+        <ul
+          ref={cardsListRef}
+          className='list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2'
+          style={{
+            gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+            aspectRatio: `${influence.length * 10} / 13`
+          }}
+        >
           {influence.map((card, i) => {
             return (
               <PlayingCard
                 key={card.id}
                 isFaceDown={!game || game.status === 'WAITING'}
-                isAnimated={game?.status === 'IN_PROGRESS'}
+                isAnimated
                 animationDelay={i * 0.08}
                 {...card}
               />
             )
           })}
-        </AnimatePresence>
-      </ul>
+        </ul>
+      </AnimatePresence>
     </div>
   )
 }
