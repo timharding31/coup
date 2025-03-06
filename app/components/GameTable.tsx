@@ -34,9 +34,10 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
               <OpponentHand
                 key={opponent.id}
                 {...opponent}
-                isActor={actor?.id === opponent.id}
+                isActor={actor.id === opponent.id}
                 isBlocker={blocker?.id === opponent.id}
                 isChallenger={challenger?.id === opponent.id}
+                isExchanging={game.currentTurn?.phase === 'AWAITING_EXCHANGE_RETURN' && actor.id === opponent.id}
                 className={cn('col-span-2', getOpponentClasses(index, opponentsCount))}
               />
             ))}

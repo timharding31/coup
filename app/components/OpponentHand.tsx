@@ -13,6 +13,7 @@ interface OpponentHandProps extends Player<'client'> {
   isActor?: boolean
   isBlocker?: boolean
   isChallenger?: boolean
+  isExchanging?: boolean
   className?: string
 }
 
@@ -21,6 +22,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   isActor = false,
   isBlocker = false,
   isChallenger = false,
+  isExchanging = false,
   influence,
   className,
   ...nameTagProps
@@ -30,6 +32,21 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   const [maxWidth, setMaxWidth] = useState<number>()
 
   const cardsListRef = useRef<HTMLUListElement>(null)
+
+  const [shuffledInfluence, setShuffledInfluence] = useState(influence)
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined
+    if (!isEqual(influence, shuffledInfluence)) {
+      setShuffledInfluence(influence)
+    }
+    if (isExchanging) {
+      interval = setInterval(() => setShuffledInfluence(prev => shuffle(prev)), 2_000)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [influence, isExchanging])
 
   // Optimize resize handling with ResizeObserver
   useEffect(() => {
@@ -73,7 +90,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
             aspectRatio: `${influence.length * 10} / 13`
           }}
         >
-          {influence.map((card, i) => {
+          {shuffledInfluence.map((card, i) => {
             return (
               <PlayingCard
                 key={card.id}
@@ -88,4 +105,17 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
       </AnimatePresence>
     </div>
   )
+}
+
+function isEqual<T extends { id: string }>(a: T[], b: T[], equalFn: (a: T, b: T) => boolean = (a, b) => a.id === b.id) {
+  return a.length === b.length && a.every((v, i) => equalFn(v, b[i]))
+}
+
+function shuffle<T extends { id: string }>(arr: T[]) {
+  const shuffled = arr.slice()
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
 }

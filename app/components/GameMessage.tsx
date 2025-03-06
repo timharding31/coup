@@ -68,7 +68,7 @@ const LoadingBackground: React.FC<{ type?: MessageType }> = ({ type = 'success' 
 const CardTag: React.FC<{ type: CardType }> = ({ type }) => {
   return (
     <motion.span
-      className='inline-flex items-center mx-1 px-2 rounded-md bg-nord-5 text-nord-1 tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle'
+      className='inline-flex items-center mx-1 rounded-md tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle'
       initial={{ x: 10, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{
@@ -87,7 +87,7 @@ const CardTag: React.FC<{ type: CardType }> = ({ type }) => {
 const TargetTag: React.FC<{ name: string }> = ({ name }) => {
   return (
     <motion.span
-      className='inline-flex items-center mx-1 px-2 rounded-md bg-nord-1 text-nord-5 tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle'
+      className='inline-flex items-center mx-1 rounded-md tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle'
       initial={{ x: 10, opacity: 0, skewX: 0 }}
       animate={{ x: 0, opacity: 1, skewX: -4 }}
       transition={{
@@ -164,16 +164,16 @@ export const GameMessage = ({ message, className = '' }: GameMessageProps) => {
           <div className='flex flex-wrap items-center justify-center gap-1 max-w-full'>
             {/* Message text with staggered character animation */}
             <motion.div className='inline-flex items-center flex-wrap font-bold text-[16px] leading-5'>
-              {textArray.map((char, index) => (
+              {textArray.map((char, i) => (
                 <motion.span
-                  key={index}
+                  key={i}
                   initial={{ y: -20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{
                     type: 'spring',
                     stiffness: 500,
                     damping: 15,
-                    delay: index * 0.02, // Stagger effect
+                    delay: i * 0.02, // Stagger effect
                     mass: 0.6
                   }}
                 >
