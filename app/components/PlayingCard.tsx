@@ -3,7 +3,7 @@ import cn from 'classnames'
 import { motion } from 'framer-motion'
 import { Card, CardType } from '~/types'
 
-const colorSchemes: Record<CardType, string> = {
+export const colorSchemes: Record<CardType, string> = {
   [CardType.AMBASSADOR]: 'bg-gradient-to-br from-amber-200 to-amber-600',
   [CardType.ASSASSIN]: 'bg-gradient-to-br from-emerald-900 to-black',
   [CardType.CAPTAIN]: 'bg-gradient-to-br from-slate-600 to-gray-800',
@@ -11,7 +11,7 @@ const colorSchemes: Record<CardType, string> = {
   [CardType.DUKE]: 'bg-gradient-to-br from-cyan-600 to-purple-800'
 }
 
-const textColors: Record<CardType, string> = {
+export const textColors: Record<CardType, string> = {
   [CardType.AMBASSADOR]: 'text-amber-900',
   [CardType.ASSASSIN]: 'text-emerald-400',
   [CardType.CAPTAIN]: 'text-slate-300',

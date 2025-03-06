@@ -1,15 +1,14 @@
-import { Game, Player, CardType, TurnPhase } from '~/types'
+import { Game, CardType, TurnPhase, ActionType } from '~/types'
 import { ActionVerbValue, getActionObject, getActionVerb } from '~/utils/action'
 import { getActor, getTarget, getBlocker, getChallenger } from '~/utils/game'
-import { action } from '../routes/_index'
 
-// Define message data types without JSX
 export type MessageType = 'info' | 'challenge' | 'block' | 'success' | 'failure'
 
 export interface MessageData {
   text: string
   type: MessageType
   isWaiting?: boolean
+  cardType?: CardType
   target?: string
   delayMs?: number
 }
@@ -77,12 +76,13 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [blocker.id]: {
-          text: `Block with ${opponentResponses.claimedCard}!`,
+          text: 'Block with',
           type: 'block',
-          isWaiting: false
+          isWaiting: false,
+          cardType: opponentResponses.claimedCard
         },
         [actor.id]: {
-          text: 'Responding to BLOCK',
+          text: 'Responding',
           type: 'block',
           isWaiting: true,
           delayMs: 750
@@ -98,15 +98,17 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: `Challenge ${action.requiredCharacter}!`,
+          text: 'Challenge',
           type: 'challenge',
-          isWaiting: false
+          isWaiting: false,
+          cardType: challengeResult.challengedCaracter
         },
         [actor.id]: {
-          text: `Proving ${challengeResult.challengedCaracter}`,
+          text: 'Proving',
           type: 'challenge',
           isWaiting: true,
-          delayMs: 750
+          delayMs: 750,
+          cardType: challengeResult.challengedCaracter
         }
       }
 
@@ -119,15 +121,17 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: `Challenge ${challengeResult.challengedCaracter}!`,
+          text: 'Challenge',
           type: 'challenge',
-          isWaiting: false
+          isWaiting: false,
+          cardType: challengeResult.challengedCaracter
         },
         [blocker.id]: {
-          text: `Proving ${challengeResult.challengedCaracter}`,
+          text: 'Proving',
           type: 'challenge',
           isWaiting: true,
-          delayMs: 500
+          delayMs: 750,
+          cardType: challengeResult.challengedCaracter
         }
       }
 
@@ -138,7 +142,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: 'Choosing challenge penalty',
+          text: 'Revealing card',
           type: 'failure',
           isWaiting: true
         }
@@ -153,7 +157,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [target.id]: {
-          text: 'Choosing card to reveal',
+          text: 'Revealing card',
           type: 'failure',
           isWaiting: true
         }
@@ -174,7 +178,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [actor.id]: {
-          text: `${getActionObject(action)} failed`,
+          text: 'Action failed',
           type: 'failure',
           isWaiting: false
         }

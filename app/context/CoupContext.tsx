@@ -95,15 +95,11 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
           updateMessages(responderMessages)
         }
 
-        const isNewBlockOrChallenge =
-          (opponentResponses?.block && !opponentResponsesRef.current?.block) ||
-          (opponentResponses?.challenge && !opponentResponsesRef.current?.challenge)
-        if (isNewBlockOrChallenge) {
-          clearPlayerMessages(
-            respondedPlayers.filter(
-              responder => responder !== opponentResponses.block && responder !== opponentResponses.challenge
-            )
-          )
+        const wasBlockRegistered = opponentResponses?.block && !opponentResponsesRef.current?.block
+        const wasChallengeRegistered = opponentResponses?.challenge && !opponentResponsesRef.current?.challenge
+
+        if (wasBlockRegistered || wasChallengeRegistered) {
+          clearPlayerMessages(respondedPlayers.filter(id => id !== blockerId && id !== challengerId))
         }
 
         // Process turn phase messages
@@ -114,18 +110,20 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
           }
         }
 
-        // Process challenge penalty messages
+        // There's no specific phase for replacing a card that was used as successful challenge defense, it happens automatically while the challenger selects their penalty
         if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
           const challengeDefender = players.find(
             player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
           )
           if (challengeDefender) {
             const challengeDefenseCard = challengeDefender.influence.find(card => card.isChallengeDefenseCard)
-            if (challengeDefenseCard) {
+            if (challengeDefenseCard?.type) {
               updateMessages({
                 [challengeDefender.id]: {
-                  text: `Replacing ${challengeDefenseCard?.type}`,
-                  type: 'info'
+                  text: 'Replacing',
+                  type: 'success',
+                  isWaiting: true,
+                  cardType: challengeDefenseCard.type
                 }
               })
             } else {
