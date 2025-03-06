@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import { Card, CardType } from '~/types'
 import cn from 'classnames'
-import { motion } from 'framer-motion'
+import { motion, useAnimation } from 'framer-motion'
 
 const colorSchemes: Record<CardType, string> = {
   [CardType.AMBASSADOR]: 'bg-gradient-to-br from-amber-200 to-amber-600',
@@ -20,120 +20,68 @@ const textColors: Record<CardType, string> = {
 }
 
 interface PlayingCardProps extends Card<'client'> {
+  layoutId?: string
   isFaceDown?: boolean
   isAnimated?: boolean
   animationDelay?: number
+  isExiting?: boolean
+  onAnimationComplete?: () => void
+}
+
+// Spring animation configuration for consistent feel
+const springTransition = {
+  type: 'spring',
+  stiffness: 300,
+  damping: 20,
+  mass: 0.8,
+  duration: 0.3
 }
 
 export const PlayingCard: React.FC<PlayingCardProps> = ({
   id,
+  layoutId = `card-${id}`,
   type: character,
   isFaceDown,
   isRevealed,
   isAnimated = false,
-  animationDelay = 0
+  animationDelay,
+  onAnimationComplete
 }) => {
-  const cardRef = useRef<HTMLDivElement>(null)
+  // const controls = useAnimation()
 
-  const [dx, setDx] = useState<number>()
-  const [dy, setDy] = useState<number>()
-  const animationCalcCompleteRef = useRef(false)
+  // Start animation with delay if specified
+  // useEffect(() => {
+  //   if (isAnimated && animationDelay != null) {
+  //     // Start with hidden state
+  //     controls.set({ opacity: 0, scale: 0.7, rotate: 10 })
 
-  useEffect(() => {
-    const card = cardRef.current
+  //     // Then animate in after delay
+  //     const timer = setTimeout(() => {
+  //       controls.start({
+  //         opacity: 1,
+  //         scale: 1,
+  //         rotate: 0,
+  //         transition: springTransition
+  //       })
+  //     }, animationDelay * 1000)
 
-    // Skip calculation if we already have values or missing coordinates/element
-    if (!card || !isAnimated || animationCalcCompleteRef.current) return
+  //     return () => clearTimeout(timer)
+  //   }
+  // }, [isAnimated, animationDelay, controls])
 
-    // Set a small delay to ensure the card is properly rendered before measuring
-    const courtDeck = document.getElementById('court-deck')
-    const deckRect = courtDeck?.getBoundingClientRect()
-    if (!deckRect) return
-
-    const x = deckRect.left + deckRect.width / 2
-    const y = deckRect.top + deckRect.height / 2
-
-    const timer = requestAnimationFrame(() => {
-      const cardRect = card.getBoundingClientRect()
-
-      // Calculate the translation distance
-      setDx(x - cardRect.left)
-      setDy(y - cardRect.top)
-
-      animationCalcCompleteRef.current = true
-    })
-
-    return () => {
-      cancelAnimationFrame(timer)
-      animationCalcCompleteRef.current = false
+  // Optimize card rendering based on face state
+  const RenderedCard = useCallback(() => {
+    if (!character || isFaceDown) {
+      return <FaceDownCard />
     }
-  }, [isAnimated])
 
-  // We don't need this effect anymore as the exit animation is handled directly in the motion.div
+    let className = 'card-container'
+    if (isRevealed) {
+      className += ' rotate-180 grayscale-[80%] transform-origin-center'
+    }
 
-  // Let's simplify the approach to fix animation issues
-  const CardWrapper = useCallback(
-    ({ delay = 0, children }: React.PropsWithChildren<{ delay?: number }>) => {
-      if (!isAnimated) return <>{children}</>
-      if (!dx || !dy) {
-        // Instead of showing nothing, render with opacity 0 until ready
-        return <div className='opacity-0'>{children}</div>
-      }
-
-      return (
-        <motion.div
-          initial={{
-            x: dx,
-            y: dy,
-            scale: 0.5,
-            rotate: 360,
-            opacity: 0.5
-          }}
-          animate={{
-            x: 0,
-            y: 0,
-            scale: 1,
-            rotate: 0,
-            opacity: 1
-          }}
-          exit={{
-            x: dx,
-            y: dy,
-            scale: 0.5,
-            rotate: 360,
-            opacity: 0,
-            transition: { delay: 0 }
-          }}
-          transition={{
-            type: 'spring',
-            stiffness: 100,
-            damping: 10,
-            delay: delay
-          }}
-        >
-          {children}
-        </motion.div>
-      )
-    },
-    [isAnimated, dx, dy]
-  )
-
-  if (!character || isFaceDown) {
     return (
-      <CardWrapper delay={animationDelay}>
-        <FaceDownCard ref={cardRef} />
-      </CardWrapper>
-    )
-  }
-
-  let className = 'card-container'
-  if (isRevealed) {
-    className += ' rotate-180 grayscale-[80%] transform-origin-center'
-  }
-
-  return (
-    <CardWrapper delay={animationDelay}>
-      <div ref={cardRef} className={className}>
+      <div className={className}>
         <div className={`rounded-card w-full h-full nord-shadow relative overflow-hidden ${colorSchemes[character]}`}>
           {/* Card corners */}
           <div className='absolute top-2 left-2 px-[4cqi] flex flex-col items-start z-10'>
@@ -154,20 +102,33 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           </div>
         </div>
       </div>
-    </CardWrapper>
-  )
-}
+    )
+  }, [character, isFaceDown, isRevealed])
 
-export const FaceDownCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, forwardedRef) => {
+  if (isAnimated) {
     return (
-      <div ref={forwardedRef} className={cn('card-container', className)} {...props}>
-        <div className='rounded-card w-full h-full nord-shadow relative overflow-hidden'>
-          <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
-            <use href='#card-back' />
-          </svg>
-        </div>
-      </div>
+      <motion.div
+        layout
+        layoutId={layoutId}
+        transition={{ ...springTransition, delay: animationDelay }}
+        onAnimationComplete={onAnimationComplete}
+      >
+        <RenderedCard />
+      </motion.div>
     )
   }
-)
+  return <RenderedCard />
+}
+
+// Simplified FaceDownCard component that works better with animations
+export const FaceDownCard: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
+  return (
+    <div className={cn('card-container', className)} {...props}>
+      <div className='rounded-card w-full h-full nord-shadow relative overflow-hidden'>
+        <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
+          <use href='#card-back' />
+        </svg>
+      </div>
+    </div>
+  )
+}

@@ -69,7 +69,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
           </div>
 
           <div className='flex justify-center gap-2'>
-            {cards.map(card => {
+            {cards.map((card, i) => {
               if (card.isRevealed) {
                 return null
               }
@@ -83,7 +83,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
                   style={{ width: `${100 / Math.min(4, cards.length)}%`, maxWidth: '180px' }}
                   onClick={() => toggleCard(card.id)}
                 >
-                  <PlayingCard {...card} />
+                  <PlayingCard isAnimated animationDelay={0.08 * i} {...card} />
                   {selectedCardIds.includes(card.id) && (
                     <div
                       className={`absolute inset-0 ${bgClassName} rounded-lg flex items-center justify-center bg-opacity-50`}

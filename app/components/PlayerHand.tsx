@@ -1,15 +1,16 @@
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { Game, GameStatus, Player, TurnPhase } from '~/types'
 import { PlayingCard } from './PlayingCard'
 import { useGame } from '~/context/CoupContext'
 import { PlayerNameTag } from './PlayerNameTag'
 import { useDrawerHeight } from './Drawer'
+import { AnimatePresence, LayoutGroup } from 'framer-motion'
 
 export interface PlayerHandProps extends Player<'client'> {
   game: Game<'client'>
 }
 
-export const PlayerHand: React.FC<PlayerHandProps> = ({ game, influence, ...nameTagProps }) => {
+export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, influence, ...nameTagProps }) => {
   const ref = useRef<HTMLDivElement>(null)
   const drawerHeight = useDrawerHeight()
 
@@ -38,11 +39,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ game, influence, ...name
         boxShadow: '0px 300px 0px 0px var(--nord-0)'
       }}
     >
-      <PlayerNameTag {...nameTagProps} className='text-lg my-2' bgColor='nord-0' />
+      <PlayerNameTag id={playerId} {...nameTagProps} className='text-lg my-2' bgColor='nord-0' />
       <div className='grid grid-cols-2 gap-4'>
-        {influence.slice(0, 2).map(card => (
-          <PlayingCard key={card.id} isFaceDown={game.status === 'WAITING'} {...card} />
-        ))}
+        <AnimatePresence>
+          {influence.slice(0, 2).map((card, i) => {
+            return (
+              <PlayingCard
+                key={card.id}
+                isFaceDown={game.status === 'WAITING'}
+                layoutId={`player-${playerId}-card-${card.id}`}
+                // isAnimated={game.status === 'IN_PROGRESS'}
+                // animationDelay={i * 0.08}
+                {...card}
+              />
+            )
+          })}
+        </AnimatePresence>
       </div>
     </div>
   )

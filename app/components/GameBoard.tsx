@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useRef } from 'react'
 import { useCoupContext } from '~/context/CoupContext'
 import { GameTable } from './GameTable'
 import { GameLobby } from './GameLobby'
@@ -7,7 +7,7 @@ import { GameControls } from './GameControls'
 import { Header } from './Header'
 import { PlayerHand } from './PlayerHand'
 import { CourtDeck } from './CourtDeck'
-import _ from 'lodash'
+import { LayoutGroup } from 'framer-motion'
 import { Card } from '~/types'
 
 interface GameBoardProps {
@@ -17,8 +17,6 @@ interface GameBoardProps {
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
   const { game, players, startGame, leaveGame, sendResponse, selectCard, exchangeCards, addBot, isLoading } =
     useCoupContext()
-
-  // const recordDealtCard = useRecordDealtCardAtom()
 
   // Keep track of previous game state to detect newly dealt cards
   const prevGameRef = useRef<{
@@ -58,8 +56,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
                       exchangeCards={exchangeCards}
                       isLoading={isLoading}
                     />
-                    <div id='court-deck' className='flex-none py-2 flex items-center justify-center'>
-                      <CourtDeck deckCount={game.deck.length} />
+                    <div className='flex-none py-2 flex items-center justify-center'>
+                      <CourtDeck deck={game.deck} />
                     </div>
                   </>
                 )
