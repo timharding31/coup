@@ -33,21 +33,6 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 
   const cardsListRef = useRef<HTMLUListElement>(null)
 
-  const [shuffledInfluence, setShuffledInfluence] = useState(influence)
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout | undefined
-    if (!isEqual(influence, shuffledInfluence)) {
-      setShuffledInfluence(influence)
-    }
-    if (isExchanging) {
-      interval = setInterval(() => setShuffledInfluence(prev => shuffle(prev)), 2_000)
-    }
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [influence, isExchanging])
-
   // Optimize resize handling with ResizeObserver
   useEffect(() => {
     if (!cardsListRef.current) return
@@ -90,7 +75,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
             aspectRatio: `${influence.length * 10} / 13`
           }}
         >
-          {shuffledInfluence.map((card, i) => {
+          {influence.map((card, i) => {
             return (
               <PlayingCard
                 key={card.id}
