@@ -89,7 +89,8 @@ const config: Config = {
         'nord-13-dark': '#dca332',
         'nord-13-light': '#faf1e0',
         'nord-14-dark': '#709353',
-        'nord-14-light': '#d8e4ce'
+        'nord-14-light': '#d8e4ce',
+        'nord-11-darkest': '#592429'
       },
       fontFamily: {
         odachi: ['Odachi', 'sans-serif'],
@@ -145,7 +146,8 @@ const config: Config = {
           '--nord-13-dark': '#dca332',
           '--nord-13-light': '#faf1e0',
           '--nord-14-dark': '#709353',
-          '--nord-14-light': '#d8e4ce'
+          '--nord-14-light': '#d8e4ce',
+          '--nord-11-darkest': '#592429'
         }
       })
     }

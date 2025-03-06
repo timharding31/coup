@@ -10,7 +10,8 @@ export interface MessageData {
   text: string
   type: MessageType
   isWaiting?: boolean
-  target?: string // Target for actions that need highlighting
+  target?: string
+  delayMs?: number
 }
 
 export type MessageMap = Record<string, MessageData>
@@ -58,7 +59,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           if (opponent.id !== actor.id) {
             return {
               [opponent.id]: {
-                text: '',
+                text: 'Responding',
                 type: 'info',
                 isWaiting: true
               }
@@ -76,14 +77,15 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [blocker.id]: {
-          text: `Block with ${opponentResponses.claimedCard}`,
+          text: `Block with ${opponentResponses.claimedCard}!`,
           type: 'block',
           isWaiting: false
         },
         [actor.id]: {
-          text: 'Responding to block',
-          type: 'info',
-          isWaiting: true
+          text: 'Responding to BLOCK',
+          type: 'block',
+          isWaiting: true,
+          delayMs: 750
         }
       }
 
@@ -96,14 +98,15 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: `Challenge ${action.requiredCharacter}`,
+          text: `Challenge ${action.requiredCharacter}!`,
           type: 'challenge',
           isWaiting: false
         },
         [actor.id]: {
           text: `Proving ${challengeResult.challengedCaracter}`,
-          type: 'info',
-          isWaiting: true
+          type: 'challenge',
+          isWaiting: true,
+          delayMs: 750
         }
       }
 
@@ -116,14 +119,15 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: `Challenge ${challengeResult.challengedCaracter}`,
+          text: `Challenge ${challengeResult.challengedCaracter}!`,
           type: 'challenge',
           isWaiting: false
         },
         [blocker.id]: {
           text: `Proving ${challengeResult.challengedCaracter}`,
-          type: 'info',
-          isWaiting: true
+          type: 'challenge',
+          isWaiting: true,
+          delayMs: 500
         }
       }
 
@@ -134,7 +138,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: 'Selecting challenge penalty',
+          text: 'Choosing challenge penalty',
           type: 'failure',
           isWaiting: true
         }
@@ -159,7 +163,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       return {
         [actor.id]: {
           text: 'Exchanging cards',
-          type: 'info',
+          type: 'success',
           isWaiting: true
         }
       }

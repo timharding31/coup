@@ -8,3 +8,4 @@ export type NordColor =
   | 'nord-13-light'
   | 'nord-14-dark'
   | 'nord-14-light'
+  | 'nord-11-darkest'

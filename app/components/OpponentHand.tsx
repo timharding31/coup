@@ -6,8 +6,8 @@ import { Player } from '~/types'
 import { PlayerNameTag } from './PlayerNameTag'
 import { TooltipGameMessage } from './GameMessage'
 import { MessageData } from '~/utils/messages'
-import _, { set } from 'lodash'
-import { useDeckCoordinatesAtom } from '~/hooks/useDeckCoordinates'
+import { AnimatePresence } from 'framer-motion'
+import _ from 'lodash'
 
 interface OpponentHandProps extends Player<'client'> {
   isActor?: boolean
@@ -17,6 +17,7 @@ interface OpponentHandProps extends Player<'client'> {
 }
 
 export const OpponentHand: React.FC<OpponentHandProps> = ({
+  id: playerId,
   isActor = false,
   isBlocker = false,
   isChallenger = false,
@@ -25,28 +26,24 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   ...nameTagProps
 }) => {
   const game = useGame()
-  const message: MessageData | null = usePlayerMessage(nameTagProps.id)
+  const message: MessageData | null = usePlayerMessage(playerId)
   const [maxWidth, setMaxWidth] = useState<number>()
-
-  const [deckCoordinates] = useDeckCoordinatesAtom()
 
   const cardsListRef = useRef<HTMLUListElement>(null)
 
+  // Optimize resize handling with ResizeObserver
   useEffect(() => {
     if (!cardsListRef.current) return
 
-    const debouncedOnResize = _.debounce(() => {
-      const el = cardsListRef.current
-      if (el) setMaxWidth(el.clientWidth)
-    }, 500)
+    const resizeObserver = new ResizeObserver(
+      _.debounce(() => {
+        const el = cardsListRef.current
+        if (el) setMaxWidth(el.clientWidth)
+      }, 100)
+    )
 
-    debouncedOnResize()
-    window.addEventListener('resize', debouncedOnResize)
-
-    return () => {
-      debouncedOnResize.cancel()
-      window.removeEventListener('resize', debouncedOnResize)
-    }
+    resizeObserver.observe(cardsListRef.current)
+    return () => resizeObserver.disconnect()
   }, [])
 
   const isPlayerDead = influence.every(card => card.isRevealed)
@@ -62,7 +59,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           className='mx-auto w-full'
           style={(maxWidth ? { maxWidth: `${maxWidth.toFixed(2)}px` } : {}) as React.CSSProperties}
         >
-          <PlayerNameTag {...nameTagProps} size='sm' bgColor='nord-1' />
+          <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' />
         </div>
         {isPopoverOpen && <TooltipGameMessage message={message} />}
       </div>
@@ -75,9 +72,19 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           aspectRatio: `${influence.length * 10} / 13`
         }}
       >
-        {influence.map(card => (
-          <PlayingCard key={card.id} isFaceDown={!game || game.status === 'WAITING'} {...card} />
-        ))}
+        <AnimatePresence>
+          {influence.map((card, i) => {
+            return (
+              <PlayingCard
+                key={card.id}
+                isFaceDown={!game || game.status === 'WAITING'}
+                isAnimated={game?.status === 'IN_PROGRESS'}
+                animationDelay={i * 0.08}
+                {...card}
+              />
+            )
+          })}
+        </AnimatePresence>
       </ul>
     </div>
   )
