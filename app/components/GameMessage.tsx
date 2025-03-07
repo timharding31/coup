@@ -31,7 +31,7 @@ const BG_STRIPE_COLOR: Record<Exclude<MessageType, ActionType>, NordColor> = {
   success: 'nord-14-dark'
 }
 
-const LoadingBackground: React.FC<{ type?: MessageType }> = ({ type = 'success' }) => {
+const LoadingBackground: React.FC<{ type?: MessageType }> = ({ type }) => {
   switch (type) {
     case 'info':
     case 'challenge':
@@ -97,7 +97,7 @@ const TargetTag: React.FC<{ name: string }> = ({ name }) => {
         delay: 0.2
       }}
     >
-      <Sprite id='avatar' size='sm' color='nord-4' />
+      <Sprite id='avatar' size='sm' color='nord-0' />
       <span className='translate-y-[0.125em]'>{name.replace('🤖 ', '🤖')}</span>
     </motion.span>
   )
@@ -108,7 +108,7 @@ interface GameMessageProps {
   className?: string
 }
 
-export const GameMessage = ({ message, className = '' }: GameMessageProps) => {
+export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '' }) => {
   const { text, type, isWaiting, cardType = null, target = null, delayMs = 0 } = message
   const [isVisible, setIsVisible] = useState(false)
 

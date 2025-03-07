@@ -15,7 +15,7 @@ export const GameTableDialog: React.FC<GameTableDialogProps> = ({ heading, actio
     <div className='absolute inset-0' role='dialog' aria-labelledby='overlay-heading' tabIndex={-1}>
       <div
         className={cn(
-          'flex flex-col items-stretch w-full h-full px-6 bg-ui overflow-y-scroll no-scrollbar relative',
+          'flex flex-col items-stretch w-full h-full px-6 overflow-y-scroll no-scrollbar relative',
           className
         )}
       >
@@ -24,7 +24,7 @@ export const GameTableDialog: React.FC<GameTableDialogProps> = ({ heading, actio
         </h2>
         {children}
         {actions && (
-          <div className='sticky bottom-0 pt-2 pb-6 bg-ui'>
+          <div className='sticky bottom-0 pt-2 pb-6'>
             {actions.secondary ? (
               <div className='w-full grid grid-cols-[1fr_2fr] gap-2'>
                 <Button size='lg' {...actions.secondary} />

@@ -7,6 +7,7 @@ import { WaitingEllipsis } from './WaitingEllipsis'
 import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
 import { useIsMobile } from '~/hooks/useIsMobile'
+import cn from 'classnames'
 
 interface GameLobbyProps {
   game: Game<'client'>
@@ -111,7 +112,18 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
       </div>
 
       <div className='w-full max-w-md flex-auto flex flex-col'>
-        <h3 className='text-lg mb-2'>Players ({players.length})</h3>
+        <div
+          className={cn('flex items-center justify-between mb-2', {
+            'mb-4': isHost
+          })}
+        >
+          <h3 className='text-lg'>Players ({players.length})</h3>
+          {isHost && (
+            <Button size='sm' variant='secondary' onClick={addBot} disabled={players.length > 5} sprite='plus'>
+              Bot Player
+            </Button>
+          )}
+        </div>
         <ul className='list-reset pb-6 flex flex-col items-stretch flex-auto gap-2'>
           {players.map((player, i) => (
             <li key={player.id} className='flex w-full rounded-full px-2 pb-[2px] pt-[3px] bg-nord-15 text-base'>
@@ -126,18 +138,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               />
             </li>
           ))}
-          {isHost && (
-            <li className='self-end mt-auto'>
-              <Button size='sm' variant='tertiary' onClick={addBot} disabled={players.length > 5} sprite='plus'>
-                Bot Player
-              </Button>
-            </li>
-          )}
         </ul>
       </div>
 
       {!isHost && (
-        <div className='text-lg leading-16 sticky bottom-0 text-center bg-ui pb-6 pt-4'>
+        <div className='text-lg leading-16 sticky bottom-0 text-center pb-6 pt-4'>
           Waiting for host
           <WaitingEllipsis size='lg' />
         </div>
