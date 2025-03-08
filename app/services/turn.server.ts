@@ -1048,7 +1048,7 @@ export class TurnService implements ITurnService {
 
       // If game is still in progress, check if the next player is a bot
       if (game.status === GameStatus.IN_PROGRESS) {
-        this.handleBotTurn(game)
+        await this.handleBotTurn(game)
       }
     }
   }

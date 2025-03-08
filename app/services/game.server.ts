@@ -322,7 +322,7 @@ export class GameService implements IGameService {
     } finally {
       if (game?.status === GameStatus.IN_PROGRESS && CoupRobot.isBotPlayer(game.players[game.currentPlayerIndex])) {
         // If the first player is a bot, start their turn for them
-        this.turnService.handleBotTurn(game)
+        await this.turnService.handleBotTurn(game)
       }
     }
   }
