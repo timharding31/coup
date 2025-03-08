@@ -1,20 +1,18 @@
 import React, { useMemo, useRef } from 'react'
 import { Game } from '~/types'
-import { useNavigate } from '@remix-run/react'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
 
 interface GameOverProps {
+  playerId: string
   game: Game<'client'>
-  leaveGame: () => Promise<void>
 }
 
 export const GameOver: React.FC<GameOverProps> = ({
-  game: { winnerId, status, players, eliminationOrder },
-  leaveGame
+  playerId,
+  game: { id: gameId, winnerId, status, players, eliminationOrder }
 }) => {
-  const navigate = useNavigate()
   const allPlayers = useMemo(() => new Map(players.map(player => [player.id, player])), [players])
   const losersRef = useRef(eliminationOrder?.reverse().filter(id => id !== winnerId) || [])
 
@@ -31,13 +29,9 @@ export const GameOver: React.FC<GameOverProps> = ({
       heading='Game Over'
       className='gap-1'
       actions={{
-        primary: {
-          variant: 'secondary',
-          onClick: () => {
-            leaveGame().then(() => navigate('/'))
-          },
-          children: 'Exit'
-        }
+        url: `/api/games/${gameId}/leave?playerId=${playerId}`,
+        variant: 'secondary',
+        children: 'Exit'
       }}
     >
       {winner ? (

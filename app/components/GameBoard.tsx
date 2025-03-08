@@ -15,8 +15,7 @@ interface GameBoardProps {
 }
 
 export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
-  const { game, players, startGame, leaveGame, sendResponse, selectCard, exchangeCards, addBot, isLoading } =
-    useCoupContext()
+  const { game, players, sendResponse, selectCard, exchangeCards, addBot, isLoading } = useCoupContext()
 
   // Keep track of previous game state to detect newly dealt cards
   const prevGameRef = useRef<{
@@ -35,15 +34,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
           {(() => {
             switch (game.status) {
               case 'WAITING':
-                return (
-                  <GameLobby
-                    game={game}
-                    playerId={playerId}
-                    startGame={startGame}
-                    leaveGame={leaveGame}
-                    addBot={addBot}
-                  />
-                )
+                return <GameLobby playerId={playerId} game={game} addBot={addBot} />
 
               case 'IN_PROGRESS':
                 return (
@@ -63,7 +54,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
                 )
 
               case 'COMPLETED':
-                return <GameOver game={game} leaveGame={leaveGame} />
+                return <GameOver playerId={playerId} game={game} />
             }
           })()}
         </GameTable>

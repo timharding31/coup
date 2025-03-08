@@ -134,17 +134,6 @@ h4 {
     0px -1px 0 var(--text-shadow-color);
 }
 
-/* .tooltip-content::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -4px;
-  transform: translateX(-50%);
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 4px solid var(--accent-color);
-} */
-
 .court-deck-card {
   @apply playing-card absolute brightness-100;
 

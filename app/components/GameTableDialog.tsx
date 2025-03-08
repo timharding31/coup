@@ -1,12 +1,15 @@
 import React, { useEffect, useRef } from 'react'
 import cn from 'classnames'
 import { Button, ButtonProps } from './Button'
+import { Form } from '@remix-run/react'
 
-interface DialogButtonProps extends Pick<ButtonProps, 'variant' | 'onClick' | 'disabled' | 'children' | 'sprite'> {}
+interface DialogButtonProps extends Pick<ButtonProps, 'variant' | 'disabled' | 'children' | 'sprite'> {
+  url: string
+}
 
 interface GameTableDialogProps extends React.PropsWithChildren {
   heading: string
-  actions: { primary: DialogButtonProps; secondary?: DialogButtonProps } | null
+  actions: DialogButtonProps | null
   className?: string
 }
 
@@ -25,14 +28,9 @@ export const GameTableDialog: React.FC<GameTableDialogProps> = ({ heading, actio
         {children}
         {actions && (
           <div className='sticky bottom-0 pt-2 pb-6'>
-            {actions.secondary ? (
-              <div className='w-full grid grid-cols-[1fr_2fr] gap-2'>
-                <Button size='lg' {...actions.secondary} />
-                <Button size='lg' {...actions.primary} />
-              </div>
-            ) : (
-              <Button size='lg' className='w-full' {...actions.primary} />
-            )}
+            <Form action={actions.url} method='POST'>
+              <Button size='lg' className='w-full' {...actions} type='submit' />
+            </Form>
           </div>
         )}
       </div>

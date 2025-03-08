@@ -1,6 +1,11 @@
-import type { ActionFunction } from '@remix-run/node'
+import { LoaderFunction, redirect, type ActionFunction } from '@remix-run/node'
 import { gameService } from '~/services/index.server'
 import { prepareGameForClient } from '~/utils/game'
+
+export const loader: LoaderFunction = async ({ params }) => {
+  const { gameId } = params
+  return redirect(`/games/${gameId}`)
+}
 
 export const action: ActionFunction = async ({ request, params }) => {
   if (request.method !== 'POST') {
@@ -9,7 +14,7 @@ export const action: ActionFunction = async ({ request, params }) => {
 
   try {
     const { gameId } = params
-    const { playerId: hostId } = await request.json()
+    const hostId = new URL(request.url).searchParams.get('hostId')
 
     if (!gameId || !hostId) {
       return { error: 'Missing required fields' }

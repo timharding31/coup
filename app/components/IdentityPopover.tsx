@@ -12,7 +12,6 @@ interface IdentityPopoverProps extends Player<'server' | 'client'> {
 
 export const IdentityPopover: React.FC<IdentityPopoverProps> = ({ username, buttonProps }) => {
   const { variant = 'primary', size = 'sm', color = 'nord-6' } = buttonProps || {}
-  const isDrawerOpen = !!useDrawerHeight()
   return (
     <Popover className='relative w-[46px] h-9'>
       <PopoverButton
@@ -21,9 +20,7 @@ export const IdentityPopover: React.FC<IdentityPopoverProps> = ({ username, butt
         variant={variant}
         size={size}
         color={color}
-        className={cn('absolute inset-0', {
-          'z-50': !isDrawerOpen
-        })}
+        className={cn('absolute inset-0 z-10')}
       />
 
       <Transition
@@ -34,7 +31,7 @@ export const IdentityPopover: React.FC<IdentityPopoverProps> = ({ username, butt
         leaveFrom='scale-100 opacity-100'
         leaveTo='scale-95 opacity-0'
       >
-        <PopoverPanel className='absolute z-40 rounded-b-md min-w-48 top-[-4px] right-[-4px] pt-12 bg-nord-0 shadow-lg ring-1 ring-nord--1 ring-opacity-5 focus:outline-none origin-top-right'>
+        <PopoverPanel className='absolute rounded-b-md min-w-48 top-[-4px] right-[-4px] pt-12 bg-nord-0 shadow-lg ring-1 ring-nord--1 ring-opacity-5 focus:outline-none origin-top-right'>
           <div className=''>
             <div className='mb-2 pl-6 pr-1'>
               <span className='text-xs text-nord-4'>Username</span>

@@ -30,8 +30,6 @@ export interface CoupContextType {
     all: Array<Player<'client'>>
   }
   playerMessages: Map<string, MessageData>
-  startGame: () => Promise<void>
-  leaveGame: () => Promise<void>
   performTargetedAction: (actionType: TargetedActionType, targetPlayerId: string) => Promise<void>
   performUntargetedAction: (actionType: UntargetedActionType) => Promise<void>
   selectCard: (cardId: string) => Promise<void>
@@ -225,38 +223,6 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
     [gameId, playerId]
   )
 
-  const startGame = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const res = await fetch(`/api/games/${gameId}/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId })
-      })
-      if (!res.ok) throw new Error('Failed to start game')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred')
-    } finally {
-      return setIsLoading(false)
-    }
-  }, [gameId, playerId])
-
-  const leaveGame = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const res = await fetch(`/api/games/${gameId}/leave`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId })
-      })
-      if (!res.ok) throw new Error('Failed to leave game')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error occurred')
-    } finally {
-      return setIsLoading(false)
-    }
-  }, [gameId, playerId])
-
   const exchangeCards = useCallback(
     async (cardIds: string[]) => {
       setIsLoading(true)
@@ -338,8 +304,6 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
       value={{
         game,
         error,
-        startGame,
-        leaveGame,
         performTargetedAction,
         performUntargetedAction,
         sendResponse,

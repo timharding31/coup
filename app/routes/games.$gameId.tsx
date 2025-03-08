@@ -33,3 +33,7 @@ export default function GameRoute() {
     </CoupContextProvider>
   )
 }
+
+export function ErrorBoundary() {
+  return null
+}

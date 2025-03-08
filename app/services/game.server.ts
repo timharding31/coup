@@ -266,11 +266,9 @@ export class GameService implements IGameService {
       const updatedDeck = this.deckService.shuffleDeck([...game.deck, ...playerCards])
       const updatedPlayers = game.players.filter(p => p.id !== playerId)
 
-      const humanPlayerCount = game.players.reduce((ct, p) => ct + (CoupRobot.isBotPlayer(p) ? 0 : 1), 0)
-
       return {
         ...game,
-        status: playerId === game.hostId || humanPlayerCount < 1 ? 'COMPLETED' : game.status,
+        status: playerId === game.hostId ? 'COMPLETED' : game.status,
         players: updatedPlayers,
         deck: updatedDeck,
         updatedAt: Date.now()
@@ -283,17 +281,15 @@ export class GameService implements IGameService {
 
     const updatedGame = result.snapshot.val() as Game | null
 
-    if (updatedGame?.status === 'COMPLETED') {
-      await this.cleanupGame(gameId)
-    }
-
     const humanPlayerCount = (updatedGame?.players || []).reduce((ct, p) => ct + (CoupRobot.isBotPlayer(p) ? 0 : 1), 0)
 
-    if (updatedGame && humanPlayerCount < 1) {
+    if (humanPlayerCount < 1) {
+      await this.playerService.updatePlayer(playerId, { currentGameId: null })
+      await this.pinService.removeGamePin(gameId)
       await this.gamesRef.child(gameId).remove()
+    } else if (updatedGame?.status === 'COMPLETED') {
+      await this.cleanupGame(gameId)
     }
-
-    await this.playerService.updatePlayer(playerId, { currentGameId: null })
 
     return { success: true }
   }
@@ -355,13 +351,13 @@ export class GameService implements IGameService {
   private async cleanupGame(gameId: string, winnerId?: string): Promise<void> {
     const gameRef = this.gamesRef.child(gameId)
     const snapshot = await gameRef.get()
-    const game = snapshot.val() as Game
+    const game = snapshot.val() as Game | null
 
     if (!game) return
 
     // Clear player game references, remove PIN and mark game as completed
     await Promise.all([
-      ...game.players.map(player => this.playerService.updatePlayer(player.id, { currentGameId: null })),
+      ...game.players?.map(player => this.playerService.updatePlayer(player.id, { currentGameId: null })),
       this.pinService.removeGamePin(gameId),
       gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() })
     ])

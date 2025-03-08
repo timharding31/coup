@@ -1,27 +1,22 @@
 import React, { useState } from 'react'
 import { Game } from '~/types'
 import { Button } from './Button'
-import { useCoupContext } from '~/context/CoupContext'
-import { Link, useNavigate } from '@remix-run/react'
 import { WaitingEllipsis } from './WaitingEllipsis'
 import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
 import { useIsMobile } from '~/hooks/useIsMobile'
 import cn from 'classnames'
+import { Form } from '@remix-run/react'
 
 interface GameLobbyProps {
   game: Game<'client'>
   playerId: string
-  startGame: () => Promise<void>
-  leaveGame: () => Promise<void>
   addBot?: () => Promise<void>
 }
 
 export const GameLobby: React.FC<GameLobbyProps> = ({
-  game: { hostId, status, pin, players },
   playerId,
-  startGame,
-  leaveGame,
+  game: { id: gameId, hostId, status, pin, players },
   addBot
 }) => {
   const isHost = playerId === hostId
@@ -30,7 +25,6 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   const [shareButtonText, setShareButtonText] = useState<string | null>(null)
   const [wasPinCopied, setWasPinCopied] = useState(false)
   const isMobile = useIsMobile()
-  const navigate = useNavigate()
 
   if (status !== 'WAITING') {
     return null
@@ -66,12 +60,10 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
       actions={
         isHost
           ? {
-              primary: {
-                variant: 'success',
-                onClick: startGame,
-                disabled: !canStart,
-                children: 'Start Game'
-              }
+              url: `/api/games/${gameId}/start?hostId=${playerId}`,
+              variant: 'success',
+              disabled: !canStart,
+              children: 'Start Game'
             }
           : null
       }
@@ -96,16 +88,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         )}
       </div>
       <div className='grid grid-cols-[auto_1fr_auto] items-center gap-2 mt-1 mb-6'>
-        <Button
-          size='base'
-          sprite='arrow-left'
-          variant='danger'
-          onClick={() => {
-            leaveGame().then(() => navigate('/'))
-          }}
-        >
-          Leave
-        </Button>
+        <Form action={`/api/games/${gameId}/leave?playerId=${playerId}`} method='POST'>
+          <Button size='base' sprite='arrow-left' variant='danger' type='submit'>
+            Leave
+          </Button>
+        </Form>
         <Button size='base' variant='primary' onClick={handleShare} sprite='link'>
           {shareButtonText || 'Invite Players'}
         </Button>
@@ -126,7 +113,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         </div>
         <ul className='list-reset pb-6 flex flex-col items-stretch flex-auto gap-2'>
           {players.map((player, i) => (
-            <li key={player.id} className='flex w-full rounded-full px-2 pb-[2px] pt-[3px] bg-nord-15 text-base'>
+            <li key={player.id} className='flex w-full rounded-full pl-2 pr-4 pb-[2px] pt-[3px] bg-nord-15 text-base'>
               <span className='mr-2 pl-1 text-nord-1'>&bull;</span>
               <PlayerNameTag
                 {...player}

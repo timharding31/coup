@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Drawer as DrawerPrimitive } from 'vaul'
 import { atom, useAtomValue, useSetAtom } from 'jotai'
-import { useMergedRefs } from '~/hooks/useMergedRefs'
+import cn from 'classnames'
 
 const drawerHeightAtom = atom<number | null>(null)
 
@@ -33,24 +33,22 @@ const DrawerContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, forwardedRef) => {
   const setDrawerHeight = useSetAtom(drawerHeightAtom)
-  const ref = useMergedRefs(forwardedRef, node => {
-    if (node) {
-      setDrawerHeight(node.clientHeight)
-    } else {
-      setDrawerHeight(null)
-    }
-  })
   return (
     <DrawerPortal>
       <DrawerOverlay />
       <DrawerPrimitive.Content
-        ref={ref}
-        className={`
-        fixed left-max right-max bottom-0 z-50 flex h-auto flex-col 
-        rounded-t-[24px] bg-nord-1 nord-shadow
-        drawer duration-500
-        pb-4
-        ${className}`}
+        ref={forwardedRef}
+        onOpenAutoFocus={e => {
+          if (e.target && e.target instanceof HTMLElement) {
+            const height = e.target.clientHeight
+            setDrawerHeight(height)
+          }
+        }}
+        onCloseAutoFocus={e => setDrawerHeight(null)}
+        className={cn(
+          'fixed left-max right-max bottom-0 z-50 flex h-auto flex-col  rounded-t-[24px] bg-nord-1 nord-shadow drawer duration-500 pb-4',
+          className
+        )}
         {...props}
       >
         {children}

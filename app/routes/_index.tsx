@@ -59,7 +59,7 @@ export const action: ActionFunction = async ({ request }) => {
         return { error: 'No game to delete' }
       }
       await gameService.leaveGame(playerId, currentGameId)
-      return { gameId: null }
+      return redirect('/')
   }
 
   if (gameId) {

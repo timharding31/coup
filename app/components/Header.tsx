@@ -1,25 +1,25 @@
 import React from 'react'
-import { Link, LinkProps } from '@remix-run/react'
-import { Button } from './Button'
+import cn from 'classnames'
+import { Link } from '@remix-run/react'
 import { usePlayers } from '~/context/CoupContext'
 import { IdentityPopover } from './IdentityPopover'
 
-interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
-  showIdentityPopoverTrigger?: boolean
-}
+interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
 
-export const Header: React.FC<HeaderProps> = ({ showIdentityPopoverTrigger = true, className = '', ...rest }) => {
+export const Header: React.FC<HeaderProps> = ({ className, ...rest }) => {
   const { myself = null } = usePlayers() || {}
   return (
     <header
-      className={`relative flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3 nord-shadow ${className}`}
+      className={cn(
+        'relative z-50 flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3 nord-shadow',
+        className
+      )}
       {...rest}
     >
-      <Link to='/' className='flex items-end'>
-        {/* <Button variant='primary' size='sm' sprite='arrow-left' /> */}
+      <Link to='/'>
         <h1 className='text-3xl'>polar coup</h1>
       </Link>
-      {showIdentityPopoverTrigger && myself && <IdentityPopover {...myself} />}
+      {myself && <IdentityPopover {...myself} />}
     </header>
   )
 }
