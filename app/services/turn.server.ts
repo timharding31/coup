@@ -616,6 +616,8 @@ export class TurnService implements ITurnService {
           if (haveAllPlayersResponded(game, updatedTurn)) {
             updatedTurn.phase = 'ACTION_EXECUTION'
             updatedTurn.timeoutAt = 0 // Clear timeoutAt when changing phase to action execution
+          } else {
+            return game
           }
           break
 
@@ -726,8 +728,7 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
           // Process bot responses after transitioning to the waiting phase
           if (CoupRobot.isBotGame(game)) {
-            // Don't await because this should happen asynchronously
-            this.processBotResponses(game)
+            await this.processBotResponses(game)
           }
         } else {
           await this.transitionState(game.id, currentPhase, 'ACTION_EXECUTION')
