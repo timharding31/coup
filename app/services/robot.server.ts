@@ -1,26 +1,14 @@
-import {
-  Action,
-  ActionType,
-  Card,
-  CardType,
-  Game,
-  Player,
-  TargetedActionType,
-  TurnPhase,
-  UntargetedActionType
-} from '~/types'
+import { Action, ActionType, Card, CardType, Game, Player, TargetedActionType, UntargetedActionType } from '~/types'
+
+type RobotResponse<T> = Promise<T & { memory: Record<string, any> }>
 
 interface ICoupRobot {
-  decideAction(): Promise<{ action: Action; memory: Record<string, any> }>
-  decideResponse(
-    phase: TurnPhase,
-    action: Action
-  ): Promise<{
-    response: 'accept' | 'challenge' | 'block'
-    blockCard?: CardType
-  }>
-  decideCardSelection(phase: TurnPhase): Promise<{ cardId: string; memory: Record<string, any> }>
-  decideExchangeCards(): Promise<{ cards: string[]; memory: Record<string, any> }>
+  decideAction(): RobotResponse<{ action: Action }>
+  decideResponse(): RobotResponse<
+    { response: 'accept' | 'challenge'; blockCard?: never } | { response: 'block'; blockCard: CardType }
+  >
+  decideCardSelection(): RobotResponse<{ cardId: string }>
+  decideExchangeCards(): RobotResponse<{ cardIds: string[] }>
 }
 
 // Type to track observed player actions and inferred cards
@@ -664,10 +652,14 @@ export class CoupRobot implements ICoupRobot {
   /**
    * Decide how to respond to another player's action
    */
-  async decideResponse(
-    phase: TurnPhase,
-    action: Action
-  ): Promise<{ response: 'accept' | 'challenge' | 'block'; blockCard?: CardType; memory: Record<string, any> }> {
+  async decideResponse(): RobotResponse<
+    { response: 'accept' | 'challenge'; blockCard?: never } | { response: 'block'; blockCard: CardType }
+  > {
+    const { phase, action } = this.game.currentTurn || {}
+    if (!phase || !action) {
+      throw new Error('Invalid game state')
+    }
+
     // Update our knowledge of the game state by scanning for newly revealed cards
     this.scanGameForRevealedCards()
 
@@ -753,13 +745,28 @@ export class CoupRobot implements ICoupRobot {
       [this.botMemoryKey]: this.saveBotMemory()
     }
 
-    return { response, blockCard, memory }
+    switch (response) {
+      case 'accept':
+        return { response: 'accept', memory }
+      case 'challenge':
+        return { response: 'challenge', memory }
+      case 'block':
+        if (!blockCard) {
+          throw new Error('Cannot block without claiming a card')
+        }
+        return { response: 'block', blockCard, memory }
+    }
   }
 
   /**
    * Choose which card to select when the bot needs to lose influence or reveal a card
    */
-  async decideCardSelection(phase: TurnPhase): Promise<{ cardId: string; memory: Record<string, any> }> {
+  async decideCardSelection(): Promise<{ cardId: string; memory: Record<string, any> }> {
+    const phase = this.game.currentTurn?.phase
+    if (!phase) {
+      throw new Error('No current turn phase')
+    }
+
     const unrevealedCards = this.player.influence.filter(card => !card.isRevealed)
 
     if (unrevealedCards.length === 0) {
@@ -894,7 +901,7 @@ export class CoupRobot implements ICoupRobot {
   /**
    * Choose which cards to keep after an exchange
    */
-  async decideExchangeCards(): Promise<{ cards: string[]; memory: Record<string, any> }> {
+  async decideExchangeCards(): Promise<{ cardIds: string[]; memory: Record<string, any> }> {
     const eligibleCards = this.player.influence.filter(card => !card.isRevealed)
     const gameState = this.analyzeGameState()
 
@@ -966,7 +973,7 @@ export class CoupRobot implements ICoupRobot {
       [this.botMemoryKey]: this.saveBotMemory()
     }
 
-    return { cards: selectedCards, memory }
+    return { cardIds: selectedCards, memory }
   }
 
   /**

@@ -11,7 +11,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
   const gameId = params.gameId!
   const { game } = await gameService.getGame(gameId)
 
-  if (!game) {
+  if (!game || !game.players?.find(p => p.id === playerId)) {
     throw redirect('/')
   }
 

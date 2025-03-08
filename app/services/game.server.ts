@@ -317,12 +317,14 @@ export class GameService implements IGameService {
 
     const game = result.snapshot.val() as Game | null
 
-    // If the first player is a bot, start their turn for them
-    if (game?.status === GameStatus.IN_PROGRESS && CoupRobot.isBotPlayer(game.players[game.currentPlayerIndex])) {
-      await this.turnService.handleBotTurn(game)
+    try {
+      return { game }
+    } finally {
+      if (game?.status === GameStatus.IN_PROGRESS && CoupRobot.isBotPlayer(game.players[game.currentPlayerIndex])) {
+        // If the first player is a bot, start their turn for them
+        this.turnService.handleBotTurn(game)
+      }
     }
-
-    return { game }
   }
 
   async getGame(gameId?: string | null) {
