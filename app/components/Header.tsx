@@ -3,11 +3,14 @@ import cn from 'classnames'
 import { Link } from '@remix-run/react'
 import { usePlayers } from '~/context/CoupContext'
 import { IdentityPopover } from './IdentityPopover'
+import { Player } from '~/types'
 
-interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
+interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
+  player?: Player<'server' | 'client'>
+}
 
-export const Header: React.FC<HeaderProps> = ({ className, ...rest }) => {
-  const { myself = null } = usePlayers() || {}
+export const Header: React.FC<HeaderProps> = ({ className, player, ...rest }) => {
+  const myself = usePlayers()?.myself || player || null
   return (
     <header
       className={cn(

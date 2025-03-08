@@ -75,10 +75,10 @@ export default function Index() {
   const [pin, setPin] = useState('')
 
   return (
-    <div className='pt-16 pb-8 px-6 flex flex-col h-full'>
+    <div className='pt-20 pb-8 px-6 flex flex-col h-full'>
       <header className='fixed top-0 left-max right-max p-1 flex'>
         <div className='ml-auto'>
-          <IdentityPopover {...player} buttonProps={{ variant: 'secondary' }} />
+          <IdentityPopover {...player} />
         </div>
       </header>
 
