@@ -97,7 +97,10 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         const wasChallengeRegistered = opponentResponses?.challenge && !opponentResponsesRef.current?.challenge
 
         if (wasBlockRegistered || wasChallengeRegistered) {
-          clearPlayerMessages(respondedPlayers.filter(id => id !== blockerId && id !== challengerId))
+          const uninvolvedPlayers = players.filter(
+            player => player.id !== actorId && player.id !== blockerId && player.id !== challengerId
+          )
+          clearPlayerMessages(uninvolvedPlayers.map(player => player.id))
         }
 
         // Process turn phase messages

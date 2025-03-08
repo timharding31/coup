@@ -169,7 +169,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <button className={classes} ref={useMergedRefs(forwardedRef, innerRef)} {...props} disabled={isDisabled}>
-        {timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
+        {!!timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
 
         {isLoading && hasIcon ? (
           <Sprite id='loading' size={size} className='animate-spin duration-500' />

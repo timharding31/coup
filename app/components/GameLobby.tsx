@@ -68,7 +68,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           : null
       }
     >
-      <div className='ml-1 text-xs font-sansation text-nord-4 absolute top-0 right-4'>
+      <div className='ml-1 text-xs font-sansation text-nord-4 absolute top-2 right-6'>
         <span
           onClick={() => {
             navigator.clipboard.writeText(pin).then(() => {

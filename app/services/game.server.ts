@@ -280,12 +280,12 @@ export class GameService implements IGameService {
     }
 
     const updatedGame = result.snapshot.val() as Game | null
-
+    const { pin = null } = updatedGame || {}
     const humanPlayerCount = (updatedGame?.players || []).reduce((ct, p) => ct + (CoupRobot.isBotPlayer(p) ? 0 : 1), 0)
 
     if (humanPlayerCount < 1) {
+      if (pin) await this.pinService.removeGamePin(pin)
       await this.playerService.updatePlayer(playerId, { currentGameId: null })
-      await this.pinService.removeGamePin(gameId)
       await this.gamesRef.child(gameId).remove()
     } else if (updatedGame?.status === 'COMPLETED') {
       await this.cleanupGame(gameId)
@@ -360,7 +360,7 @@ export class GameService implements IGameService {
     // Clear player game references, remove PIN and mark game as completed
     await Promise.all([
       ...game.players?.map(player => this.playerService.updatePlayer(player.id, { currentGameId: null })),
-      this.pinService.removeGamePin(gameId),
+      this.pinService.removeGamePin(game.pin),
       gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() })
     ])
   }

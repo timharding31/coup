@@ -225,6 +225,8 @@ export class TurnService implements ITurnService {
         return game
       }
 
+      this.clearTimer(gameId)
+
       const [dealt, remainingDeck] = this.deckService.dealCards(game.deck, 2)
 
       return {
@@ -519,11 +521,13 @@ export class TurnService implements ITurnService {
       if (playerId !== turn.action.playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
 
+      this.clearTimer(gameId)
+
       // Create updated turn state - we're setting timeout to 0 for all block responses
       // because either the action is accepted (ending the turn) or challenged (no timeout needed)
       const updatedTurn: TurnState = {
         ...turn,
-        respondedPlayers: (turn.respondedPlayers || []).concat(playerId),
+        respondedPlayers: [playerId],
         timeoutAt: 0 // Always clear timeout for block response as we'll be moving to a non-timeout phase
       }
 
@@ -626,6 +630,8 @@ export class TurnService implements ITurnService {
           return game
       }
 
+      this.clearTimer(gameId)
+
       return {
         ...game,
         currentTurn: updatedTurn,
@@ -720,11 +726,8 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
           // Process bot responses after transitioning to the waiting phase
           if (CoupRobot.isBotGame(game)) {
-            // Update game before processing bot responses
-            const { game: updatedGame } = await this.getGame(game.id)
-            if (updatedGame) {
-              await this.processBotResponses(updatedGame)
-            }
+            // Don't await because this should happen asynchronously
+            this.processBotResponses(game)
           }
         } else {
           await this.transitionState(game.id, currentPhase, 'ACTION_EXECUTION')
@@ -739,11 +742,7 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
           // Handle bot active response to block
           if (CoupRobot.isBotGame(game)) {
-            // Update game before processing bot response
-            const { game: updatedGame } = await this.getGame(game.id)
-            if (updatedGame) {
-              await this.processBotBlockerResponse(updatedGame)
-            }
+            await this.processBotBlockerResponse(game)
           }
         } else if (game.currentTurn.opponentResponses?.challenge) {
           // A direct challenge: actor must defend.
@@ -752,11 +751,7 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTOR_DEFENSE')
           // Handle bot defense
           if (CoupRobot.isBotGame(game)) {
-            // Update game before processing bot defense
-            const { game: updatedGame } = await this.getGame(game.id)
-            if (updatedGame) {
-              await this.processBotDefense(updatedGame)
-            }
+            await this.processBotDefense(game.id)
           }
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
           // All players have responded (possibly due to timeout), clear timer
@@ -775,12 +770,12 @@ export class TurnService implements ITurnService {
       case 'AWAITING_BLOCKER_DEFENSE':
         // Waiting for the defender to select and reveal a card.
         // Bot defense is handled by processBotDefense
-        await this.processBotDefense(game)
+        await this.processBotDefense(game.id)
         break
 
       case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
         // Waiting for failed challenger to select card.
-        await this.processBotCardSelection(game)
+        await this.processBotCardSelection(game.id)
         break
 
       case 'ACTION_EXECUTION':
@@ -789,7 +784,7 @@ export class TurnService implements ITurnService {
 
       case 'AWAITING_TARGET_SELECTION':
         // Waiting for the target to select a card to lose (handled via selectCardToLose).
-        await this.processBotCardSelection(game)
+        await this.processBotCardSelection(game.id)
         break
 
       case 'AWAITING_EXCHANGE_RETURN':
@@ -875,8 +870,9 @@ export class TurnService implements ITurnService {
   /**
    * Processes bot defense against a challenge
    */
-  private async processBotDefense(game: Game): Promise<void> {
-    if (!game.currentTurn) return
+  private async processBotDefense(gameId: string): Promise<void> {
+    const { game } = await this.getGame(gameId)
+    if (!game?.currentTurn) return
 
     const { phase, action, opponentResponses, challengeResult } = game.currentTurn
 
@@ -919,8 +915,9 @@ export class TurnService implements ITurnService {
   /**
    * Processes bot card selection (for losing influence, etc.)
    */
-  private async processBotCardSelection(game: Game): Promise<void> {
-    if (!game.currentTurn) return
+  private async processBotCardSelection(gameId: string): Promise<void> {
+    const { game } = await this.getGame(gameId)
+    if (!game?.currentTurn) return
 
     const { phase, action, challengeResult } = game.currentTurn
 
@@ -1150,11 +1147,7 @@ export class TurnService implements ITurnService {
 
           // Check if the target is a bot, and if so, immediately process their card selection
           if (target && CoupRobot.isBotPlayer(target)) {
-            // Get the updated game state after the transition
-            const { game: updatedGame } = await this.getGame(gameId)
-            if (updatedGame) {
-              await this.processBotCardSelection(updatedGame)
-            }
+            await this.processBotCardSelection(gameId)
           }
         }
         break
