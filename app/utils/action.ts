@@ -270,7 +270,7 @@ export const VALID_TRANSITIONS: StateTransition[] = [
   },
   {
     from: 'AWAITING_ACTOR_DEFENSE',
-    to: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
+    to: 'REPLACING_CHALLENGE_DEFENSE_CARD',
     condition: turn => turn.challengeResult?.defenseSuccessful === true
   },
   {
@@ -285,8 +285,13 @@ export const VALID_TRANSITIONS: StateTransition[] = [
   },
   {
     from: 'AWAITING_BLOCKER_DEFENSE',
-    to: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
+    to: 'REPLACING_CHALLENGE_DEFENSE_CARD',
     condition: turn => turn.challengeResult?.defenseSuccessful === true
+  },
+  {
+    from: 'REPLACING_CHALLENGE_DEFENSE_CARD',
+    to: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
+    condition: () => true
   },
   {
     from: 'AWAITING_CHALLENGE_PENALTY_SELECTION',

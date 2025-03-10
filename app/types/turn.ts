@@ -8,6 +8,8 @@ import { Game } from './game'
  * - AWAITING_ACTIVE_RESPONSE_TO_BLOCK: A block was declared and the active player must decide to accept or challenge.
  * - AWAITING_ACTOR_DEFENSE: The active player defends a direct challenge.
  * - AWAITING_BLOCKER_DEFENSE: A blocker defends against a challenge to their block.
+ * - REPLACING_CHALLENGE_DEFENSE_CARD: Automatically replacing a card that was used in a successful challenge defense.
+ * - AWAITING_CHALLENGE_PENALTY_SELECTION: Waiting for the challenger to select a card to lose after a failed challenge.
  * - ACTION_EXECUTION: The action is being executed after successful defenses (or if no challenge/block occurs).
  * - AWAITING_TARGET_SELECTION: For targeted actions—waiting for the target to choose a card to lose.
  * - AWAITING_EXCHANGE_RETURN: For exchange actions—waiting for the active player to select which cards to return.
@@ -20,6 +22,7 @@ export const TurnPhase = {
   AWAITING_ACTIVE_RESPONSE_TO_BLOCK: 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
   AWAITING_ACTOR_DEFENSE: 'AWAITING_ACTOR_DEFENSE',
   AWAITING_BLOCKER_DEFENSE: 'AWAITING_BLOCKER_DEFENSE',
+  REPLACING_CHALLENGE_DEFENSE_CARD: 'REPLACING_CHALLENGE_DEFENSE_CARD',
   AWAITING_CHALLENGE_PENALTY_SELECTION: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
   ACTION_EXECUTION: 'ACTION_EXECUTION',
   AWAITING_TARGET_SELECTION: 'AWAITING_TARGET_SELECTION',

@@ -111,28 +111,6 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
           }
         }
 
-        // There's no specific phase for replacing a card that was used as successful challenge defense, it happens automatically while the challenger selects their penalty
-        if (turn?.phase === 'AWAITING_CHALLENGE_PENALTY_SELECTION') {
-          const challengeDefender = players.find(
-            player => player.id === (turn.opponentResponses?.block || turn.action.playerId)
-          )
-          if (challengeDefender) {
-            const challengeDefenseCard = challengeDefender.influence.find(card => card.isChallengeDefenseCard)
-            if (challengeDefenseCard?.type) {
-              updateMessages({
-                [challengeDefender.id]: {
-                  text: 'Replacing',
-                  type: 'success',
-                  isWaiting: true,
-                  cardType: challengeDefenseCard.type
-                }
-              })
-            } else {
-              clearPlayerMessages([challengeDefender.id])
-            }
-          }
-        }
-
         turnPhaseRef.current = turn?.phase || null
         opponentResponsesRef.current = opponentResponses || null
         respondedPlayersRef.current = respondedPlayers

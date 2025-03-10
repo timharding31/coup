@@ -51,6 +51,7 @@ export function getResponseMenuProps(
     case 'ACTION_EXECUTION':
     case 'ACTION_FAILED':
     case 'TURN_COMPLETE':
+    case 'REPLACING_CHALLENGE_DEFENSE_CARD':
       return {}
 
     case 'AWAITING_OPPONENT_RESPONSES':
