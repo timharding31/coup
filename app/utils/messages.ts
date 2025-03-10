@@ -135,10 +135,23 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
         }
       }
 
-    case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
+    case 'REPLACING_CHALLENGE_DEFENSE_CARD':
       const defender = turn?.opponentResponses?.block ? blocker : actor
-      if (!challenger || !defender) {
-        throw new Error('Challenger and/or defender not found')
+      if (!defender || !challengeResult?.challengedCaracter) {
+        throw new Error('Defender not found')
+      }
+      return {
+        [defender.id]: {
+          text: 'Replacing',
+          type: 'success',
+          isWaiting: true,
+          cardType: challengeResult.challengedCaracter
+        }
+      }
+
+    case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
+      if (!challenger) {
+        throw new Error('Challenger not found')
       }
       return {
         [challenger.id]: {

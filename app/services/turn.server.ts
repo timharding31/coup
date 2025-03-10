@@ -108,8 +108,10 @@ export class TurnService implements ITurnService {
       }
 
       defenseSuccessful = revealedCard.type === turn.challengeResult.challengedCaracter
+
+      // Determine the next phase based on defense result
       const nextPhase = defenseSuccessful
-        ? 'AWAITING_CHALLENGE_PENALTY_SELECTION'
+        ? 'REPLACING_CHALLENGE_DEFENSE_CARD'
         : turn.phase === 'AWAITING_BLOCKER_DEFENSE'
           ? 'ACTION_EXECUTION'
           : 'ACTION_FAILED'
@@ -120,6 +122,7 @@ export class TurnService implements ITurnService {
 
       return {
         ...game,
+        players: updatedPlayers,
         currentTurn: {
           ...game.currentTurn,
           phase: nextPhase,
@@ -130,7 +133,6 @@ export class TurnService implements ITurnService {
             lostCardId: defenseSuccessful ? null : revealedCard.id
           }
         },
-        players: updatedPlayers,
         updatedAt: Date.now()
       }
     })
@@ -140,22 +142,27 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle challenge defense card')
     }
 
-    let challengeDefenseResult: TransactionResult | undefined
-
+    // For successful defense, handle card replacement in the REPLACING_CHALLENGE_DEFENSE_CARD phase
     if (defenseSuccessful && revealedCard) {
-      let card: Card | undefined
       try {
-        // Replace the revealed card.
-        card = await this.revealChallengeDefenseCardTemporarily(gameId, defenderId, revealedCard)
+        // Mark the card as challenge defense card temporarily
+        const card = await this.revealChallengeDefenseCardTemporarily(gameId, defenderId, revealedCard)
+
         // Sleep for 3s before replacing the card with a new one from the deck
         await new Promise(res => setTimeout(res, 3_000))
+
+        // Replace the card and return to deck, will update state to AWAITING_CHALLENGE_PENALTY_SELECTION
+        await this.returnAndReplaceCard(gameId, defenderId, card || revealedCard)
       } catch (e) {
-        console.error(`Error revealing card temporarily: ${e}`)
+        console.error(`Error handling challenge defense card replacement: ${e}`)
       }
-      challengeDefenseResult = await this.returnAndReplaceCard(gameId, defenderId, card || revealedCard)
     }
 
-    await this.progressToNextPhase(challengeDefenseResult || result)
+    // Only progress next phase for failed defense, for successful defense
+    // the returnAndReplaceCard function will take care of progression
+    if (!defenseSuccessful) {
+      await this.progressToNextPhase(result)
+    }
   }
 
   private async revealChallengeDefenseCardTemporarily(
@@ -774,6 +781,12 @@ export class TurnService implements ITurnService {
         await this.processBotDefense(game.id)
         break
 
+      case 'REPLACING_CHALLENGE_DEFENSE_CARD':
+        // This is an automatic phase handled by returnAndReplaceCard
+        // No action needed here as the card replacement process will
+        // update the state to AWAITING_CHALLENGE_PENALTY_SELECTION
+        break
+
       case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
         // Waiting for failed challenger to select card.
         await this.processBotCardSelection(game.id)
@@ -1184,14 +1197,14 @@ export class TurnService implements ITurnService {
     return turn.phase === 'TURN_COMPLETE'
   }
 
-  private async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<TransactionResult> {
+  private async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<void> {
     // Return card to deck
     const newDeck = await this.deckService.returnCardsToDeck(gameId, card)
 
     // Then draw a new card for the player
     const [dealtCards, remainingDeck] = this.deckService.dealCards(newDeck, 1)
 
-    // Update the game state
+    // Update the game state and change the phase if needed
     const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
       if (!game || !game.currentTurn) return game
 
@@ -1207,6 +1220,10 @@ export class TurnService implements ITurnService {
         ...game,
         deck: remainingDeck,
         players: updatedPlayers,
+        currentTurn: {
+          ...game.currentTurn,
+          phase: 'AWAITING_CHALLENGE_PENALTY_SELECTION'
+        },
         updatedAt: Date.now()
       }
     })
@@ -1215,7 +1232,7 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to return and replace card')
     }
 
-    return result
+    await this.progressToNextPhase(result)
   }
 
   private async updateGameState(gameId: string, updateFn: (game: Game) => Partial<Game>) {
