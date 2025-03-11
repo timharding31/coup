@@ -142,22 +142,16 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle challenge defense card')
     }
 
-    let successfulDefenseResult: TransactionResult | undefined
-
     // For successful defense, handle card replacement in the REPLACING_CHALLENGE_DEFENSE_CARD phase
     if (defenseSuccessful && revealedCard) {
-      try {
-        // Sleep for 3s before replacing the card with a new one from the deck
-        await new Promise(res => setTimeout(res, 3_000))
-
-        // Replace the card and return to deck, will update state to AWAITING_CHALLENGE_PENALTY_SELECTION
-        successfulDefenseResult = await this.returnAndReplaceCard(gameId, defenderId, revealedCard)
-      } catch (e) {
-        console.error(`Error handling challenge defense card replacement: ${e}`)
-      }
+      // Process the card replacement asynchronously - don't block the request
+      // This allows the server to respond to the client faster
+      this.processCardReplacement(gameId, defenderId, revealedCard)
+    } else {
+      // Only progress to next phase immediately for failed defense
+      // For successful defense, the replacement process will handle progression
+      await this.progressToNextPhase(result)
     }
-
-    await this.progressToNextPhase(successfulDefenseResult || result)
   }
 
   async handleFailedChallengerCard(gameId: string, challengerId: string, cardId: string) {
@@ -676,9 +670,9 @@ export class TurnService implements ITurnService {
       case 'ACTION_DECLARED':
         if (game.currentTurn.action.canBeBlocked || game.currentTurn.action.canBeChallenged) {
           await this.transitionState(game.id, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
-          // Process bot responses after transitioning to the waiting phase
+          // Process bot responses after transitioning to the waiting phase (non-blocking)
           if (CoupRobot.isBotGame(game)) {
-            await this.processBotResponses(game)
+            this.processBotResponses(game)
           }
         } else {
           this.clearTimer(game.id)
@@ -692,18 +686,18 @@ export class TurnService implements ITurnService {
         if (game.currentTurn.opponentResponses?.block) {
           // Don't clear the timer - a new timeout was already set in handleActionResponse
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
-          // Handle bot active response to block
+          // Handle bot active response to block (non-blocking)
           if (CoupRobot.isBotGame(game)) {
-            await this.processBotBlockerResponse(game)
+            this.processBotBlockerResponse(game)
           }
         } else if (game.currentTurn.opponentResponses?.challenge) {
           // A direct challenge: actor must defend.
           // Clear timer as no timeout is needed for defense
           this.clearTimer(game.id)
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTOR_DEFENSE')
-          // Handle bot defense
+          // Handle bot defense (non-blocking)
           if (CoupRobot.isBotGame(game)) {
-            await this.processBotDefense(game.id)
+            this.processBotDefense(game.id)
           }
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
           // All players have responded (possibly due to timeout), clear timer
@@ -721,8 +715,8 @@ export class TurnService implements ITurnService {
       case 'AWAITING_ACTOR_DEFENSE':
       case 'AWAITING_BLOCKER_DEFENSE':
         // Waiting for the defender to select and reveal a card.
-        // Bot defense is handled by processBotDefense
-        await this.processBotDefense(game.id)
+        // Bot defense is handled by processBotDefense (non-blocking)
+        this.processBotDefense(game.id)
         break
 
       case 'REPLACING_CHALLENGE_DEFENSE_CARD':
@@ -732,8 +726,8 @@ export class TurnService implements ITurnService {
         break
 
       case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
-        // Waiting for failed challenger to select card.
-        await this.processBotCardSelection(game.id)
+        // Waiting for failed challenger to select card (non-blocking)
+        this.processBotCardSelection(game.id)
         break
 
       case 'ACTION_EXECUTION':
@@ -743,6 +737,8 @@ export class TurnService implements ITurnService {
 
       case 'AWAITING_TARGET_SELECTION':
         // Waiting for the target to select a card to lose (handled via selectCardToLose).
+        // Process bot card selection if needed (non-blocking)
+        this.processBotCardSelection(game.id)
         break
 
       case 'AWAITING_EXCHANGE_RETURN':
@@ -989,8 +985,9 @@ export class TurnService implements ITurnService {
       await this.checkGameStatus(game)
 
       // If game is still in progress, check if the next player is a bot
+      // Handle bot turn asynchronously to allow quick response to client
       if (game.status === GameStatus.IN_PROGRESS) {
-        await this.handleBotTurn(game)
+        this.handleBotTurn(game)
       }
     }
   }
@@ -1083,7 +1080,7 @@ export class TurnService implements ITurnService {
         await this.dealExchangeCards(gameId, action.playerId)
 
         if (actor && CoupRobot.isBotPlayer(actor)) {
-          await this.processBotExchangeReturn(game)
+          this.processBotExchangeReturn(game)
         }
 
         break
@@ -1098,7 +1095,7 @@ export class TurnService implements ITurnService {
 
           // Check if the target is a bot, and if so, immediately process their card selection
           if (target && CoupRobot.isBotPlayer(target)) {
-            await this.processBotCardSelection(gameId)
+            this.processBotCardSelection(gameId)
           }
         }
         break
@@ -1132,6 +1129,47 @@ export class TurnService implements ITurnService {
 
   private isTurnComplete(turn: TurnState): boolean {
     return turn.phase === 'TURN_COMPLETE'
+  }
+
+  /**
+   * Process card replacement asynchronously to avoid blocking client requests
+   */
+  private processCardReplacement(gameId: string, defenderId: string, card: Card): void {
+    // Use setTimeout to make this non-blocking
+    setTimeout(async () => {
+      try {
+        // Sleep for 3s before replacing the card with a new one from the deck
+        await new Promise(res => setTimeout(res, 3_000))
+
+        // Replace the card and return to deck, will update state to AWAITING_CHALLENGE_PENALTY_SELECTION
+        const result = await this.returnAndReplaceCard(gameId, defenderId, card)
+
+        // Progress to next phase
+        await this.progressToNextPhase(result)
+      } catch (e) {
+        console.error(`Error in async card replacement process: ${e}`)
+
+        // Attempt to recover the game state on error
+        try {
+          const gameRef = this.gamesRef.child(gameId)
+          const snapshot = await gameRef.get()
+          const game = snapshot.val() as Game | null
+
+          if (game && game.currentTurn?.phase === 'REPLACING_CHALLENGE_DEFENSE_CARD') {
+            // If we're still in the replacement phase, force transition to penalty selection
+            await gameRef.child('currentTurn/phase').set('AWAITING_CHALLENGE_PENALTY_SELECTION')
+
+            // Get updated state and progress
+            const updatedSnapshot = await gameRef.get()
+            if (updatedSnapshot.exists()) {
+              await this.progressToNextPhase({ committed: true, snapshot: updatedSnapshot })
+            }
+          }
+        } catch (recoveryError) {
+          console.error(`Failed to recover from card replacement error: ${recoveryError}`)
+        }
+      }
+    }, 0)
   }
 
   private async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<TransactionResult> {
