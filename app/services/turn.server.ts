@@ -672,7 +672,7 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
           // Process bot responses after transitioning to the waiting phase (non-blocking)
           if (CoupRobot.isBotGame(game)) {
-            await this.processBotResponses(game)
+            await this.processBotResponses(game.id)
           }
         } else {
           this.clearTimer(game.id)
@@ -761,8 +761,9 @@ export class TurnService implements ITurnService {
   /**
    * Processes bot responses to actions
    */
-  private async processBotResponses(game: Game): Promise<void> {
-    if (!game.currentTurn) return
+  private async processBotResponses(gameId: string): Promise<void> {
+    const { game } = await this.getGame(gameId)
+    if (!game?.currentTurn) return
 
     const { action, respondedPlayers = [] } = game.currentTurn
 
@@ -775,22 +776,35 @@ export class TurnService implements ITurnService {
       return true
     })
 
+    let challengingBot: Player | undefined, blockingBot: Player | undefined, botBlockCard: CardType | undefined
+
     // Process bot responses one by one with a small delay between each
     for (const bot of respondingBots) {
       try {
-        // Small random delay to make it seem more human-like
-        const delay = Math.random() * 1000
-        await new Promise(res => setTimeout(res, delay))
-
-        const robot = await this.assembleRobotForPhase(game.id, bot.id, ['AWAITING_OPPONENT_RESPONSES'])
-        if (!robot) break
-
+        const robot = new CoupRobot(bot, game)
         const { response, blockCard, memory } = await robot.decideResponse()
         await this.updateBotMemory(game.id, memory)
-        await this.handleActionResponse(game.id, bot.id, response, blockCard)
+        if (response === 'block') {
+          blockingBot = bot
+          botBlockCard = blockCard!
+          break
+        } else if (response === 'challenge') {
+          challengingBot = bot
+          break
+        } else if (response === 'accept') {
+          await this.handleActionResponse(game.id, bot.id, response, blockCard)
+        }
       } catch (error) {
         console.error(`Error processing bot response: ${error}`)
       }
+    }
+    if (blockingBot) {
+      await this.handleActionResponse(gameId, blockingBot.id, 'block', botBlockCard)
+      return
+    }
+    if (challengingBot) {
+      await this.handleActionResponse(gameId, challengingBot.id, 'challenge')
+      return
     }
   }
 
@@ -990,9 +1004,6 @@ export class TurnService implements ITurnService {
     }
 
     try {
-      // Give a small delay to make the bot seem like it's thinking
-      await new Promise(resolve => setTimeout(resolve, 1500))
-
       // Create a robot instance for this bot
       const robot = new CoupRobot(currentPlayer, game)
 
@@ -1126,9 +1137,6 @@ export class TurnService implements ITurnService {
     // Use setTimeout to make this non-blocking
     setTimeout(async () => {
       try {
-        // Sleep for 3s before replacing the card with a new one from the deck
-        await new Promise(res => setTimeout(res, 3_000))
-
         // Replace the card and return to deck, will update state to AWAITING_CHALLENGE_PENALTY_SELECTION
         const result = await this.returnAndReplaceCard(gameId, defenderId, card)
 
@@ -1157,7 +1165,7 @@ export class TurnService implements ITurnService {
           console.error(`Failed to recover from card replacement error: ${recoveryError}`)
         }
       }
-    }, 0)
+    }, 3_000)
   }
 
   private async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<TransactionResult> {
