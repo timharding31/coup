@@ -45,12 +45,7 @@ export function useThrottledGameCallback(onGame: (value: Game<'client'>) => void
 
 function getDelayFromGame(game: Game<'client'>, nextGame: Game<'client'> | null = null): number {
   if (!game.currentTurn) {
-    return 0
-  }
-
-  // Simulate thinking by adding a random delay of ~0.5s
-  if (game.botActionInProgress) {
-    return 200 + Math.random() * 600
+    return 200
   }
 
   // Make sure replaced card is visible for 2.5s
@@ -61,5 +56,10 @@ function getDelayFromGame(game: Game<'client'>, nextGame: Game<'client'> | null 
     }
   }
 
-  return 10
+  // Simulate thinking by adding a random delay of ~0.5s
+  if (game.botActionInProgress) {
+    return 200 + Math.random() * 600
+  }
+
+  return 0
 }
