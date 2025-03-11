@@ -7,7 +7,6 @@ export interface IActionService {
   resolveCoinUpdates(game: Game, action: Action): Promise<void>
   updatePlayerCoins(gameId: string, updates: { [playerId: string]: number }): Promise<void>
   revealInfluence(gameId: string, playerId: string, cardId: string): Promise<void>
-  withRevealedInfluence(game: Game, playerId: string, revealedCardId: string): Game
 }
 
 export class ActionService implements IActionService {
@@ -18,60 +17,57 @@ export class ActionService implements IActionService {
   }
 
   validateAction(game: Game, action: Action): boolean {
-    console.log(`Validating action: ${action.type} by player ${action.playerId}`);
-    
     const player = game.players.find(p => p.id === action.playerId)
     if (!player) {
-      console.log(`Player ${action.playerId} not found in game`);
-      return false;
+      console.error(`Player ${action.playerId} not found in game`)
+      return false
     }
 
     // Force coup at 10+ coins
     if (player.coins >= 10 && action.type !== 'COUP') {
-      console.log(`Player has ${player.coins} coins but isn't using COUP`);
-      return false;
+      console.error(`Player has ${player.coins} coins but isn't using COUP`)
+      return false
     }
 
     // Check basic requirements
     const requirements = ACTION_REQUIREMENTS[action.type]
     if (!requirements) {
-      console.log(`No requirements found for action type ${action.type}`);
-      return false;
+      console.error(`No requirements found for action type ${action.type}`)
+      return false
     }
-    
+
     if (player.coins < requirements.coinCost) {
-      console.log(`Player has ${player.coins} coins but needs ${requirements.coinCost} for ${action.type}`);
-      return false;
+      console.error(`Player has ${player.coins} coins but needs ${requirements.coinCost} for ${action.type}`)
+      return false
     }
 
     // Check if player is eliminated
     if (this.isDeadPlayer(player)) {
-      console.log(`Player ${player.username} is eliminated, cannot take actions`);
-      return false;
+      console.error(`Player ${player.username} is eliminated, cannot take actions`)
+      return false
     }
 
     // Validate target if required
     if (action.targetPlayerId) {
       const targetPlayer = game.players.find(p => p.id === action.targetPlayerId)
       if (!targetPlayer) {
-        console.log(`Target player ${action.targetPlayerId} not found`);
-        return false;
+        console.error(`Target player ${action.targetPlayerId} not found`)
+        return false
       }
-      
+
       if (this.isDeadPlayer(targetPlayer)) {
-        console.log(`Target player ${targetPlayer.username} is eliminated`);
-        return false;
+        console.error(`Target player ${targetPlayer.username} is eliminated`)
+        return false
       }
 
       // Additional target-specific validation
       if (action.type === 'STEAL' && targetPlayer.coins === 0) {
-        console.log(`Cannot steal from ${targetPlayer.username} - they have 0 coins`);
-        return false;
+        console.error(`Cannot steal from ${targetPlayer.username} - they have 0 coins`)
+        return false
       }
     }
 
-    console.log(`Action ${action.type} validation passed for ${player.username}`);
-    return true;
+    return true
   }
 
   private isDeadPlayer(player: Player): boolean {
@@ -140,34 +136,6 @@ export class ActionService implements IActionService {
       throw new Error('Player not found')
     }
     return player.coins || 0
-  }
-
-  withRevealedInfluence(game: Game, playerId: string, revealedCardId: string): Game {
-    const playerIndex = game.players.findIndex(p => p.id === playerId)
-    if (playerIndex === -1) {
-      console.error('Player not found')
-      return game
-    }
-
-    const cardIndex = game.players[playerIndex]!.influence.findIndex(c => c.id === revealedCardId)
-    if (cardIndex === -1) {
-      console.error('Card not found')
-      return game
-    }
-
-    if (game.players[playerIndex].influence[cardIndex].isRevealed) {
-      console.error('Card already revealed')
-      return game
-    }
-
-    const updatedPlayers = game.players.slice()
-    updatedPlayers[playerIndex].influence[cardIndex].isRevealed = true
-
-    return {
-      ...game,
-      players: updatedPlayers,
-      updatedAt: Date.now()
-    }
   }
 
   async revealInfluence(gameId: string, playerId: string, cardId: string): Promise<void> {

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo } from 'react'
 import { Game } from '~/types'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'
@@ -14,7 +14,7 @@ export const GameOver: React.FC<GameOverProps> = ({
   game: { id: gameId, winnerId, status, players, eliminationOrder }
 }) => {
   const allPlayers = useMemo(() => new Map(players.map(player => [player.id, player])), [players])
-  const losersRef = useRef(eliminationOrder?.reverse().filter(id => id !== winnerId) || [])
+  const losers = eliminationOrder?.slice().reverse()
 
   const winner = winnerId ? allPlayers.get(winnerId) : null
 
@@ -42,19 +42,18 @@ export const GameOver: React.FC<GameOverProps> = ({
             <span>🥇</span>
             <PlayerNameTag {...winner} cardCount={cardCount} textColor='nord-0' bgColor='nord-0' />
           </div>
-          {eliminationOrder != null && (
-            <ul className='mt-2 pb-4 list-reset flex flex-col items-stretch gap-2'>
-              {losersRef.current.slice(0, 2).map((loserId, i) => {
-                const loser = allPlayers.get(loserId)
-                return loser ? (
-                  <li key={loser.id} className='grid grid-cols-[auto_1fr] gap-1 px-4'>
-                    <span>{['🥈', '🥉'][i]}</span>
-                    <PlayerNameTag {...loser} cardCount={0} textColor='nord-4' bgColor='nord-1' />
-                  </li>
-                ) : null
-              })}
-            </ul>
-          )}
+          <ol className='mt-2 pb-4 list-reset flex flex-col items-stretch gap-2'>
+            {losers?.slice(0, 2).map((id, i) => {
+              if (id === winnerId) return null
+              const loser = allPlayers.get(id)
+              return loser ? (
+                <li key={loser.id} className='grid grid-cols-[auto_1fr] gap-1 px-4'>
+                  <span>{['🥈', '🥉'][i]}</span>
+                  <PlayerNameTag {...loser} cardCount={0} textColor='nord-4' bgColor='nord-1' />
+                </li>
+              ) : null
+            })}
+          </ol>
         </div>
       ) : (
         <div className='pt-16 text-center text-lg flex-auto'>The host left the game</div>

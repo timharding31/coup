@@ -65,10 +65,10 @@ function getOpponentClasses(index: number, total: number) {
 
     case 4:
       return [
-        'row-start-3', // bottom left
         'row-start-2', // middle left
-        'col-start-3 row-start-2', // middle right
-        'col-start-3 row-start-3' // bottom right
+        '', // top left
+        'col-start-3', // top right
+        'col-start-3 row-start-2' // middle right
       ][index]
 
     case 3:
