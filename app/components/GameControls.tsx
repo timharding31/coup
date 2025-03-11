@@ -43,7 +43,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
     return <ActionControls targets={game.players.filter(p => p.id !== myself.id)} coins={myself.coins} />
   }
 
-  if (!game.currentTurn) {
+  if (!game.currentTurn || game.botActionInProgress) {
     return null
   }
 

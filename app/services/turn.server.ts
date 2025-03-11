@@ -49,6 +49,7 @@ export class TurnService implements ITurnService {
     this.deckService = deckService
     this.onGameEnded = onGameEnded
   }
+
   async handleChallengeDefenseCard(gameId: string, defenderId: string, cardId: string) {
     let defenseSuccessful: boolean | undefined
     let revealedCard: Card | undefined
@@ -146,7 +147,7 @@ export class TurnService implements ITurnService {
     if (defenseSuccessful && revealedCard) {
       // Process the card replacement asynchronously - don't block the request
       // This allows the server to respond to the client faster
-      this.processCardReplacement(gameId, defenderId, revealedCard)
+      await this.processCardReplacement(gameId, defenderId, revealedCard)
     } else {
       // Only progress to next phase immediately for failed defense
       // For successful defense, the replacement process will handle progression
@@ -776,10 +777,15 @@ export class TurnService implements ITurnService {
       return true
     })
 
-    let challengingBot: Player | undefined, blockingBot: Player | undefined, botBlockCard: CardType | undefined
+    let challengingBot: Player | undefined
+    let blockingBot: Player | undefined
+    let botBlockCard: CardType | undefined
 
-    // Process bot responses one by one with a small delay between each
-    for (const bot of respondingBots) {
+    await this.gamesRef.child(`${gameId}/botActionInProgress`).set(true)
+
+    while (respondingBots.length > 0) {
+      // Randomly select a bot to respond
+      const bot = respondingBots.splice(Math.floor(Math.random() * respondingBots.length), 1)[0]
       try {
         const robot = new CoupRobot(bot, game)
         const { response, blockCard, memory } = await robot.decideResponse()
@@ -801,14 +807,14 @@ export class TurnService implements ITurnService {
         console.error(`Error processing bot response: ${error}`)
       }
     }
+
     if (blockingBot) {
       await this.handleActionResponse(gameId, blockingBot.id, 'block', botBlockCard)
-      return
-    }
-    if (challengingBot) {
+    } else if (challengingBot) {
       await this.handleActionResponse(gameId, challengingBot.id, 'challenge')
-      return
     }
+
+    await this.gamesRef.child(`${gameId}/botActionInProgress`).set(false)
   }
 
   /**
@@ -824,13 +830,14 @@ export class TurnService implements ITurnService {
       try {
         const robot = await this.assembleRobotForPhase(game.id, action.playerId, ['AWAITING_ACTIVE_RESPONSE_TO_BLOCK'])
         if (!robot) return
-
+        await this.gamesRef.child(`${game.id}/botActionInProgress`).set(true)
         const { response, memory } = await robot.decideResponse()
         await this.updateBotMemory(game.id, memory)
         await this.handleBlockResponse(game.id, action.playerId, response === 'challenge' ? 'challenge' : 'accept')
       } catch (error) {
         console.error(`Error processing bot block response: ${error}`)
       }
+      await this.gamesRef.child(`${game.id}/botActionInProgress`).set(false)
     }
   }
 
@@ -865,10 +872,14 @@ export class TurnService implements ITurnService {
     ])
     if (!robot) return
 
+    await this.gamesRef.child(`${gameId}/botActionInProgress`).set(true)
+
     // Let bot decide which card to reveal for defense
     const { cardId, memory } = await robot.decideCardSelection()
     await this.updateBotMemory(game.id, memory)
     await this.handleChallengeDefenseCard(game.id, defenderId, cardId)
+
+    await this.gamesRef.child(`${gameId}/botActionInProgress`).set(false)
   }
 
   /**
@@ -899,7 +910,9 @@ export class TurnService implements ITurnService {
       'AWAITING_CHALLENGE_PENALTY_SELECTION'
     ])
     if (!robot) return
-    // Let bot decide which card to select
+
+    await this.gamesRef.child(`${gameId}/botActionInProgress`).set(true)
+
     const { cardId, memory } = await robot.decideCardSelection()
 
     // Update the game with the bot's memory
@@ -912,6 +925,7 @@ export class TurnService implements ITurnService {
       // Handle challenge penalty selection
       await this.handleFailedChallengerCard(game.id, botId, cardId)
     }
+    await this.gamesRef.child(`${gameId}/botActionInProgress`).set(false)
   }
 
   /**
@@ -930,13 +944,14 @@ export class TurnService implements ITurnService {
       try {
         const robot = await this.assembleRobotForPhase(game.id, botPlayer.id, ['AWAITING_EXCHANGE_RETURN'])
         if (!robot) return
-        // Let bot decide which cards to keep
+        await this.gamesRef.child(`${game.id}/botActionInProgress`).set(true)
         const { cardIds, memory } = await robot.decideExchangeCards()
         await this.updateBotMemory(game.id, memory)
         await this.handleExchangeReturn(game.id, action.playerId, cardIds)
       } catch (error) {
         console.error(`Error processing bot exchange: ${error}`)
       }
+      await this.gamesRef.child(`${game.id}/botActionInProgress`).set(false)
     }
   }
 
@@ -978,6 +993,7 @@ export class TurnService implements ITurnService {
 
       return {
         ...game,
+        botActionInProgress: false,
         currentPlayerIndex: nextPlayerIndex,
         currentTurn: null,
         updatedAt: Date.now()
@@ -1006,6 +1022,8 @@ export class TurnService implements ITurnService {
       return
     }
 
+    await this.gamesRef.child(`${game.id}/botActionInProgress`).set(true)
+
     try {
       // Create a robot instance for this bot
       const robot = new CoupRobot(currentPlayer, game)
@@ -1021,6 +1039,8 @@ export class TurnService implements ITurnService {
     } catch (error) {
       console.error(`Error handling bot turn: ${error}`)
     }
+
+    await this.gamesRef.child(`${game.id}/botActionInProgress`).set(false)
   }
 
   /**
@@ -1136,39 +1156,36 @@ export class TurnService implements ITurnService {
   /**
    * Process card replacement asynchronously to avoid blocking client requests
    */
-  private processCardReplacement(gameId: string, defenderId: string, card: Card): void {
-    // Use setTimeout to make this non-blocking
-    setTimeout(async () => {
+  private async processCardReplacement(gameId: string, defenderId: string, card: Card): Promise<void> {
+    try {
+      // Replace the card and return to deck, will update state to AWAITING_CHALLENGE_PENALTY_SELECTION
+      const result = await this.returnAndReplaceCard(gameId, defenderId, card)
+
+      // Progress to next phase
+      await this.progressToNextPhase(result)
+    } catch (e) {
+      console.error(`Error in async card replacement process: ${e}`)
+
+      // Attempt to recover the game state on error
       try {
-        // Replace the card and return to deck, will update state to AWAITING_CHALLENGE_PENALTY_SELECTION
-        const result = await this.returnAndReplaceCard(gameId, defenderId, card)
+        const gameRef = this.gamesRef.child(gameId)
+        const snapshot = await gameRef.get()
+        const game = snapshot.val() as Game | null
 
-        // Progress to next phase
-        await this.progressToNextPhase(result)
-      } catch (e) {
-        console.error(`Error in async card replacement process: ${e}`)
+        if (game && game.currentTurn?.phase === 'REPLACING_CHALLENGE_DEFENSE_CARD') {
+          // If we're still in the replacement phase, force transition to penalty selection
+          await gameRef.child('currentTurn/phase').set('AWAITING_CHALLENGE_PENALTY_SELECTION')
 
-        // Attempt to recover the game state on error
-        try {
-          const gameRef = this.gamesRef.child(gameId)
-          const snapshot = await gameRef.get()
-          const game = snapshot.val() as Game | null
-
-          if (game && game.currentTurn?.phase === 'REPLACING_CHALLENGE_DEFENSE_CARD') {
-            // If we're still in the replacement phase, force transition to penalty selection
-            await gameRef.child('currentTurn/phase').set('AWAITING_CHALLENGE_PENALTY_SELECTION')
-
-            // Get updated state and progress
-            const updatedSnapshot = await gameRef.get()
-            if (updatedSnapshot.exists()) {
-              await this.progressToNextPhase({ committed: true, snapshot: updatedSnapshot })
-            }
+          // Get updated state and progress
+          const updatedSnapshot = await gameRef.get()
+          if (updatedSnapshot.exists()) {
+            await this.progressToNextPhase({ committed: true, snapshot: updatedSnapshot })
           }
-        } catch (recoveryError) {
-          console.error(`Failed to recover from card replacement error: ${recoveryError}`)
         }
+      } catch (recoveryError) {
+        console.error(`Failed to recover from card replacement error: ${recoveryError}`)
       }
-    }, 3_000)
+    }
   }
 
   private async returnAndReplaceCard(gameId: string, playerId: string, card: Card): Promise<TransactionResult> {

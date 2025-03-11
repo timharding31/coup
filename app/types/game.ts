@@ -24,4 +24,5 @@ export interface Game<Context extends 'server' | 'client' = 'server'> {
   updatedAt: number
   completedAt?: number
   botMemory?: Record<string, any> // Store bot memory for inference and decision-making
+  botActionInProgress?: boolean
 }

@@ -59,9 +59,85 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const turnPhaseRef = useRef<TurnPhase | null>(null)
   const opponentResponsesRef = useRef<OpponentBlockResponse | OpponentChallengeResponse | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
-
-  // Use our new message queue hook
   const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessageQueue()
+
+  const isProcessingRef = useRef(false)
+  const gameUpdatesQueueRef = useRef<Game<'client'>[]>([])
+
+  const handleProcessQueue = useCallback(async () => {
+    isProcessingRef.current = true
+    while (gameUpdatesQueueRef.current.length > 0) {
+      const game = gameUpdatesQueueRef.current.shift()!
+      const nextTurnPhase = gameUpdatesQueueRef.current.at(0)?.currentTurn?.phase
+
+      let delay = 0
+
+      if (
+        nextTurnPhase &&
+        nextTurnPhase !== 'REPLACING_CHALLENGE_DEFENSE_CARD' &&
+        game.currentTurn?.phase === 'REPLACING_CHALLENGE_DEFENSE_CARD'
+      ) {
+        delay = 3_000
+      } else if (game.botActionInProgress) {
+        delay = 500 + Math.random() * 500
+      }
+
+      await new Promise(res => setTimeout(res, delay))
+
+      setGame(game)
+
+      const { currentTurn: turn, players } = game
+      const { respondedPlayers = [], opponentResponses } = turn || {}
+      const { playerId: actorId } = turn?.action || {}
+      const { block: blockerId, challenge: challengerId } = opponentResponses || {}
+
+      // Process responded players messages
+      if (!isEqual(respondedPlayers, respondedPlayersRef.current)) {
+        // Create a map of responder messages using our new data structure
+        const responderMessages: Record<string, MessageData> = {}
+        for (const playerId of respondedPlayers) {
+          const message = getResponderMessage(playerId, actorId || '', turn?.phase, blockerId, challengerId)
+          if (message) {
+            responderMessages[playerId] = message
+          }
+        }
+        updateMessages(responderMessages)
+      }
+
+      const wasBlockRegistered = opponentResponses?.block && !opponentResponsesRef.current?.block
+      const wasChallengeRegistered = opponentResponses?.challenge && !opponentResponsesRef.current?.challenge
+
+      if (wasBlockRegistered || wasChallengeRegistered) {
+        const uninvolvedPlayers = players.filter(
+          player => player.id !== actorId && player.id !== blockerId && player.id !== challengerId
+        )
+        clearPlayerMessages(uninvolvedPlayers.map(player => player.id))
+      }
+
+      // Process turn phase messages
+      if (turn?.phase !== turnPhaseRef.current) {
+        const newMessages = getPlayerActionMessages(game)
+        if (newMessages) {
+          updateMessages(newMessages, { clear: !turn?.phase })
+        }
+      }
+
+      turnPhaseRef.current = turn?.phase || null
+      opponentResponsesRef.current = opponentResponses || null
+      respondedPlayersRef.current = respondedPlayers
+    }
+    isProcessingRef.current = false
+  }, [])
+
+  const throttledSetGame = useCallback(
+    (value: Game<'client'>) => {
+      gameUpdatesQueueRef.current.push(value)
+      if (!isProcessingRef.current) {
+        handleProcessQueue()
+      }
+    },
+    [setGame, handleProcessQueue]
+  )
 
   useEffect(() => {
     const db = getFirebaseDatabase()
@@ -73,47 +149,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
       const serverGameValue = snapshot.val() as Game<'server'> | null
       if (serverGameValue) {
         const game = prepareGameForClient(serverGameValue, playerId)
-        setGame(game)
-
-        const { currentTurn: turn, players } = game
-        const { respondedPlayers = [], opponentResponses } = turn || {}
-        const { playerId: actorId } = turn?.action || {}
-        const { block: blockerId, challenge: challengerId } = opponentResponses || {}
-
-        // Process responded players messages
-        if (!isEqual(respondedPlayers, respondedPlayersRef.current)) {
-          // Create a map of responder messages using our new data structure
-          const responderMessages: Record<string, MessageData> = {}
-          for (const playerId of respondedPlayers) {
-            const message = getResponderMessage(playerId, actorId || '', turn?.phase, blockerId, challengerId)
-            if (message) {
-              responderMessages[playerId] = message
-            }
-          }
-          updateMessages(responderMessages)
-        }
-
-        const wasBlockRegistered = opponentResponses?.block && !opponentResponsesRef.current?.block
-        const wasChallengeRegistered = opponentResponses?.challenge && !opponentResponsesRef.current?.challenge
-
-        if (wasBlockRegistered || wasChallengeRegistered) {
-          const uninvolvedPlayers = players.filter(
-            player => player.id !== actorId && player.id !== blockerId && player.id !== challengerId
-          )
-          clearPlayerMessages(uninvolvedPlayers.map(player => player.id))
-        }
-
-        // Process turn phase messages
-        if (turn?.phase !== turnPhaseRef.current) {
-          const newMessages = getPlayerActionMessages(game)
-          if (newMessages) {
-            updateMessages(newMessages, { clear: !turn?.phase })
-          }
-        }
-
-        turnPhaseRef.current = turn?.phase || null
-        opponentResponsesRef.current = opponentResponses || null
-        respondedPlayersRef.current = respondedPlayers
+        throttledSetGame(game)
       }
     }
 
@@ -122,7 +158,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
     return () => {
       unsubscribe()
     }
-  }, [gameId, playerId, updateMessages, clearPlayerMessages])
+  }, [gameId, playerId, updateMessages, clearPlayerMessages, throttledSetGame])
 
   const performAction = async (action: any) => {
     setIsLoading(true)
