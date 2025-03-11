@@ -113,8 +113,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         </div>
         <ul className='list-reset pb-6 flex flex-col items-stretch flex-auto gap-2'>
           {players.map((player, i) => (
-            <li key={player.id} className='flex w-full rounded-full pl-2 pr-4 pb-[2px] pt-[3px] bg-nord-15 text-base'>
-              <span className='mr-2 pl-1 text-nord-1'>&bull;</span>
+            <li key={player.id} className='w-full rounded-full px-3 pb-[2px] pt-[3px] bg-nord-15 text-base'>
               <PlayerNameTag
                 {...player}
                 isHost={player.id === hostId}

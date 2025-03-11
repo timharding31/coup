@@ -32,7 +32,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
   }, [game.currentTurn?.phase, drawerHeight])
 
   return (
-    <div
+    <section
       ref={ref}
       className='grid grid-rows-[auto_auto] px-4 pb-4 flex-none bg-nord-0 border-t border-nord-3 transition-transform duration-500 ease-in-out container-type-inline-size nord-shadow z-50'
       style={{
@@ -40,7 +40,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
         boxShadow: '0px 300px 0px 0px var(--nord-0)'
       }}
     >
-      <PlayerNameTag id={playerId} {...nameTagProps} className='text-lg my-2' bgColor='nord-0' />
+      <PlayerNameTag id={playerId} {...nameTagProps} className='text-lg my-2' bgColor='nord-0' iconSize='sm' />
       <AnimatePresence>
         <div
           className={cn('h-[64cqi] grid items-center gap-4', {
@@ -61,7 +61,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
           })}
         </div>
       </AnimatePresence>
-    </div>
+    </section>
   )
 }
 

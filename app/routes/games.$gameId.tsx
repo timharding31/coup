@@ -29,9 +29,7 @@ export default function GameRoute() {
 
   return (
     <CoupContextProvider gameId={gameId} playerId={playerId} game={game}>
-      <div className='h-full w-full flex flex-col items-stretch justify-between'>
-        <GameBoard playerId={playerId} />
-      </div>
+      <GameBoard playerId={playerId} />
     </CoupContextProvider>
   )
 }

@@ -4,6 +4,9 @@ export const loader: LoaderFunction = () => {
   return new Response(
     `<svg xmlns="http://www.w3.org/2000/svg">
       <defs>
+        <g id="robot">
+          <path fill="currentColor" d="M32,224H64V416H32A31.96166,31.96166,0,0,1,0,384V256A31.96166,31.96166,0,0,1,32,224Zm512-48V448a64.06328,64.06328,0,0,1-64,64H160a64.06328,64.06328,0,0,1-64-64V176a79.974,79.974,0,0,1,80-80H288V32a32,32,0,0,1,64,0V96H464A79.974,79.974,0,0,1,544,176ZM264,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,264,256Zm-8,128H192v32h64Zm96,0H288v32h64ZM456,256a40,40,0,1,0-40,40A39.997,39.997,0,0,0,456,256Zm-8,128H384v32h64ZM640,256V384a31.96166,31.96166,0,0,1-32,32H576V224h32A31.96166,31.96166,0,0,1,640,256Z"/>
+        </g>
         <g id="plus">
           <path fill="currentColor" d="M41.267,18.557H26.832V4.134C26.832,1.851,24.99,0,22.707,0c-2.283,0-4.124,1.851-4.124,4.135v14.432H4.141   c-2.283,0-4.139,1.851-4.138,4.135c-0.001,1.141,0.46,2.187,1.207,2.934c0.748,0.749,1.78,1.222,2.92,1.222h14.453V41.27   c0,1.142,0.453,2.176,1.201,2.922c0.748,0.748,1.777,1.211,2.919,1.211c2.282,0,4.129-1.851,4.129-4.133V26.857h14.435   c2.283,0,4.134-1.867,4.133-4.15C45.399,20.425,43.548,18.557,41.267,18.557z"/>
         </g>
@@ -99,18 +102,3 @@ export const loader: LoaderFunction = () => {
     }
   )
 }
-
-/**
-    <pattern id="card-back" patternUnits="objectBoundingBox" width="1" height="0.75" viewBox="0 0 80 80">
-        <pattern id="card-back" patternUnits="objectBoundingBox" width="0.5" height="0.375" viewBox="0 0 80 80">
- */
-// ;<svg width="60" height="80" viewBox="0 0 60 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-// <g clip-path="url(#clip0_4_45)">
-
-// </g>
-// <defs>
-// <clipPath id="clip0_4_45">
-// <rect width="60" height="80" fill="white"/>
-// </clipPath>
-// </defs>
-// </svg>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import cn from 'classnames'
 import { useMergedRefs } from '~/hooks/useMergedRefs'
 import { Sprite, SpriteId } from './Sprite'
-import CoinStack from './CoinStack'
+import { CoinStack } from './CoinStack'
 import { PlayerNameTag } from './PlayerNameTag'
 
 export const variantStyles = {
@@ -186,7 +186,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : null}
 
         {nameTag ? (
-          <PlayerNameTag {...nameTag} userClassName={props.disabled ? 'font-normal line-through' : undefined} />
+          <PlayerNameTag {...nameTag} userClassName={props.disabled ? 'font-normal' : undefined} />
         ) : children ? (
           <span
             className={cn('relative font-sansation font-bold translate-y-[0.0625em]', {

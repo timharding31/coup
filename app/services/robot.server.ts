@@ -168,7 +168,7 @@ export class CoupRobot implements ICoupRobot {
   static getRandomUsername(existingBots: string[] = []): string {
     let n = 0
     while (n < 10) {
-      const username = '🤖 ' + CoupRobot.USERNAMES[Math.floor(Math.random() * CoupRobot.USERNAMES.length)]
+      const username = CoupRobot.USERNAMES[Math.floor(Math.random() * CoupRobot.USERNAMES.length)]
       if (!existingBots.includes(username)) return username
       n++
     }

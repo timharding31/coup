@@ -20,7 +20,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
   const opponentsCount = opponents.length
 
   return (
-    <div className='relative flex flex-col h-full flex-auto'>
+    <main className='relative flex flex-col h-full'>
       <div
         className={cn('px-4 py-2 flex-auto grid grid-cols-4 gap-x-8 gap-y-4 min-h-0', {
           'grid-rows-1': opponentsCount <= 2,
@@ -48,7 +48,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
       {!!drawerHeight && (
         <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord--1/50 z-50 pointer-events-none' />
       )}
-    </div>
+    </main>
   )
 }
 

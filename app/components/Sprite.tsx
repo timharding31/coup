@@ -27,8 +27,10 @@ export type SpriteId =
   | 'exclamation'
   | 'loading'
   | 'plus'
+  | 'robot'
 
 export const SpriteSize = {
+  xs: 16,
   sm: 18,
   base: 24,
   lg: 32
@@ -79,8 +81,7 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
       break
 
     case 'avatar':
-      viewBox = '0 0 512 512'
-      width = 14
+      viewBox = '-128 -104 720 720'
       break
 
     case 'crown':
@@ -101,6 +102,10 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
 
     case 'plus':
       viewBox = '0 0 45.402 45.402'
+      break
+
+    case 'robot':
+      viewBox = '-20 -84 680 680'
       break
   }
 

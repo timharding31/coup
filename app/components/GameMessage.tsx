@@ -84,7 +84,7 @@ const CardTag: React.FC<{ type: CardType }> = ({ type }) => {
   )
 }
 
-const TargetTag: React.FC<{ name: string }> = ({ name }) => {
+const TargetTag: React.FC<{ name: string; isBot?: boolean }> = ({ name, isBot = true }) => {
   return (
     <motion.span
       className='inline-flex items-center mx-1 rounded-md tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle'
@@ -97,8 +97,8 @@ const TargetTag: React.FC<{ name: string }> = ({ name }) => {
         delay: 0.2
       }}
     >
-      <Sprite id='avatar' size='sm' color='nord-0' />
-      <span className='translate-y-[0.125em]'>{name.replace('🤖 ', '🤖')}</span>
+      <Sprite id={isBot ? 'robot' : 'avatar'} size='sm' color='nord-0' />
+      <span className='translate-y-[0.125em]'>{name}</span>
     </motion.span>
   )
 }

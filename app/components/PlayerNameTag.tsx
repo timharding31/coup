@@ -1,27 +1,34 @@
 import React from 'react'
 import cn from 'classnames'
 import { NordColor, Player } from '~/types'
-import CoinStack from './CoinStack'
+import { CoinStack } from './CoinStack'
 import { Sprite } from './Sprite'
 
 interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
   textColor?: NordColor
-  size?: 'sm' | 'base' | 'lg'
+  size?: 'xs' | 'sm' | 'base' | 'lg'
+  iconSize?: 'xs' | 'sm' | 'base' | 'lg'
+  iconColor?: NordColor
   bgColor?: NordColor
   className?: string
   userClassName?: string
   cardCount?: number
   isHost?: boolean
+  isBot?: boolean
 }
 
 export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
+  id,
   username,
   coins,
   textColor = 'nord-4',
   size = 'base',
+  iconSize = 'xs',
+  iconColor = textColor,
   bgColor = 'nord-1',
   cardCount,
   isHost = false,
+  isBot = id.startsWith('bot-'),
   className,
   userClassName
 }) => {
@@ -32,13 +39,16 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
         className
       )}
     >
-      <span className={cn('overflow-hidden whitespace-nowrap text-ellipsis font-bold', userClassName)}>
-        {username}
-        {isHost && (
-          <span className='font-normal ml-2' style={{ fontSize: 'smaller' }}>
-            (host)
-          </span>
-        )}
+      <span className={cn('inline-flex items-center font-bold gap-1.5 overflow-hidden', userClassName)}>
+        <Sprite id={isBot ? 'robot' : 'avatar'} size={iconSize} color={iconColor} />
+        <span className='flex-auto overflow-hidden text-ellipsis whitespace-nowrap'>
+          {username}
+          {isHost && (
+            <span className='ml-2 font-normal' style={{ fontSize: 'smaller' }}>
+              (host)
+            </span>
+          )}
+        </span>
       </span>
       <div className='flex items-center gap-1 flex-row-reverse'>
         {cardCount != null && (
