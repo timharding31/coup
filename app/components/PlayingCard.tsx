@@ -53,19 +53,19 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     }
 
     return (
-      <div
-        className={cn('card-container', {
-          'rotate-180 grayscale-[80%] transform-origin-center': isRevealed
-        })}
-      >
-        <div className={`rounded-card nord-shadow w-full h-full relative ${colorSchemes[character]}`}>
+      <div className='card-container nord-shadow'>
+        <div
+          className={cn('rounded-card w-full h-full relative', colorSchemes[character], {
+            'rotate-180 grayscale-[80%] transform-origin-center': isRevealed
+          })}
+        >
           {/* Card corners */}
           <div className='absolute top-2 left-2 px-[4cqi] flex flex-col items-start z-10'>
             <span className={`text-[8cqi] font-bold ${textColors[character]} font-robotica`}>{character.slice()}</span>
           </div>
 
           {/* Mirrored name for bottom */}
-          <div className='absolute bottom-2 right-2 px-[4cqi] flex flex-col items-end rotate-180 z-10 mix-blend-exclusion'>
+          <div className='absolute bottom-2 right-2 px-[4cqi] flex flex-col items-end rotate-180 mix-blend-exclusion z-10'>
             <span className={`text-[8cqi] font-bold ${textColors[character]} font-robotica`}>{character.slice()}</span>
           </div>
 

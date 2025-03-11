@@ -180,7 +180,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : sprite ? (
           <Sprite
             id={sprite === 'arrow-left' ? 'arrow' : sprite}
-            className={sprite === 'arrow-left' ? 'rotate-180 z-50' : 'z-50'}
+            className={sprite === 'arrow-left' ? 'rotate-180 z-40' : 'z-40'}
             size={size}
           />
         ) : null}

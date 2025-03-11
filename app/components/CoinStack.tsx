@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
+import ReactDOM from 'react-dom'
 import { Sprite, SpriteProps, SpriteSize } from './Sprite'
 import { NordColor } from '~/types'
 import cn from 'classnames'
+import { AnimatePresence, motion } from 'framer-motion'
+import _ from 'lodash'
 
 const HORIZONTAL_OFFSET: Record<SpriteSize, number> = {
   sm: 3,
@@ -29,7 +32,23 @@ const CoinStack: React.FC<CoinStackProps> = ({
   const [showAnimation, setShowAnimation] = useState(false)
   const [changeAmount, setChangeAmount] = useState(0)
   const prevCountRef = useRef(count)
+  const ref = useRef<HTMLDivElement>(null)
+  const [rect, setRect] = useState<DOMRect | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    if (!ref.current) return
+
+    const observer = new ResizeObserver(
+      _.debounce(() => {
+        const el = ref.current
+        if (!el) return
+        setRect(el.getBoundingClientRect())
+      }, 50)
+    )
+    observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (watchChanges && count !== prevCountRef.current) {
@@ -42,8 +61,12 @@ const CoinStack: React.FC<CoinStackProps> = ({
       }
 
       timeoutRef.current = setTimeout(() => {
-        setShowAnimation(false)
-      }, 2_000)
+        setShowAnimation(true)
+        if (timeoutRef.current) clearTimeout(timeoutRef.current)
+        timeoutRef.current = setTimeout(() => {
+          setShowAnimation(false)
+        }, 1_000)
+      }, 50)
 
       prevCountRef.current = count
     }
@@ -59,7 +82,7 @@ const CoinStack: React.FC<CoinStackProps> = ({
   const offset = HORIZONTAL_OFFSET[size]
 
   return (
-    <div className='relative'>
+    <div ref={ref}>
       <div
         className={cn('flex flex-row-reverse justify-center', className, {
           'gap-1': size === 'lg',
@@ -105,21 +128,44 @@ const CoinStack: React.FC<CoinStackProps> = ({
           ))}
         </div>
       </div>
-
-      {showAnimation && (
-        <div className='absolute -top-4 right-0.5 transform font-robotica font-normal shadow-lg z-10 animate-coin-change'>
-          <span
-            className={cn('text-sm text-right whitespace-nowrap translate-y-[0.125em]', {
-              'text-nord-14': changeAmount > 0,
-              'text-nord-11': changeAmount < 0
-            })}
-          >
-            {changeAmount > 0 ? '+' : ''}
-            {changeAmount}
-          </span>
-        </div>
-      )}
+      <AnimatePresence>
+        {showAnimation && (
+          <CoinStackChange
+            changeAmount={changeAmount}
+            className='fixed z-50'
+            style={!rect ? {} : { top: `${rect.top - 20}px`, left: `${rect.right - 24}px` }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  )
+}
+
+interface CoinStackChangeProps extends React.HTMLAttributes<HTMLDivElement> {
+  changeAmount: number
+}
+
+const CoinStackChange: React.FC<CoinStackChangeProps> = ({ changeAmount, ...rest }) => {
+  return ReactDOM.createPortal(
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ type: 'spring', stiffness: 200, damping: 15, duration: 0.1 }}
+      style={rest.style}
+      className={rest.className}
+    >
+      <div
+        className={cn('text-[14px] text-right whitespace-nowrap w-[24px] leading-[24px] font-robotica font-normal', {
+          'text-nord-14': changeAmount > 0,
+          'text-nord-11': changeAmount < 0
+        })}
+      >
+        {changeAmount > 0 ? '+' : ''}
+        {changeAmount}
+      </div>
+    </motion.div>,
+    document.getElementById('root')!
   )
 }
 

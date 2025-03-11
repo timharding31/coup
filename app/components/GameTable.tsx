@@ -46,7 +46,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
       </div>
       {children}
       {!!drawerHeight && (
-        <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord--1/50 z-60 pointer-events-none' />
+        <div className='absolute top-0 right-0 bottom-0 left-0 bg-nord--1/50 z-50 pointer-events-none' />
       )}
     </div>
   )

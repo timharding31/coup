@@ -14,7 +14,7 @@ export const Header: React.FC<HeaderProps> = ({ className, player, ...rest }) =>
   return (
     <header
       className={cn(
-        'relative z-50 flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3 nord-shadow',
+        'relative z-40 flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3 nord-shadow',
         className
       )}
       {...rest}
