@@ -1,14 +1,16 @@
-import { Action, ActionType, Card, CardType, Game, Player, TargetedActionType, UntargetedActionType } from '~/types'
+import { Action, ActionType, CardType, Game, Player, TargetedActionType, UntargetedActionType } from '~/types'
+import { db } from './firebase.server'
+import { Reference } from 'firebase-admin/database'
 
-type RobotResponse<T> = Promise<T & { memory: Record<string, any> }>
+// type RobotResponse<T> = Promise<T & { memory: Record<string, any> }>
 
 interface ICoupRobot {
-  decideAction(): RobotResponse<{ action: Action }>
-  decideResponse(): RobotResponse<
+  decideAction(): Promise<{ action: Action }>
+  decideResponse(): Promise<
     { response: 'accept' | 'challenge'; blockCard?: never } | { response: 'block'; blockCard: CardType }
   >
-  decideCardSelection(): RobotResponse<{ cardId: string }>
-  decideExchangeCards(): RobotResponse<{ cardIds: string[] }>
+  decideCardSelection(): Promise<{ cardId: string }>
+  decideExchangeCards(): Promise<{ cardIds: string[] }>
 }
 
 // Type to track observed player actions and inferred cards
@@ -133,6 +135,8 @@ export class CoupRobot implements ICoupRobot {
     'Star'
   ]
 
+  private readonly botsRef: Reference = db.ref('bots')
+  private memoryRef: Reference
   private player: Player
   private game: Game
   // Map of player ID to their card inferences
@@ -141,27 +145,48 @@ export class CoupRobot implements ICoupRobot {
   private exchangeSeenCards: Set<CardType> = new Set()
   // Count of each card type known to be revealed/seen
   private knownCardCounts: Map<CardType, number> = new Map()
-  // Metadata field to store bot memory in the database
-  private botMemoryKey: string
 
-  constructor(player: Player, game: Game) {
+  private constructor(player: Player, game: Game) {
     this.player = player
     this.game = game
-    this.botMemoryKey = `botMemory_${player.id}`
-    this.loadBotMemory()
+    this.memoryRef = this.botsRef.child(`${game.id}/${player.id}`)
+  }
+
+  static async create(player: Player, game: Game): Promise<CoupRobot> {
+    const bot = new CoupRobot(player, game)
+    return bot.initMemory()
+  }
+
+  static isBotPlayer(player: Player | null = null): boolean {
+    return !!player?.id.startsWith('bot-')
+  }
+
+  static isBotGame(game: Game | null = null): boolean {
+    return !!game?.players.some(p => p.id.startsWith('bot-'))
+  }
+
+  static getRandomUsername(existingBots: string[] = []): string {
+    let n = 0
+    while (n < 10) {
+      const username = '🤖 ' + CoupRobot.USERNAMES[Math.floor(Math.random() * CoupRobot.USERNAMES.length)]
+      if (!existingBots.includes(username)) return username
+      n++
+    }
+    throw new Error('Failed to generate bot username')
   }
 
   /**
    * Load bot memory from the game's metadata
    * This restores the bot's knowledge about cards and player inferences
    */
-  private loadBotMemory(): void {
+  private async initMemory(): Promise<CoupRobot> {
     // First initialize with default values
     this.initializeInferences()
     this.initializeKnownCardCounts()
 
     // Then try to load saved memory if it exists
-    const memory = this.game.botMemory?.[this.botMemoryKey]
+    const snapshot = await this.memoryRef.get()
+    const memory = snapshot.val() as Record<string, any> | null
 
     if (memory) {
       try {
@@ -190,40 +215,21 @@ export class CoupRobot implements ICoupRobot {
         this.initializeKnownCardCounts()
       }
     }
+
+    return this
   }
 
   /**
    * Save bot memory to be stored in the game's metadata
    * This preserves the bot's knowledge between turns
    */
-  private saveBotMemory(): Record<string, any> {
-    return {
+  private async saveBotMemory(): Promise<void> {
+    const memory = {
       playerInferences: Object.fromEntries(this.playerInferences.entries()),
       exchangeSeenCards: Array.from(this.exchangeSeenCards),
       knownCardCounts: Object.fromEntries(this.knownCardCounts.entries())
     }
-  }
-
-  static isBotPlayer(player: Player | null = null): boolean {
-    return !!player?.id.startsWith('bot-')
-  }
-
-  static isBotGame(game: Game | null = null): boolean {
-    return !!game?.players.some(p => p.id.startsWith('bot-'))
-  }
-
-  static fromPlayer(player: Player, game: Game): CoupRobot {
-    return new CoupRobot(player, game)
-  }
-
-  static getRandomUsername(existingBots: string[] = []): string {
-    let n = 0
-    while (n < 10) {
-      const username = '🤖 ' + CoupRobot.USERNAMES[Math.floor(Math.random() * CoupRobot.USERNAMES.length)]
-      if (!existingBots.includes(username)) return username
-      n++
-    }
-    throw new Error('Failed to generate bot username')
+    await this.memoryRef.transaction(prev => ({ ...prev, ...memory }))
   }
 
   /**
@@ -484,7 +490,7 @@ export class CoupRobot implements ICoupRobot {
   /**
    * Decide what action to take on the robot's turn
    */
-  async decideAction(): Promise<{ action: Action; memory: Record<string, any> }> {
+  async decideAction(): Promise<{ action: Action }> {
     // Update our knowledge of the game state by scanning for newly revealed cards
     this.scanGameForRevealedCards()
 
@@ -538,11 +544,9 @@ export class CoupRobot implements ICoupRobot {
     }
 
     // Save bot's memory to persist its knowledge
-    const memory = {
-      [this.botMemoryKey]: this.saveBotMemory()
-    }
+    await this.saveBotMemory()
 
-    return { action, memory }
+    return { action }
   }
 
   /**
@@ -652,7 +656,7 @@ export class CoupRobot implements ICoupRobot {
   /**
    * Decide how to respond to another player's action
    */
-  async decideResponse(): RobotResponse<
+  async decideResponse(): Promise<
     { response: 'accept' | 'challenge'; blockCard?: never } | { response: 'block'; blockCard: CardType }
   > {
     const { phase, action } = this.game.currentTurn || {}
@@ -741,26 +745,25 @@ export class CoupRobot implements ICoupRobot {
     }
 
     // Save bot memory after making a decision
-    const memory = {
-      [this.botMemoryKey]: this.saveBotMemory()
-    }
+    await this.saveBotMemory()
 
     switch (response) {
       case 'accept':
       case 'challenge':
-        return { response, memory }
+        return { response }
+
       case 'block':
         if (!blockCard) {
           throw new Error('Cannot block without claiming a card')
         }
-        return { response: 'block', blockCard, memory }
+        return { response: 'block', blockCard }
     }
   }
 
   /**
    * Choose which card to select when the bot needs to lose influence or reveal a card
    */
-  async decideCardSelection(): Promise<{ cardId: string; memory: Record<string, any> }> {
+  async decideCardSelection(): Promise<{ cardId: string }> {
     const phase = this.game.currentTurn?.phase
     if (!phase) {
       throw new Error('No current turn phase')
@@ -853,11 +856,9 @@ export class CoupRobot implements ICoupRobot {
     }
 
     // Save memory after making a decision
-    const memory = {
-      [this.botMemoryKey]: this.saveBotMemory()
-    }
+    await this.saveBotMemory()
 
-    return { cardId: selectedCardId, memory }
+    return { cardId: selectedCardId }
   }
 
   /**
@@ -900,7 +901,7 @@ export class CoupRobot implements ICoupRobot {
   /**
    * Choose which cards to keep after an exchange
    */
-  async decideExchangeCards(): Promise<{ cardIds: string[]; memory: Record<string, any> }> {
+  async decideExchangeCards(): Promise<{ cardIds: string[] }> {
     const eligibleCards = this.player.influence.filter(card => !card.isRevealed)
     const gameState = this.analyzeGameState()
 
@@ -968,11 +969,9 @@ export class CoupRobot implements ICoupRobot {
     const selectedCards = sortedCards.slice(0, 2)
 
     // Save memory after making a decision
-    const memory = {
-      [this.botMemoryKey]: this.saveBotMemory()
-    }
+    await this.saveBotMemory()
 
-    return { cardIds: selectedCards, memory }
+    return { cardIds: selectedCards }
   }
 
   /**

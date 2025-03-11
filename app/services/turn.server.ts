@@ -787,9 +787,8 @@ export class TurnService implements ITurnService {
       // Randomly select a bot to respond
       const bot = respondingBots.splice(Math.floor(Math.random() * respondingBots.length), 1)[0]
       try {
-        const robot = new CoupRobot(bot, game)
-        const { response, blockCard, memory } = await robot.decideResponse()
-        await this.updateBotMemory(game.id, memory)
+        const robot = await CoupRobot.create(bot, game)
+        const { response, blockCard } = await robot.decideResponse()
 
         if (response === 'block') {
           blockingBot = bot
@@ -831,8 +830,7 @@ export class TurnService implements ITurnService {
         const robot = await this.assembleRobotForPhase(game.id, action.playerId, ['AWAITING_ACTIVE_RESPONSE_TO_BLOCK'])
         if (!robot) return
         await this.gamesRef.child(`${game.id}/botActionInProgress`).set(true)
-        const { response, memory } = await robot.decideResponse()
-        await this.updateBotMemory(game.id, memory)
+        const { response } = await robot.decideResponse()
         await this.handleBlockResponse(game.id, action.playerId, response === 'challenge' ? 'challenge' : 'accept')
       } catch (error) {
         console.error(`Error processing bot block response: ${error}`)
@@ -875,8 +873,7 @@ export class TurnService implements ITurnService {
     await this.gamesRef.child(`${gameId}/botActionInProgress`).set(true)
 
     // Let bot decide which card to reveal for defense
-    const { cardId, memory } = await robot.decideCardSelection()
-    await this.updateBotMemory(game.id, memory)
+    const { cardId } = await robot.decideCardSelection()
     await this.handleChallengeDefenseCard(game.id, defenderId, cardId)
 
     await this.gamesRef.child(`${gameId}/botActionInProgress`).set(false)
@@ -913,10 +910,7 @@ export class TurnService implements ITurnService {
 
     await this.gamesRef.child(`${gameId}/botActionInProgress`).set(true)
 
-    const { cardId, memory } = await robot.decideCardSelection()
-
-    // Update the game with the bot's memory
-    await this.updateBotMemory(game.id, memory)
+    const { cardId } = await robot.decideCardSelection()
 
     if (phase === 'AWAITING_TARGET_SELECTION') {
       // Handle target selection
@@ -945,8 +939,7 @@ export class TurnService implements ITurnService {
         const robot = await this.assembleRobotForPhase(game.id, botPlayer.id, ['AWAITING_EXCHANGE_RETURN'])
         if (!robot) return
         await this.gamesRef.child(`${game.id}/botActionInProgress`).set(true)
-        const { cardIds, memory } = await robot.decideExchangeCards()
-        await this.updateBotMemory(game.id, memory)
+        const { cardIds } = await robot.decideExchangeCards()
         await this.handleExchangeReturn(game.id, action.playerId, cardIds)
       } catch (error) {
         console.error(`Error processing bot exchange: ${error}`)
@@ -970,7 +963,7 @@ export class TurnService implements ITurnService {
       console.error('Bot player not found: ' + botPlayerId)
       return null
     }
-    return new CoupRobot(updatedPlayer, game)
+    return await CoupRobot.create(updatedPlayer, game)
   }
 
   /**
@@ -1026,13 +1019,10 @@ export class TurnService implements ITurnService {
 
     try {
       // Create a robot instance for this bot
-      const robot = new CoupRobot(currentPlayer, game)
+      const robot = await CoupRobot.create(currentPlayer, game)
 
       // Let the bot decide on an action
-      const { action, memory } = await robot.decideAction()
-
-      // Update the game with the bot's memory
-      await this.updateBotMemory(game.id, memory)
+      const { action } = await robot.decideAction()
 
       // Start the turn with the bot's chosen action
       await this.startTurn(game.id, action)
@@ -1041,25 +1031,6 @@ export class TurnService implements ITurnService {
     }
 
     await this.gamesRef.child(`${game.id}/botActionInProgress`).set(false)
-  }
-
-  /**
-   * Update the bot memory in the database
-   */
-  private async updateBotMemory(gameId: string, memory: Record<string, any>): Promise<void> {
-    // Update the game's botMemory field
-    await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
-      if (!game) return game
-
-      return {
-        ...game,
-        botMemory: {
-          ...(game.botMemory || {}),
-          ...memory
-        },
-        updatedAt: Date.now()
-      }
-    })
   }
 
   private getNextPlayerIndex(game: Game): number {

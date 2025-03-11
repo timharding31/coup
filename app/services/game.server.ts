@@ -34,6 +34,7 @@ export interface IGameService {
 
 export class GameService implements IGameService {
   private gamesRef: Reference = db.ref('games')
+  private botsRef: Reference = db.ref('bots')
 
   private actionService: ActionService
   private deckService: DeckService
@@ -287,6 +288,7 @@ export class GameService implements IGameService {
       if (pin) await this.pinService.removeGamePin(pin)
       await this.playerService.updatePlayer(playerId, { currentGameId: null })
       await this.gamesRef.child(gameId).remove()
+      await this.botsRef.child(gameId).remove()
     } else if (updatedGame?.status === 'COMPLETED') {
       await this.cleanupGame(gameId)
     }
@@ -361,7 +363,8 @@ export class GameService implements IGameService {
     await Promise.all([
       ...game.players?.map(player => this.playerService.updatePlayer(player.id, { currentGameId: null })),
       this.pinService.removeGamePin(game.pin),
-      gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() })
+      gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() }),
+      this.botsRef.child(gameId).remove()
     ])
   }
 
