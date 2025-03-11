@@ -784,14 +784,17 @@ export class TurnService implements ITurnService {
         const robot = new CoupRobot(bot, game)
         const { response, blockCard, memory } = await robot.decideResponse()
         await this.updateBotMemory(game.id, memory)
+
         if (response === 'block') {
           blockingBot = bot
           botBlockCard = blockCard!
           break
-        } else if (response === 'challenge') {
+        }
+        if (response === 'challenge') {
           challengingBot = bot
           break
-        } else if (response === 'accept') {
+        }
+        if (response === 'accept') {
           await this.handleActionResponse(game.id, bot.id, response, blockCard)
         }
       } catch (error) {
@@ -989,7 +992,7 @@ export class TurnService implements ITurnService {
       // If game is still in progress, check if the next player is a bot
       // Handle bot turn asynchronously to allow quick response to client
       if (game.status === GameStatus.IN_PROGRESS) {
-        this.handleBotTurn(game)
+        await this.handleBotTurn(game)
       }
     }
   }

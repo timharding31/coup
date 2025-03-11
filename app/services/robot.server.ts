@@ -747,9 +747,8 @@ export class CoupRobot implements ICoupRobot {
 
     switch (response) {
       case 'accept':
-        return { response: 'accept', memory }
       case 'challenge':
-        return { response: 'challenge', memory }
+        return { response, memory }
       case 'block':
         if (!blockCard) {
           throw new Error('Cannot block without claiming a card')
