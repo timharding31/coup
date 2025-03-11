@@ -672,7 +672,7 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_OPPONENT_RESPONSES')
           // Process bot responses after transitioning to the waiting phase (non-blocking)
           if (CoupRobot.isBotGame(game)) {
-            this.processBotResponses(game)
+            await this.processBotResponses(game)
           }
         } else {
           this.clearTimer(game.id)
@@ -688,7 +688,7 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK')
           // Handle bot active response to block (non-blocking)
           if (CoupRobot.isBotGame(game)) {
-            this.processBotBlockerResponse(game)
+            await this.processBotBlockerResponse(game)
           }
         } else if (game.currentTurn.opponentResponses?.challenge) {
           // A direct challenge: actor must defend.
@@ -697,7 +697,7 @@ export class TurnService implements ITurnService {
           await this.transitionState(game.id, currentPhase, 'AWAITING_ACTOR_DEFENSE')
           // Handle bot defense (non-blocking)
           if (CoupRobot.isBotGame(game)) {
-            this.processBotDefense(game.id)
+            await this.processBotDefense(game.id)
           }
         } else if (haveAllPlayersResponded(game, game.currentTurn)) {
           // All players have responded (possibly due to timeout), clear timer
@@ -716,7 +716,7 @@ export class TurnService implements ITurnService {
       case 'AWAITING_BLOCKER_DEFENSE':
         // Waiting for the defender to select and reveal a card.
         // Bot defense is handled by processBotDefense (non-blocking)
-        this.processBotDefense(game.id)
+        await this.processBotDefense(game.id)
         break
 
       case 'REPLACING_CHALLENGE_DEFENSE_CARD':
@@ -727,7 +727,7 @@ export class TurnService implements ITurnService {
 
       case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
         // Waiting for failed challenger to select card (non-blocking)
-        this.processBotCardSelection(game.id)
+        await this.processBotCardSelection(game.id)
         break
 
       case 'ACTION_EXECUTION':
@@ -738,7 +738,7 @@ export class TurnService implements ITurnService {
       case 'AWAITING_TARGET_SELECTION':
         // Waiting for the target to select a card to lose (handled via selectCardToLose).
         // Process bot card selection if needed (non-blocking)
-        this.processBotCardSelection(game.id)
+        await this.processBotCardSelection(game.id)
         break
 
       case 'AWAITING_EXCHANGE_RETURN':
@@ -779,7 +779,7 @@ export class TurnService implements ITurnService {
     for (const bot of respondingBots) {
       try {
         // Small random delay to make it seem more human-like
-        const delay = 500 + Math.random() * 1000
+        const delay = Math.random() * 1000
         await new Promise(res => setTimeout(res, delay))
 
         const robot = await this.assembleRobotForPhase(game.id, bot.id, ['AWAITING_OPPONENT_RESPONSES'])
@@ -805,9 +805,6 @@ export class TurnService implements ITurnService {
     // Check if the active player is a bot and needs to respond to a block
     if (action.playerId.startsWith('bot-') && opponentResponses?.block) {
       try {
-        // Small delay to simulate thinking
-        await new Promise(resolve => setTimeout(resolve, 1500))
-
         const robot = await this.assembleRobotForPhase(game.id, action.playerId, ['AWAITING_ACTIVE_RESPONSE_TO_BLOCK'])
         if (!robot) return
 
@@ -845,9 +842,6 @@ export class TurnService implements ITurnService {
     const botPlayer = game.players.find(p => p.id === defenderId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
 
-    // Small delay to simulate thinking
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
     const robot = await this.assembleRobotForPhase(game.id, botPlayer.id, [
       'AWAITING_ACTOR_DEFENSE',
       'AWAITING_BLOCKER_DEFENSE'
@@ -883,9 +877,6 @@ export class TurnService implements ITurnService {
     const botPlayer = game.players.find(p => p.id === botId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
 
-    // Small delay to simulate thinking
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
     const robot = await this.assembleRobotForPhase(game.id, botPlayer.id, [
       'AWAITING_TARGET_SELECTION',
       'AWAITING_CHALLENGE_PENALTY_SELECTION'
@@ -920,9 +911,6 @@ export class TurnService implements ITurnService {
 
     if (CoupRobot.isBotPlayer(botPlayer)) {
       try {
-        // Small delay to simulate thinking
-        await new Promise(resolve => setTimeout(resolve, 1000))
-
         const robot = await this.assembleRobotForPhase(game.id, botPlayer.id, ['AWAITING_EXCHANGE_RETURN'])
         if (!robot) return
         // Let bot decide which cards to keep
@@ -1080,7 +1068,7 @@ export class TurnService implements ITurnService {
         await this.dealExchangeCards(gameId, action.playerId)
 
         if (actor && CoupRobot.isBotPlayer(actor)) {
-          this.processBotExchangeReturn(game)
+          await this.processBotExchangeReturn(game)
         }
 
         break
@@ -1095,7 +1083,7 @@ export class TurnService implements ITurnService {
 
           // Check if the target is a bot, and if so, immediately process their card selection
           if (target && CoupRobot.isBotPlayer(target)) {
-            this.processBotCardSelection(gameId)
+            await this.processBotCardSelection(gameId)
           }
         }
         break
