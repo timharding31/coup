@@ -40,7 +40,7 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
       )}
     >
       <span className={cn('inline-flex items-center font-bold gap-1.5 overflow-hidden', userClassName)}>
-        <Sprite id={isBot ? 'robot' : 'avatar'} size={iconSize} color={iconColor} />
+        {isBot ? <Sprite id={isBot ? 'robot' : 'avatar'} size={iconSize} color={iconColor} /> : null}
         <span className='flex-auto overflow-hidden text-ellipsis whitespace-nowrap'>
           {username}
           {isHost && (
