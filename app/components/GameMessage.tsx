@@ -78,7 +78,7 @@ const CardTag: React.FC<{ type: CardType }> = ({ type }) => {
         delay: 0.2
       }}
     >
-      <Sprite id='card' size='sm' color='nord-8' />
+      <Sprite id='card' size='sm' color='nord-10' />
       <span className='translate-y-[0.125em]'>{type}</span>
     </motion.span>
   )

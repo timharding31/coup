@@ -54,7 +54,7 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
         {cardCount != null && (
           <div className='flex flex-row-reverse justify-start min-w-9'>
             {Array.from({ length: cardCount }).map((_, i) => (
-              <Sprite key={`card-${i}`} id='card' color='nord-8' size={size} className='-mr-1.5' />
+              <Sprite key={`card-${i}`} id='card' color='nord-10' size={size} className='-mr-1.5' />
             ))}
             {Array.from({ length: 2 - cardCount }).map((_, i) => (
               <Sprite key={`card-${i}`} id='card' color='nord-3' size={size} className='-mr-1.5' />
