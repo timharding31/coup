@@ -48,7 +48,6 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
     return () => resizeObserver.disconnect()
   }, [])
 
-  const isBot = playerId.startsWith('bot-')
   const isPlayerDead = influence.every(card => card.isRevealed)
   const isPopoverOpen = game?.status === 'IN_PROGRESS' && !isPlayerDead && message
 
@@ -62,7 +61,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           className='mx-auto w-full'
           style={(maxWidth ? { maxWidth: `${maxWidth.toFixed(2)}px` } : {}) as React.CSSProperties}
         >
-          <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' isBot={isBot} />
+          <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' />
         </div>
         {isPopoverOpen && <TooltipGameMessage message={message} />}
       </div>

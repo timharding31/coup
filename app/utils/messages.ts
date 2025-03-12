@@ -85,7 +85,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           text: 'Responding',
           type: 'block',
           isWaiting: true,
-          delayMs: 750
+          delayMs: 50
         }
       }
 
@@ -107,7 +107,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           text: 'Proving',
           type: 'challenge',
           isWaiting: true,
-          delayMs: 750,
+          delayMs: 50,
           cardType: challengeResult.challengedCaracter
         }
       }
@@ -130,7 +130,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           text: 'Proving',
           type: 'challenge',
           isWaiting: true,
-          delayMs: 750,
+          delayMs: 50,
           cardType: challengeResult.challengedCaracter
         }
       }
