@@ -742,6 +742,28 @@ export class CoupRobot implements ICoupRobot {
           }
         }
       }
+    } else if (phase === 'AWAITING_TARGET_BLOCK_RESPONSE') {
+      // If we've been targeted and the actor already defended a challenge, decide whether to block the actor
+      if (action.canBeBlocked && action.targetPlayerId === this.player.id) {
+        const blockableBy = action.blockableBy
+        const legitBlockCards = blockableBy.filter(cardType => this.playerHasCard(this.player, cardType))
+
+        if (legitBlockCards.length > 0) {
+          // Always block with a card we actually have
+          response = 'block'
+          blockCard = legitBlockCards[0]
+        } else if (blockableBy.length > 0) {
+          // Consider bluffing a block
+          // Assess risk of being challenged on the bluff
+          const possibleBlockCard = blockableBy[0] // Take first blockable card
+
+          // Only bluff if it's not too risky
+          if (!this.isRiskyBluff(possibleBlockCard) && Math.random() < 0.6) {
+            response = 'block'
+            blockCard = possibleBlockCard
+          }
+        }
+      }
     }
 
     // Save bot memory after making a decision

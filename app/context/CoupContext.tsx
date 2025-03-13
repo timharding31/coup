@@ -145,16 +145,6 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         path: '/actions',
         body: { action }
       })
-      try {
-        const response = await fetch(`/api/games/${gameId}/actions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, playerId })
-        })
-        if (!response.ok) throw new Error('Failed to perform action')
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error occurred')
-      }
       setIsLoading(false)
     },
     [gameId, playerId]

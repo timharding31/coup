@@ -130,6 +130,16 @@ export class GameService implements IGameService {
         await this.turnService.handleActionResponse(gameId, playerId, response, claimedCardForBlock)
         break
 
+      case 'AWAITING_TARGET_BLOCK_RESPONSE':
+        if (playerId !== action.targetPlayerId) {
+          throw new Error('Not your turn to respond')
+        }
+        if (response === 'challenge') {
+          throw new Error('Invalid response. You cannot challenge in this phase')
+        }
+        await this.turnService.handleTargetResponse(gameId, playerId, response, claimedCardForBlock)
+        break
+
       default:
         throw new Error(`Invalid phase for response: ${phase}`)
     }

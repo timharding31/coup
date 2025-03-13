@@ -46,7 +46,7 @@ function getDelayFromGame(game: Game<'client'>, nextGame: Game<'client'> | null 
   if (isChallengeDefenseCardVisible(game) && !isChallengeDefenseCardVisible(nextGame)) {
     return 2_500
   }
-  if (isActiveExchangeReturn(game) && !isActiveExchangeReturn(nextGame)) {
+  if (isActiveBotExchangeReturn(game) && !isActiveBotExchangeReturn(nextGame)) {
     return 1_000
   }
 
@@ -67,11 +67,14 @@ function isChallengeDefenseCardVisible(game: Game<'client'> | null): boolean {
   return allCards.some(card => card.isChallengeDefenseCard)
 }
 
-function isActiveExchangeReturn(game: Game<'client'> | null): boolean {
+function isActiveBotExchangeReturn(game: Game<'client'> | null): boolean {
   const { phase } = game?.currentTurn || {}
   if (phase !== 'AWAITING_EXCHANGE_RETURN') {
     return false
   }
-  const allPlayers = game?.players || []
-  return allPlayers.some(player => player.influence.length > 2)
+  const actor = game?.players[game.currentPlayerIndex]
+  if (!actor || !actor.id.startsWith('bot-')) {
+    return false
+  }
+  return actor.influence.length > 2
 }

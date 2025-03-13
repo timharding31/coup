@@ -3,8 +3,8 @@ import { Game } from './game'
 
 /**
  * Turn Phases:
- * - ACTION_DECLARED: The active player has submitted an action.
  * - AWAITING_OPPONENT_RESPONSES: Waiting for opponents to respond (block/challenge).
+ * - AWAITING_TARGET_BLOCK_RESPONSE: Waiting for target to respond (block/accept) after successful challenge defense of STEAL/ASSASSINATE by actor
  * - AWAITING_ACTIVE_RESPONSE_TO_BLOCK: A block was declared and the active player must decide to accept or challenge.
  * - AWAITING_ACTOR_DEFENSE: The active player defends a direct challenge.
  * - AWAITING_BLOCKER_DEFENSE: A blocker defends against a challenge to their block.
@@ -17,8 +17,8 @@ import { Game } from './game'
  * - TURN_COMPLETE: Final state indicating end of turn.
  */
 export const TurnPhase = {
-  ACTION_DECLARED: 'ACTION_DECLARED',
   AWAITING_OPPONENT_RESPONSES: 'AWAITING_OPPONENT_RESPONSES',
+  AWAITING_TARGET_BLOCK_RESPONSE: 'AWAITING_TARGET_BLOCK_RESPONSE',
   AWAITING_ACTIVE_RESPONSE_TO_BLOCK: 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
   AWAITING_ACTOR_DEFENSE: 'AWAITING_ACTOR_DEFENSE',
   AWAITING_BLOCKER_DEFENSE: 'AWAITING_BLOCKER_DEFENSE',
@@ -32,18 +32,6 @@ export const TurnPhase = {
 } as const
 
 export type TurnPhase = (typeof TurnPhase)[keyof typeof TurnPhase]
-
-// Helper type for phases that require user input.
-export type WaitingPhase = Extract<
-  TurnPhase,
-  | 'AWAITING_OPPONENT_RESPONSES'
-  | 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK'
-  | 'AWAITING_ACTOR_DEFENSE'
-  | 'AWAITING_BLOCKER_DEFENSE'
-  | 'AWAITING_CHALLENGE_PENALTY_SELECTION'
-  | 'AWAITING_TARGET_SELECTION'
-  | 'AWAITING_EXCHANGE_RETURN'
->
 
 export interface OpponentChallengeResponse {
   block?: never
@@ -123,10 +111,3 @@ export interface UntargetedAction extends BaseAction {
 }
 
 export type Action = TargetedAction | UntargetedAction
-
-export interface StateTransition {
-  from: TurnPhase
-  to: TurnPhase
-  condition?: (turn: TurnState, game: Game) => boolean
-  onTransition?: (turn: TurnState, game: Game) => Promise<void>
-}
