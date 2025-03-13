@@ -38,7 +38,7 @@ export function ErrorBoundary() {
   return (
     <>
       <Header />
-      <div className='mt-40 mx-6 bg-nord-11 p-4 rounded-lg grid grid-cols-[auto_1fr] gap-4'>
+      <div className='mt-40 mx-6 bg-nord-11 p-4 rounded-lg grid grid-cols-[auto_1fr] gap-4 delayed-fade-in'>
         <div className='flex items-center justify-center'>
           <Sprite id='exclamation' color='nord-6' size='sm' />
         </div>

@@ -4,7 +4,8 @@ import { prepareGameForClient } from '~/utils/game'
 
 export const action: ActionFunction = async ({ request, params }) => {
   if (request.method !== 'POST') {
-    return { error: 'Method not allowed' }
+    console.error('Method not allowed')
+    return Response.error()
   }
 
   try {
@@ -12,7 +13,8 @@ export const action: ActionFunction = async ({ request, params }) => {
     const { response, playerId, blockCard } = await request.json()
 
     if (!gameId || !response || !playerId) {
-      return { error: 'Missing required fields' }
+      console.error('Missing required parameters')
+      return Response.error()
     }
 
     const { game } = await gameService.handleResponse(gameId, playerId, response, blockCard)
@@ -21,6 +23,7 @@ export const action: ActionFunction = async ({ request, params }) => {
       game: game ? prepareGameForClient(game, playerId) : null
     })
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Unknown error' }
+    console.error(error)
+    return Response.error()
   }
 }

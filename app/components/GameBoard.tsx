@@ -33,7 +33,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
         {(() => {
           switch (game.status) {
             case 'WAITING':
-              return <GameLobby playerId={playerId} game={game} addBot={addBot} />
+              return <GameLobby playerId={playerId} game={game} addBot={addBot} isLoading={isLoading} />
 
             case 'IN_PROGRESS':
               return (

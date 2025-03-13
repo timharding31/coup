@@ -11,13 +11,15 @@ import { Form } from '@remix-run/react'
 interface GameLobbyProps {
   game: Game<'client'>
   playerId: string
-  addBot?: () => Promise<void>
+  addBot: () => Promise<void>
+  isLoading: boolean
 }
 
 export const GameLobby: React.FC<GameLobbyProps> = ({
   playerId,
   game: { id: gameId, hostId, status, pin, players },
-  addBot
+  addBot,
+  isLoading
 }) => {
   const isHost = playerId === hostId
   const canStart = players.length >= 2 && isHost
@@ -106,7 +108,14 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         >
           <h3 className='text-lg'>Players ({players.length})</h3>
           {isHost && (
-            <Button size='sm' variant='secondary' onClick={addBot} disabled={players.length > 5} sprite='plus'>
+            <Button
+              size='sm'
+              variant='secondary'
+              onClick={addBot}
+              disabled={players.length > 5}
+              isLoading={isLoading}
+              sprite='plus'
+            >
               Bot Player
             </Button>
           )}

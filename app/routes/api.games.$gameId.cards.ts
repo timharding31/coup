@@ -4,7 +4,8 @@ import { prepareGameForClient } from '~/utils/game'
 
 export const action: ActionFunction = async ({ request, params }) => {
   if (request.method !== 'POST') {
-    return { error: 'Method not allowed' }
+    console.error('Method not allowed')
+    return Response.error()
   }
 
   try {
@@ -12,7 +13,8 @@ export const action: ActionFunction = async ({ request, params }) => {
     const { cardId, playerId } = await request.json()
 
     if (!gameId || !cardId || !playerId) {
-      return { error: 'Missing required fields' }
+      console.error('Missing required fields')
+      return Response.error()
     }
 
     const { game } = await gameService.handleCardSelection(gameId, playerId, cardId)
@@ -21,6 +23,7 @@ export const action: ActionFunction = async ({ request, params }) => {
       game: game ? prepareGameForClient(game, playerId) : null
     })
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Unknown error' }
+    console.error(error)
+    return Response.error()
   }
 }

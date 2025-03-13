@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ActionType, CardType, NordColor } from '~/types'
 import { Sprite } from './Sprite'
 import { colorSchemes as characterColorSchemes, textColors as characterTextColors } from '~/components/PlayingCard'
+import { ActionIcon } from './ActionIcon'
 
 const DEFAULT_STYLE = 'bg-nord-6 text-nord-0'
 
@@ -109,7 +110,7 @@ interface GameMessageProps {
 }
 
 export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '' }) => {
-  const { text, type, isWaiting, cardType = null, target = null, delayMs = 0 } = message
+  const { text, type, isWaiting, cardType = null, target = null, delayMs = 0, action = null } = message
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -126,7 +127,10 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
   }, [isWaiting])
 
   // Split text into individual characters for staggered animation
-  const textArray = text.split('')
+  const textArray: React.ReactNode[] = text.split('')
+  if (action) {
+    textArray.unshift(<ActionIcon action={action} size='sm' color='nord-0' />)
+  }
 
   return (
     <AnimatePresence>
@@ -136,7 +140,10 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
             'relative w-fit max-w-full inline-flex items-center justify-center text-center px-3 py-1 rounded-md shadow-lg overflow-hidden',
             MESSAGE_STYLE[type],
             className,
-            { 'bg-transparent': isWaiting }
+            {
+              'bg-transparent': isWaiting,
+              'pl-5': action === 'INCOME' || action === 'FOREIGN_AID' || action === 'TAX'
+            }
           )}
           initial={{
             opacity: 0,
@@ -163,7 +170,7 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
 
           <div className='flex flex-wrap items-center justify-center gap-1 max-w-full'>
             {/* Message text with staggered character animation */}
-            <motion.div className='inline-flex items-center flex-wrap font-bold text-[16px] leading-5'>
+            <div className='inline-flex items-center font-bold text-[16px] leading-5 relative'>
               {textArray.map((char, i) => (
                 <motion.span
                   key={i}
@@ -173,14 +180,14 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
                     type: 'spring',
                     stiffness: 500,
                     damping: 15,
-                    delay: i * 0.02, // Stagger effect
+                    delay: i * 0.02,
                     mass: 0.6
                   }}
                 >
                   {char === ' ' ? <>&nbsp;</> : char}
                 </motion.span>
               ))}
-            </motion.div>
+            </div>
 
             {cardType || target ? (
               <div className='inline-flex flex-wrap'>
@@ -190,7 +197,6 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
             ) : null}
           </div>
 
-          {/* Flash effect overlay */}
           <motion.div
             className='absolute inset-0 rounded-md bg-white'
             initial={{ opacity: 0.7 }}
@@ -206,7 +212,7 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
 // Tooltip wrapper for GameMessage
 export const TooltipGameMessage: React.FC<GameMessageProps> = props => {
   return (
-    <div className='absolute -left-2 -right-2 top-10 flex items-center justify-center z-50 w-[calc(100%+1rem)]'>
+    <div className='absolute left-1/2 -translate-x-1/2 top-10 flex items-center justify-center z-50 w-fit max-w-[calc(100%+1rem)]'>
       <GameMessage key={props.message.text} {...props} />
     </div>
   )

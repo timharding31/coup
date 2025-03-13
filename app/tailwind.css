@@ -181,3 +181,17 @@ h4 {
   width: 300%;
   height: 100%;
 }
+
+.delayed-fade-in {
+  opacity: 0;
+  transform: translateY(-16px);
+  animation: delayedFadeIn 0.5s ease-in-out forwards;
+  animation-delay: 5s;
+}
+
+@keyframes delayedFadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

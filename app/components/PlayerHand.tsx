@@ -40,7 +40,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
         boxShadow: '0px 300px 0px 0px var(--nord-0)'
       }}
     >
-      <PlayerNameTag id={playerId} {...nameTagProps} className='text-lg my-2' bgColor='nord-0' iconSize='sm' />
+      <PlayerNameTag id={playerId} {...nameTagProps} className='my-1.5' size='lg' bgColor='nord-0' isActiveGame />
       <AnimatePresence>
         <div
           className={cn('h-[64cqi] grid items-center gap-4', {

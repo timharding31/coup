@@ -11,6 +11,7 @@ export interface MessageData {
   cardType?: CardType
   target?: string
   delayMs?: number
+  action?: ActionType
 }
 
 export type MessageMap = Record<string, MessageData>
@@ -47,7 +48,8 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           text: actionVerb.content,
           type: 'info',
           isWaiting: false,
-          target: actionVerb.target
+          target: actionVerb.target,
+          action: action.type
         }
       }
 

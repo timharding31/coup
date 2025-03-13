@@ -43,15 +43,11 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
 }
 
 function getDelayFromGame(game: Game<'client'>, nextGame: Game<'client'> | null = null): number {
-  // Make sure replaced card is visible for 2.5s
-  const { phase: currentPhase } = game.currentTurn || {}
-  const { phase: nextPhase } = nextGame?.currentTurn || {}
-
-  if (currentPhase === 'REPLACING_CHALLENGE_DEFENSE_CARD' && nextPhase !== 'REPLACING_CHALLENGE_DEFENSE_CARD') {
+  if (isChallengeDefenseCardVisible(game) && !isChallengeDefenseCardVisible(nextGame)) {
     return 2_500
   }
-  if (currentPhase === 'AWAITING_EXCHANGE_RETURN' && nextPhase !== 'AWAITING_EXCHANGE_RETURN') {
-    return 2_500
+  if (isActiveExchangeReturn(game) && !isActiveExchangeReturn(nextGame)) {
+    return 1_000
   }
 
   // Simulate thinking by adding a random delay of ~0.5s
@@ -60,4 +56,22 @@ function getDelayFromGame(game: Game<'client'>, nextGame: Game<'client'> | null 
   }
 
   return 0
+}
+
+function isChallengeDefenseCardVisible(game: Game<'client'> | null): boolean {
+  const { phase } = game?.currentTurn || {}
+  if (phase! == 'REPLACING_CHALLENGE_DEFENSE_CARD') {
+    return false
+  }
+  const allCards = game?.players.flatMap(player => player.influence) || []
+  return allCards.some(card => card.isChallengeDefenseCard)
+}
+
+function isActiveExchangeReturn(game: Game<'client'> | null): boolean {
+  const { phase } = game?.currentTurn || {}
+  if (phase !== 'AWAITING_EXCHANGE_RETURN') {
+    return false
+  }
+  const allPlayers = game?.players || []
+  return allPlayers.some(player => player.influence.length > 2)
 }

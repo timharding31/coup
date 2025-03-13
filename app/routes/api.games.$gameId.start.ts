@@ -9,7 +9,8 @@ export const loader: LoaderFunction = async ({ params }) => {
 
 export const action: ActionFunction = async ({ request, params }) => {
   if (request.method !== 'POST') {
-    return { error: 'Method not allowed' }
+    console.error('Method not allowed')
+    return Response.error()
   }
 
   try {
@@ -17,7 +18,8 @@ export const action: ActionFunction = async ({ request, params }) => {
     const hostId = new URL(request.url).searchParams.get('hostId')
 
     if (!gameId || !hostId) {
-      return { error: 'Missing required fields' }
+      console.error('Missing gameId or hostId')
+      return Response.error()
     }
 
     const { game } = await gameService.startGame(gameId, hostId)
@@ -26,6 +28,7 @@ export const action: ActionFunction = async ({ request, params }) => {
       game: game ? prepareGameForClient(game, hostId) : null
     })
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Unknown error' }
+    console.error(error)
+    return Response.error()
   }
 }

@@ -4,6 +4,7 @@ import { useMergedRefs } from '~/hooks/useMergedRefs'
 import { Sprite, SpriteId } from './Sprite'
 import { CoinStack } from './CoinStack'
 import { PlayerNameTag } from './PlayerNameTag'
+import { CoinStackWithMargin } from './ActionIcon'
 
 export const variantStyles = {
   // Nord
@@ -132,19 +133,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const getContentGapClass = () => {
       if ((sprite || isDisabled) && size === 'lg') return 'gap-4'
       if ((sprite || isDisabled) && (size === 'base' || size === 'sm')) return 'gap-3'
-      if (coinStack && !isDisabled && size === 'lg') return 'gap-3'
-      if (coinStack && !isDisabled && (size === 'base' || size === 'sm')) return 'gap-2'
       return ''
-    }
-
-    const getCoinStackMargin = () => {
-      if (!coinStack) return ''
-      const margins = {
-        1: '-ml-[4px]',
-        2: '-ml-[8px]',
-        3: '-ml-[12px]'
-      }
-      return margins[coinStack as keyof typeof margins] || ''
     }
 
     const classes = cn(
@@ -176,7 +165,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : isDisabled && hasIcon ? (
           <Sprite id='lock' size={size} />
         ) : coinStack ? (
-          <CoinStack count={coinStack} color='nord-6' className={getCoinStackMargin()} />
+          <CoinStackWithMargin color='nord-6' bgColor='nord-0' count={coinStack} size={size} />
         ) : sprite ? (
           <Sprite
             id={sprite === 'arrow-left' ? 'arrow' : sprite}

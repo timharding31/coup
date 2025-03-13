@@ -15,6 +15,7 @@ interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
   cardCount?: number
   isHost?: boolean
   isBot?: boolean
+  isActiveGame?: boolean
 }
 
 export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
@@ -30,7 +31,8 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   isHost = false,
   isBot = id.startsWith('bot-'),
   className,
-  userClassName
+  userClassName,
+  isActiveGame = false
 }) => {
   return (
     <div
@@ -61,7 +63,7 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
             ))}
           </div>
         )}
-        <CoinStack count={coins} size={size} color='nord-14' bgColor={bgColor} watchChanges={true} />
+        <CoinStack count={coins} size={size} color='nord-14' bgColor={bgColor} watchChanges={isActiveGame} />
       </div>
     </div>
   )

@@ -6,8 +6,9 @@ import { Player } from '~/types'
 import { PlayerNameTag } from './PlayerNameTag'
 import { TooltipGameMessage } from './GameMessage'
 import { MessageData } from '~/utils/messages'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import _ from 'lodash'
+import { Sprite } from './Sprite'
 
 interface OpponentHandProps extends Player<'client'> {
   isActor?: boolean
@@ -27,7 +28,6 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   className,
   ...nameTagProps
 }) => {
-  const game = useGame()
   const message: MessageData | null = usePlayerMessage(playerId)
   const [maxWidth, setMaxWidth] = useState<number>()
 
@@ -49,7 +49,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   }, [])
 
   const isPlayerDead = influence.every(card => card.isRevealed)
-  const isPopoverOpen = game?.status === 'IN_PROGRESS' && !isPlayerDead && message
+  const isPopoverOpen = !isPlayerDead && message
 
   // Calculate grid columns dynamically
   const gridCols = Math.max(2, influence.length)
@@ -61,9 +61,27 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           className='mx-auto w-full'
           style={(maxWidth ? { maxWidth: `${maxWidth.toFixed(2)}px` } : {}) as React.CSSProperties}
         >
-          <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' />
+          <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' textColor='nord-4' isActiveGame />
         </div>
         {isPopoverOpen && <TooltipGameMessage message={message} />}
+        {isActor && (
+          <motion.div
+            className='absolute -top-5 -left-1'
+            initial={{ y: -3 }}
+            animate={{ y: 0 }}
+            transition={{
+              repeat: Infinity,
+              repeatType: 'reverse',
+              duration: 0.5,
+              type: 'spring',
+              stiffness: 500,
+              damping: 8,
+              mass: 1
+            }}
+          >
+            <Sprite id='arrow' size='base' color='nord-15' className='rotate-90' />
+          </motion.div>
+        )}
       </div>
 
       <AnimatePresence>
@@ -72,19 +90,11 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           className='list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2'
           style={{
             gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
-            aspectRatio: `${influence.length * 10} / 13`
+            aspectRatio: `${Math.max(2, influence.length) * 10} / 13`
           }}
         >
           {influence.map((card, i) => {
-            return (
-              <PlayingCard
-                key={card.id}
-                isFaceDown={!game || game.status === 'WAITING'}
-                isAnimated
-                animationDelay={i * 0.08}
-                {...card}
-              />
-            )
+            return <PlayingCard key={card.id} isAnimated animationDelay={i * 0.08} {...card} />
           })}
         </ul>
       </AnimatePresence>
