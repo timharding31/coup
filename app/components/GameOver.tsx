@@ -35,10 +35,10 @@ export const GameOver: React.FC<GameOverProps> = ({
       }}
     >
       {winner ? (
-        <div className='w-full max-w-md flex-auto flex flex-col items-stretch'>
+        <div className='w-full max-w-md flex-auto flex flex-col items-stretch -mt-2'>
           <Sprite id='crown' size={120} color='nord-13' className='h-[120px]' />
           <h2 className='text-center text-lg -mt-2'>Winner</h2>
-          <div className='w-full rounded-full px-4 pb-1 pt-[6px] bg-nord-12 text-lg mt-2 grid grid-cols-[auto_1fr] gap-1'>
+          <div className='w-full rounded-full px-4 pb-1 pt-[6px] bg-nord-12 text-lg mt-[2px] grid grid-cols-[auto_1fr] gap-1'>
             <span>🥇</span>
             <PlayerNameTag {...winner} cardCount={cardCount} textColor='nord-0' bgColor='nord-0' />
           </div>

@@ -9,6 +9,7 @@ import { PlayerHand } from './PlayerHand'
 import { CourtDeck } from './CourtDeck'
 import { LayoutGroup } from 'framer-motion'
 import { Card } from '~/types'
+import classNames from 'classnames'
 
 interface GameBoardProps {
   playerId: string
@@ -27,7 +28,14 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
   })
 
   return (
-    <div className='grid grid-rows-[auto_1fr_auto] grid-cols-1 w-full h-full min-h-0 overflow-hidden'>
+    <div
+      className={classNames('transition-all grid grid-cols-1 w-full h-full min-h-0 overflow-hidden', {
+        'grid-rows-[auto_minmax(416px,1fr)_minmax(0,auto)]': game.status === 'WAITING',
+        'grid-rows-[auto_1fr_auto]': game.status === 'IN_PROGRESS',
+        'grid-rows-[auto_minmax(384px,1fr)_minmax(0,auto)]': game.status === 'COMPLETED'
+      })}
+      // style={game.status === 'COMPLETED' ? { gridTemplateRows: 'auto 414px' } : {}}
+    >
       <Header />
       <GameTable game={game} players={players}>
         {(() => {

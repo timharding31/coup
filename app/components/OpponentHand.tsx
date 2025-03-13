@@ -29,24 +29,24 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   ...nameTagProps
 }) => {
   const message: MessageData | null = usePlayerMessage(playerId)
-  const [maxWidth, setMaxWidth] = useState<number>()
+  // const [maxWidth, setMaxWidth] = useState<number>()
 
   const cardsListRef = useRef<HTMLUListElement>(null)
 
   // Optimize resize handling with ResizeObserver
-  useEffect(() => {
-    if (!cardsListRef.current) return
+  // useEffect(() => {
+  //   if (!cardsListRef.current) return
 
-    const resizeObserver = new ResizeObserver(
-      _.debounce(() => {
-        const el = cardsListRef.current
-        if (el) setMaxWidth(el.clientWidth)
-      }, 100)
-    )
+  //   const resizeObserver = new ResizeObserver(
+  //     _.debounce(() => {
+  //       const el = cardsListRef.current
+  //       if (el) setMaxWidth(el.clientWidth)
+  //     }, 100)
+  //   )
 
-    resizeObserver.observe(cardsListRef.current)
-    return () => resizeObserver.disconnect()
-  }, [])
+  //   resizeObserver.observe(cardsListRef.current)
+  //   return () => resizeObserver.disconnect()
+  // }, [])
 
   const isPlayerDead = influence.every(card => card.isRevealed)
   const isPopoverOpen = !isPlayerDead && message
@@ -55,33 +55,27 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   const gridCols = Math.max(2, influence.length)
 
   return (
-    <div className={cn('flex flex-col items-center justify-center container-type-inline-size gap-1', className)}>
+    <motion.div
+      className={cn(
+        'flex flex-col items-center justify-center container-type-inline-size gap-1 origin-bottom',
+        className
+      )}
+      variants={{
+        active: { scale: 1.1, filter: 'drop-shadow(0 0 8px rgba(216, 222, 233, 0.1))' },
+        inactive: { scale: 1, filter: 'drop-shadow(0 0 0 rgba(216, 222, 233, 0.1))' }
+      }}
+      initial='inactive'
+      animate={isActor ? 'active' : 'inactive'}
+      layout
+    >
       <div className='relative self-stretch'>
         <div
-          className='mx-auto w-full'
-          style={(maxWidth ? { maxWidth: `${maxWidth.toFixed(2)}px` } : {}) as React.CSSProperties}
+          className='mx-auto w-full max-w-[20vh]'
+          // style={(maxWidth ? { maxWidth: `${maxWidth.toFixed(2)}px` } : {}) as React.CSSProperties}
         >
           <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' textColor='nord-4' isActiveGame />
         </div>
         {isPopoverOpen && <TooltipGameMessage message={message} />}
-        {isActor && (
-          <motion.div
-            className='absolute -top-5 -left-1'
-            initial={{ y: -3 }}
-            animate={{ y: 0 }}
-            transition={{
-              repeat: Infinity,
-              repeatType: 'reverse',
-              duration: 0.5,
-              type: 'spring',
-              stiffness: 500,
-              damping: 8,
-              mass: 1
-            }}
-          >
-            <Sprite id='arrow' size='base' color='nord-15' className='rotate-90' />
-          </motion.div>
-        )}
       </div>
 
       <AnimatePresence>
@@ -98,7 +92,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           })}
         </ul>
       </AnimatePresence>
-    </div>
+    </motion.div>
   )
 }
 

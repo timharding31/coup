@@ -36,7 +36,7 @@ const springTransition = {
   duration: 0.3
 }
 
-export const PlayingCard: React.FC<PlayingCardProps> = ({
+const PlayingCard: React.FC<PlayingCardProps> = ({
   id,
   layoutId = `card-${id}`,
   type: character,
@@ -94,6 +94,10 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     <RenderedCard />
   )
 }
+
+const MemoPlayingCard = React.memo(PlayingCard)
+
+export { MemoPlayingCard as PlayingCard }
 
 // Simplified FaceDownCard component that works better with animations
 export const FaceDownCard: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {

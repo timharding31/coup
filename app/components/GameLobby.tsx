@@ -103,7 +103,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
       <div className='w-full max-w-md flex-auto flex flex-col'>
         <div
           className={cn('flex items-center justify-between mb-2', {
-            'mb-4': isHost
+            'mb-4': false
           })}
         >
           <h3 className='text-lg'>Players ({players.length})</h3>
