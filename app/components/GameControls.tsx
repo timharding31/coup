@@ -54,7 +54,6 @@ export const GameControls: React.FC<GameControlsProps> = ({
   const { heading = '', subheading } = getResponseMenuProps(game, myself)
 
   switch (phase) {
-    case 'ACTION_DECLARED':
     case 'ACTION_EXECUTION':
     case 'ACTION_FAILED':
     case 'TURN_COMPLETE':
@@ -85,6 +84,28 @@ export const GameControls: React.FC<GameControlsProps> = ({
       }
       return <TimeoutProgressBar timeoutAt={timeoutAt} />
     }
+
+    case 'AWAITING_TARGET_BLOCK_RESPONSE':
+      // Only target can respond to block
+      if (target?.id !== myself.id) {
+        return null
+      }
+      return (
+        <ResponseControls
+          onResponse={sendResponse}
+          heading={heading}
+          subheading={subheading}
+          timeoutAt={timeoutAt}
+          availableResponses={{
+            canAccept: true,
+            canBlock: true,
+            canChallenge: false
+          }}
+          label={action.requiredCharacter || action.type.replace('_', ' ')}
+          blockableBy={blockableBy}
+          isLoading={isLoading}
+        />
+      )
 
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK': {
       // Only actor can respond to block

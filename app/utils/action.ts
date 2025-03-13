@@ -4,11 +4,8 @@ import {
   CardType,
   Game,
   TurnState,
-  StateTransition,
   UntargetedAction,
   TargetedAction,
-  TurnPhase,
-  WaitingPhase,
   UntargetedActionType,
   TargetedActionType,
   Player
@@ -215,111 +212,4 @@ function getAllRespondingPlayers(game: Game, turn: TurnState): string[] {
 export function haveAllPlayersResponded(game: Game, turn: TurnState): boolean {
   const requiredResponses = getAllRespondingPlayers(game, turn)
   return requiredResponses.every(id => turn.respondedPlayers?.includes(id))
-}
-
-export const VALID_TRANSITIONS: StateTransition[] = [
-  {
-    from: 'ACTION_DECLARED',
-    to: 'AWAITING_OPPONENT_RESPONSES',
-    condition: () => true
-  },
-  {
-    from: 'ACTION_DECLARED',
-    to: 'ACTION_EXECUTION',
-    condition: turn => !turn.action.canBeBlocked && !turn.action.canBeChallenged
-  },
-  {
-    from: 'ACTION_EXECUTION',
-    to: 'AWAITING_EXCHANGE_RETURN',
-    condition: turn => turn.action.type === 'EXCHANGE'
-  },
-  {
-    from: 'ACTION_EXECUTION',
-    to: 'AWAITING_TARGET_SELECTION',
-    condition: turn => ['ASSASSINATE', 'COUP'].includes(turn.action.type)
-  },
-  {
-    from: 'ACTION_EXECUTION',
-    to: 'TURN_COMPLETE',
-    condition: turn => !['EXCHANGE', 'ASSASSINATE', 'COUP'].includes(turn.action.type)
-  },
-  {
-    from: 'AWAITING_OPPONENT_RESPONSES',
-    to: 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
-    condition: turn => turn.action.canBeBlocked && !!turn.opponentResponses?.block
-  },
-  {
-    from: 'AWAITING_OPPONENT_RESPONSES',
-    to: 'AWAITING_ACTOR_DEFENSE',
-    condition: turn => turn.action.canBeChallenged && !!turn.opponentResponses?.challenge
-  },
-  {
-    from: 'AWAITING_OPPONENT_RESPONSES',
-    to: 'ACTION_EXECUTION',
-    condition: (turn, game) => haveAllPlayersResponded(game, turn)
-  },
-  {
-    from: 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
-    to: 'ACTION_FAILED',
-    condition: () => true
-  },
-  {
-    from: 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
-    to: 'AWAITING_BLOCKER_DEFENSE',
-    condition: turn => !!turn.challengeResult && turn.challengeResult.defenseSuccessful === null
-  },
-  {
-    from: 'AWAITING_ACTOR_DEFENSE',
-    to: 'REPLACING_CHALLENGE_DEFENSE_CARD',
-    condition: turn => turn.challengeResult?.defenseSuccessful === true
-  },
-  {
-    from: 'AWAITING_ACTOR_DEFENSE',
-    to: 'ACTION_FAILED',
-    condition: turn => turn.challengeResult?.defenseSuccessful === false
-  },
-  {
-    from: 'AWAITING_BLOCKER_DEFENSE',
-    to: 'ACTION_EXECUTION',
-    condition: turn => turn.challengeResult?.defenseSuccessful === false
-  },
-  {
-    from: 'AWAITING_BLOCKER_DEFENSE',
-    to: 'REPLACING_CHALLENGE_DEFENSE_CARD',
-    condition: turn => turn.challengeResult?.defenseSuccessful === true
-  },
-  {
-    from: 'REPLACING_CHALLENGE_DEFENSE_CARD',
-    to: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
-    condition: () => true
-  },
-  {
-    from: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
-    to: 'ACTION_EXECUTION',
-    condition: turn => turn.challengeResult?.lostCardId != null
-  },
-  {
-    from: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
-    to: 'ACTION_FAILED',
-    condition: turn => turn.challengeResult?.lostCardId != null
-  },
-  {
-    from: 'AWAITING_EXCHANGE_RETURN',
-    to: 'TURN_COMPLETE',
-    condition: turn => turn.action.type === 'EXCHANGE'
-  },
-  {
-    from: 'AWAITING_CHALLENGE_PENALTY_SELECTION',
-    to: 'TURN_COMPLETE',
-    condition: turn => !!turn.targetSelection?.lostCardId
-  },
-  {
-    from: 'ACTION_FAILED',
-    to: 'TURN_COMPLETE',
-    condition: () => true
-  }
-]
-
-export const isWaitingPhase = (phase: TurnPhase): phase is WaitingPhase => {
-  return phase.startsWith('AWAITING_')
 }

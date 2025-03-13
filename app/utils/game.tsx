@@ -47,7 +47,6 @@ export function getResponseMenuProps(
   if (!action || !phase) return {}
 
   switch (phase) {
-    case 'ACTION_DECLARED':
     case 'ACTION_EXECUTION':
     case 'ACTION_FAILED':
     case 'TURN_COMPLETE':
@@ -55,6 +54,7 @@ export function getResponseMenuProps(
       return {}
 
     case 'AWAITING_OPPONENT_RESPONSES':
+    case 'AWAITING_TARGET_BLOCK_RESPONSE':
       const { content: infinitiveVerb, target } = getActionVerb(myself.id, action, 'infinitive', targetPlayer)
       return {
         heading: `${actor.username} chose to ${infinitiveVerb}${target ? ` ${target}` : ''}`,

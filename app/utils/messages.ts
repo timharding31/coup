@@ -38,36 +38,48 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
         }
       }
 
-    case 'ACTION_DECLARED':
+    case 'AWAITING_OPPONENT_RESPONSES':
       if (!action) {
-        throw new Error('No action found')
+        throw new Error('Action not found')
       }
       actionVerb = getActionVerb(actor.id, action, 'infinitive', target)
-      return {
-        [actor.id]: {
-          text: actionVerb.content,
-          type: 'info',
-          isWaiting: false,
-          target: actionVerb.target,
-          action: action.type
-        }
-      }
-
-    case 'AWAITING_OPPONENT_RESPONSES':
       return Object.assign(
         {},
-        ...game.players.map(opponent => {
-          if (opponent.id !== actor.id) {
+        ...game.players.map(player => {
+          if (player.id === actor.id) {
+            if (!actionVerb) return {}
             return {
-              [opponent.id]: {
-                text: 'Responding',
+              [player.id]: {
+                text: actionVerb.content,
                 type: 'info',
-                isWaiting: true
+                isWaiting: false,
+                target: actionVerb.target,
+                action: action.type
               }
+            }
+          }
+          return {
+            [player.id]: {
+              text: 'Responding',
+              type: 'info',
+              isWaiting: true,
+              delay: 200
             }
           }
         })
       )
+
+    case 'AWAITING_TARGET_BLOCK_RESPONSE':
+      if (!target) {
+        throw new Error('Target not found')
+      }
+      return {
+        [target.id]: {
+          text: 'Responding',
+          type: 'info',
+          isWaiting: true
+        }
+      }
 
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
       if (!blocker || !action) {
@@ -87,7 +99,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           text: 'Responding',
           type: 'block',
           isWaiting: true,
-          delayMs: 50
+          delayMs: 200
         }
       }
 
@@ -164,6 +176,18 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
 
     case 'ACTION_EXECUTION':
+      if (action && !action.canBeBlocked && !action.canBeChallenged) {
+        actionVerb = getActionVerb(actor.id, action, 'infinitive', target)
+        return {
+          [actor.id]: {
+            text: actionVerb.content,
+            type: 'info',
+            isWaiting: false,
+            target: actionVerb.target,
+            action: action.type
+          }
+        }
+      }
       return null
 
     case 'AWAITING_TARGET_SELECTION':
