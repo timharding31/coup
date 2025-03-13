@@ -86,7 +86,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
     }
 
     case 'AWAITING_TARGET_BLOCK_RESPONSE':
-      // Only target can respond to block
+      // Only target can respond to actor after their challenge defense
       if (target?.id !== myself.id) {
         return null
       }
