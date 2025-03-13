@@ -55,18 +55,15 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   const gridCols = Math.max(2, influence.length)
 
   return (
-    <motion.div
+    <div
       className={cn(
-        'flex flex-col items-center justify-center container-type-inline-size gap-1 origin-bottom',
-        className
+        'flex flex-col items-center justify-center container-type-inline-size gap-1 transition-all ease-in-out',
+        className,
+        {
+          'scale-100': !isActor,
+          'scale-110': isActor
+        }
       )}
-      variants={{
-        active: { scale: 1.1, filter: 'drop-shadow(0 0 8px rgba(216, 222, 233, 0.1))' },
-        inactive: { scale: 1, filter: 'drop-shadow(0 0 0 rgba(216, 222, 233, 0.1))' }
-      }}
-      initial='inactive'
-      animate={isActor ? 'active' : 'inactive'}
-      layout
     >
       <div className='relative self-stretch'>
         <div
@@ -81,10 +78,13 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
       <AnimatePresence>
         <ul
           ref={cardsListRef}
-          className='list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2'
+          className={cn(
+            'list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2 transition-all'
+          )}
           style={{
             gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
-            aspectRatio: `${Math.max(2, influence.length) * 10} / 13`
+            aspectRatio: `${Math.max(2, influence.length) * 10} / 13`,
+            filter: isActor ? 'drop-shadow(0 4px 12px rgba(208, 135, 112, 0.25))' : 'none'
           }}
         >
           {influence.map((card, i) => {
@@ -92,7 +92,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           })}
         </ul>
       </AnimatePresence>
-    </motion.div>
+    </div>
   )
 }
 
