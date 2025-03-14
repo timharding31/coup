@@ -33,6 +33,7 @@ export interface ITurnService {
   handleFailedChallengerCard(gameId: string, challengerId: string, cardId: string): Promise<void>
   handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void>
   handleBotTurn(game: Game): Promise<void>
+  handleNextPhase(gameId: string): Promise<void>
 }
 
 export class TurnService implements ITurnService {
@@ -41,7 +42,6 @@ export class TurnService implements ITurnService {
   private gamesRef: Reference
   private actionService: ActionService
   private deckService: DeckService
-  private activeTimers = new Map<string, NodeJS.Timeout>()
   private onGameEnded: (gameId: string, winnerId?: string) => Promise<void>
 
   constructor(
@@ -54,6 +54,11 @@ export class TurnService implements ITurnService {
     this.actionService = actionService
     this.deckService = deckService
     this.onGameEnded = onGameEnded
+  }
+
+  async handleNextPhase(gameId: string) {
+    const result = await this.gamesRef.child(gameId).transaction(game => game)
+    await this.progressToNextPhase(result)
   }
 
   async handleChallengeDefenseCard(gameId: string, defenderId: string, cardId: string) {
@@ -202,9 +207,8 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle failed challenger card')
     }
 
-    if (targetBlockResponseTimeout && targetBlockResponseTimeout > Date.now()) {
-      this.startTimer(gameId, targetBlockResponseTimeout - Date.now())
-    }
+    // Timeouts are now handled by Firebase Cloud Functions
+    // No need to manually start timer here
 
     await this.progressToNextPhase(result)
   }
@@ -405,9 +409,9 @@ export class TurnService implements ITurnService {
 
     const updatedGame = result.snapshot.val() as Game | null
 
-    // Start the timer for opponent responses if this action can be blocked or challenged
+    // Timeouts are now handled by Firebase Cloud Functions
+    // Just process bot responses if needed
     if (opponentResponseTimeout && opponentResponseTimeout > Date.now()) {
-      this.startTimer(gameId, opponentResponseTimeout - Date.now())
       if (CoupRobot.isBotGame(updatedGame)) {
         await this.processBotResponses(updatedGame)
       }
@@ -471,10 +475,8 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle action response')
     }
 
-    // Start timer for actor response to block
-    if (actorBlockResponseTimeout && actorBlockResponseTimeout > Date.now()) {
-      this.startTimer(gameId, actorBlockResponseTimeout - Date.now())
-    }
+    // Timeouts are now handled by Firebase Cloud Functions
+    // No need to manually start timer here
 
     await this.progressToNextPhase(result)
   }
@@ -552,10 +554,8 @@ export class TurnService implements ITurnService {
       throw new Error('Failed to handle action response')
     }
 
-    // Start timer for actor response to block
-    if (actorBlockResponseTimeout && actorBlockResponseTimeout > Date.now()) {
-      this.startTimer(gameId, actorBlockResponseTimeout - Date.now())
-    }
+    // Timeouts are now handled by Firebase Cloud Functions
+    // No need to manually start timer here
 
     await this.progressToNextPhase(result)
   }
@@ -569,8 +569,6 @@ export class TurnService implements ITurnService {
       if (turn.phase !== 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK') return game
       if (playerId !== turn.action.playerId) return game
       if (turn.respondedPlayers?.includes(playerId)) return game
-
-      this.clearTimer(gameId)
 
       // Create updated turn state - we're setting timeout to 0 for all block responses
       // because either the action is accepted (ending the turn) or challenged (no timeout needed)
@@ -614,131 +612,8 @@ export class TurnService implements ITurnService {
     await this.progressToNextPhase(result)
   }
 
-  // Processes all auto-acceptances, to be run on timeout expiration after action/block declared
-  private async handleTimeout(gameId: string) {
-    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
-      if (!game?.currentTurn) return game
-      const turn = game.currentTurn
-
-      // Don't process timeouts for phases that don't support them
-      if (!this.isWaitingPhase(turn.phase)) {
-        return game
-      }
-
-      // Don't process timeouts that haven't actually expired
-      if (turn.timeoutAt > Date.now()) {
-        return game
-      }
-
-      // Create updated turn state - only clear the timeout when completing the timeout action
-      const updatedTurn = { ...turn }
-
-      // Get list of players who haven't responded yet
-      const respondedPlayers = turn.respondedPlayers?.slice() || []
-      const nonRespondedPlayers = game.players
-        .map(p => p.id)
-        .filter(playerId => {
-          // Exclude the player who started the action
-          if (turn.phase === 'AWAITING_OPPONENT_RESPONSES' && playerId === turn.action.playerId) {
-            return false
-          }
-          if (turn.phase === 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK' && playerId === turn.opponentResponses?.block) {
-            return false
-          }
-          if (turn.phase === 'AWAITING_TARGET_BLOCK_RESPONSE' && playerId !== turn.action.targetPlayerId) {
-            return false
-          }
-          // Exclude players who have already responded
-          if (respondedPlayers.includes(playerId)) return false
-          // Exclude eliminated players
-          const player = game.players.find(p => p.id === playerId)
-          if (player && player.influence.every(card => card.isRevealed)) return false
-          return true
-        })
-
-      // Add all non-responded players as implicit accepts
-      updatedTurn.respondedPlayers = respondedPlayers.concat(nonRespondedPlayers)
-
-      // Progress the phase based on current waiting phase
-      switch (turn.phase) {
-        case 'AWAITING_OPPONENT_RESPONSES':
-          // If everyone has responded or timeout has been reached, progress to execution
-          if (haveAllPlayersResponded(game, updatedTurn)) {
-            updatedTurn.phase = 'ACTION_EXECUTION'
-            updatedTurn.timeoutAt = 0 // Clear timeoutAt when changing phase to action execution
-          } else {
-            return game
-          }
-          break
-
-        case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
-          // On timeout, active player is considered to have accepted the block
-          updatedTurn.phase = 'ACTION_FAILED'
-          updatedTurn.timeoutAt = 0 // Clear timeoutAt when changing phase to action failed
-          break
-
-        case 'AWAITING_TARGET_BLOCK_RESPONSE':
-          updatedTurn.phase = 'ACTION_EXECUTION'
-          updatedTurn.timeoutAt = 0
-          break
-
-        // No other phases should have timeouts, but if they do, don't change state
-        default:
-          return game
-      }
-
-      return {
-        ...game,
-        currentTurn: updatedTurn,
-        updatedAt: Date.now()
-      }
-    })
-
-    if (result.committed && result.snapshot.val().currentTurn.timeoutAt === 0) {
-      this.clearTimer(gameId)
-    }
-
-    await this.progressToNextPhase(result)
-  }
-
-  private startTimer(gameId: string, timeoutMs: number) {
-    timeoutMs = Math.max(0, timeoutMs)
-    // Clear any existing timer
-    this.clearTimer(gameId)
-
-    // Add a buffer to ensure the server has time to process the timeout
-    // This helps with race conditions where timeouts might be processed too early
-    const bufferMs = 500
-    const actualTimeoutMs = timeoutMs + bufferMs
-
-    const timer = setTimeout(async () => {
-      try {
-        // Double-check the game state before handling timeout to prevent race conditions
-        const gameRef = this.gamesRef.child(gameId)
-        const gameSnapshot = await gameRef.get()
-        const game = gameSnapshot.val() as Game | null
-
-        // Only process timeout if it's still needed
-        if (game?.currentTurn?.timeoutAt && game.currentTurn.timeoutAt <= Date.now()) {
-          await this.handleTimeout(gameId)
-        }
-      } catch (error) {
-        console.error(`Error handling timeout for game ${gameId}:`, error)
-      } finally {
-        this.activeTimers.delete(gameId)
-      }
-    }, actualTimeoutMs)
-
-    this.activeTimers.set(gameId, timer)
-  }
-
-  private clearTimer(gameId: string) {
-    const existingTimer = this.activeTimers.get(gameId)
-    if (existingTimer) {
-      clearTimeout(existingTimer)
-      this.activeTimers.delete(gameId)
-    }
-  }
+  // Timeouts are now handled by Firebase Cloud Functions
+  // handleTimeout, startTimer, and clearTimer methods have been removed
 
   private isWaitingPhase(phase: TurnPhase): boolean {
     // Only these three phases should have timeouts that auto-progress the game
@@ -781,7 +656,6 @@ export class TurnService implements ITurnService {
         break
 
       case 'AWAITING_ACTOR_DEFENSE':
-        this.clearTimer(game.id)
         if (CoupRobot.isBotGame(game)) {
           await this.processBotDefense(game.id)
         }
@@ -789,7 +663,6 @@ export class TurnService implements ITurnService {
 
       case 'AWAITING_BLOCKER_DEFENSE':
         // Waiting for the defender to select and reveal a card.
-        this.clearTimer(game.id)
         if (CoupRobot.isBotGame(game)) {
           await this.processBotDefense(game.id)
         }
@@ -808,7 +681,6 @@ export class TurnService implements ITurnService {
         break
 
       case 'ACTION_EXECUTION':
-        this.clearTimer(game.id)
         await this.resolveAction(game.id, game.currentTurn.action)
         break
 
@@ -1074,8 +946,6 @@ export class TurnService implements ITurnService {
   }
 
   private async endTurn(gameId: string): Promise<void> {
-    this.clearTimer(gameId)
-
     const gameRef = this.gamesRef.child(gameId)
 
     const result = await gameRef.transaction((game: Game | null): Game | null => {

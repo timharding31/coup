@@ -250,7 +250,6 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
       onError: setError
     })
     if (newGameId) {
-      alert(newGameId)
       navigate(`/games/${newGameId}`)
     }
     setIsLoading(false)

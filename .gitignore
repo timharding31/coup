@@ -4,8 +4,9 @@ node_modules
 /build
 .env
 
-coup-15e26-firebase-adminsdk-1jf3i-18904e60a5.json
-
-bart-project.tsx
-
-app/services/turn-manager.server.ts
+functions/firebase-debug.log
+functions/lib
+functions/node_modules
+firebase-debug.log
+database.rules.json
+database-debug.log
