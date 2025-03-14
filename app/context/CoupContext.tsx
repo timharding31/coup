@@ -1,5 +1,5 @@
 import { createContext, useEffect, useCallback, useState, useMemo, useRef, useContext } from 'react'
-import { redirect } from '@remix-run/react'
+import { redirect, useNavigate } from '@remix-run/react'
 import { ref, onValue } from 'firebase/database'
 import {
   Game,
@@ -38,6 +38,7 @@ export interface CoupContextType {
   exchangeCards: (selectedCardIds: string[]) => Promise<void>
   updatePlayer: (update: Partial<Player>) => Promise<void>
   addBot: () => Promise<void>
+  handleRematch: () => Promise<void>
 }
 
 interface CoupContextProviderProps extends React.PropsWithChildren {
@@ -61,6 +62,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const opponentResponsesRef = useRef<OpponentBlockResponse | OpponentChallengeResponse | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
   const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessageQueue()
+  const navigate = useNavigate()
 
   const onGameCallback = useCallback(
     (game: Game<'client'>) => {
@@ -238,6 +240,22 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
     setIsLoading(false)
   }, [gameId])
 
+  const handleRematch = useCallback(async () => {
+    setIsLoading(true)
+    const { newGameId } = await handlePostApiRequest({
+      gameId,
+      playerId,
+      path: '/rematch',
+      body: { hostId: playerId },
+      onError: setError
+    })
+    if (newGameId) {
+      alert(newGameId)
+      navigate(`/games/${newGameId}`)
+    }
+    setIsLoading(false)
+  }, [gameId, playerId])
+
   const actor = useMemo(() => game.players[game.currentPlayerIndex], [game.players, game.currentPlayerIndex])
 
   const myself = useMemo(() => game.players.find(p => p.id === playerId), [game.players, playerId])
@@ -273,6 +291,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         exchangeCards,
         updatePlayer,
         addBot,
+        handleRematch,
         players: { myself, actor, blocker, challenger, target, all: game.players },
         playerMessages,
         isLoading
@@ -329,7 +348,7 @@ async function handlePostApiRequest<T>({
   onCompleted?: () => void
   onError?: (msg: string) => void
   errorMessage?: string
-}): Promise<void> {
+}): Promise<any> {
   try {
     const res = await fetch(`/api/games/${gameId}` + path, {
       method: 'POST',
@@ -339,6 +358,7 @@ async function handlePostApiRequest<T>({
     if (!res.ok) {
       throw new Error(errorMessage || '')
     }
+    return res.json()
   } catch (err) {
     onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
   } finally {

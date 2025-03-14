@@ -25,11 +25,13 @@ export interface IGameService {
   handleResponse(
     gameId: string,
     playerId: string,
-    response: 'accept' | 'challenge' | 'block'
+    response: 'accept' | 'challenge' | 'block',
+    claimedCardForBlock?: CardType
   ): Promise<{ game: Game | null }>
   handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<{ game: Game | null }>
   updatePlayer(playerId: string, data: Partial<Omit<Player, 'influence' | 'coins'>>): Promise<{ player: Player | null }>
   addBot(gameId: string): Promise<{ botId: string }>
+  rematch(gameId: string, hostId: string): Promise<{ newGameId: string; pin: string }>
 }
 
 export class GameService implements IGameService {
@@ -371,7 +373,6 @@ export class GameService implements IGameService {
 
     // Clear player game references, remove PIN and mark game as completed
     await Promise.all([
-      ...game.players?.map(player => this.playerService.updatePlayer(player.id, { currentGameId: null })),
       this.pinService.removeGamePin(game.pin),
       gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() }),
       this.botsRef.child(gameId).remove()
@@ -453,5 +454,67 @@ export class GameService implements IGameService {
     }
 
     return { botId }
+  }
+
+  async rematch(gameId: string, hostId: string): Promise<{ newGameId: string; pin: string }> {
+    // Get the original game
+    const { game: originalGame } = await this.getGame(gameId)
+    if (!originalGame) {
+      throw new Error('Original game not found')
+    }
+
+    if (originalGame.status !== GameStatus.COMPLETED) {
+      throw new Error('Can only rematch completed games')
+    }
+
+    if (originalGame.hostId !== hostId) {
+      throw new Error('Only the host can start a rematch')
+    }
+
+    // Generate new game data
+    const pin = await this.pinService.generateUniquePin()
+    const newGameRef = this.gamesRef.push()
+    const newGameId = newGameRef.key!
+
+    // Create fresh deck
+    const deck = this.deckService.createInitialDeck()
+
+    // Set up players with new influence cards
+    const players = []
+    let remainingDeck = deck
+
+    for (const originalPlayer of originalGame.players || []) {
+      const [influence, updatedDeck] = this.deckService.dealCards(remainingDeck, 2)
+      remainingDeck = updatedDeck
+      players.push({
+        id: originalPlayer.id,
+        username: originalPlayer.username,
+        influence,
+        coins: 2
+      })
+    }
+
+    const newGame: Game = {
+      id: newGameId,
+      pin,
+      hostId,
+      status: GameStatus.WAITING,
+      players,
+      currentTurn: null,
+      deck: remainingDeck,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      currentPlayerIndex: 0,
+      eliminationOrder: []
+    }
+
+    // Save the new game and update player references
+    await Promise.all([
+      newGameRef.set(newGame),
+      this.pinService.saveGameIdByPin(pin, newGameId),
+      ...players.map(player => this.playerService.updatePlayer(player.id, { currentGameId: newGameId }))
+    ])
+
+    return { newGameId, pin }
   }
 }

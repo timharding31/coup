@@ -4,7 +4,7 @@ import { MessageData, MessageType } from '~/utils/messages'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ActionType, CardType, NordColor } from '~/types'
 import { Sprite } from './Sprite'
-import { ActionIcon } from './ActionIcon'
+import { ActionIcon, SpriteWithMargin } from './ActionIcon'
 
 const DEFAULT_STYLE = 'bg-nord-6 text-nord-0'
 
@@ -130,7 +130,7 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
   if (action) {
     textArray.unshift(<ActionIcon action={action} size='sm' color='nord-0' />)
   } else if (sprite) {
-    textArray.unshift(<Sprite id={sprite} size='sm' />)
+    textArray.unshift(<SpriteWithMargin id={sprite} size='sm' />)
   }
 
   return (

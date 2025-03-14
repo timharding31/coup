@@ -57,7 +57,7 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
     case 'sword':
     case 'skull':
     case 'shield':
-    case 'steal':
+    // case 'steal':
     case 'lock':
     case 'challenge':
     case 'exchange':
@@ -86,6 +86,10 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
 
     case 'crown':
       viewBox = '0 0 512 512'
+      break
+
+    case 'steal':
+      viewBox = '-44 -44 556 556'
       break
 
     case 'pencil':

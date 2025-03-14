@@ -180,6 +180,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           <span
             className={classNames('relative font-sansation font-bold translate-y-[0.0625em]', {
               'flex flex-auto': hasIcon,
+              'mr-4': size === 'lg' && !hasIcon,
               'leading-[2.25rem]': size === 'sm',
               'leading-[2.5rem]': size === 'base',
               'leading-[2.75rem]': size === 'lg'

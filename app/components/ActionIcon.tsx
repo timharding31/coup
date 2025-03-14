@@ -46,7 +46,7 @@ export const ActionIcon: React.FC<ActionIconProps> = ({
 
 interface SpriteWithMarginProps {
   id: SpriteId
-  color: NordColor
+  color?: NordColor
   size: 'sm' | 'base' | 'lg'
 }
 

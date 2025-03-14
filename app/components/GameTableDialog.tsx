@@ -3,17 +3,27 @@ import classNames from 'classnames'
 import { Button, ButtonProps } from './Button'
 import { Form } from '@remix-run/react'
 
-interface DialogButtonProps extends Pick<ButtonProps, 'variant' | 'disabled' | 'children' | 'sprite'> {
+interface BaseDialogButtonProps extends Pick<ButtonProps, 'variant' | 'disabled' | 'children' | 'sprite'> {}
+
+interface FormDialogButtonProps extends BaseDialogButtonProps {
   url: string
+  onClick?: never
 }
+interface ButtonDialogButtonProps extends BaseDialogButtonProps {
+  url?: never
+  onClick: () => void
+}
+
+type DialogButtonProps = FormDialogButtonProps | ButtonDialogButtonProps
 
 interface GameTableDialogProps extends React.PropsWithChildren {
   heading: string
-  actions: DialogButtonProps | null
+  actions: DialogButtonProps | DialogButtonProps[] | null
   className?: string
 }
 
 export const GameTableDialog: React.FC<GameTableDialogProps> = ({ heading, actions, className, children }) => {
+  const actionsList = !actions ? [] : Array.isArray(actions) ? actions : [actions]
   return (
     <div className='absolute inset-0' role='dialog' aria-labelledby='overlay-heading' tabIndex={-1}>
       <div
@@ -26,13 +36,23 @@ export const GameTableDialog: React.FC<GameTableDialogProps> = ({ heading, actio
           {heading}
         </h2>
         {children}
-        {actions && (
-          <div className='sticky bottom-0 pt-2 pb-6'>
-            <Form action={actions.url} method='POST'>
-              <Button size='lg' className='w-full' {...actions} type='submit' />
-            </Form>
-          </div>
-        )}
+        <div
+          className={classNames('sticky bottom-0 pt-2 pb-6 empty:hidden grid grid-rows-1 grid-cols-1 gap-2', {
+            'grid-cols-[2fr_3fr]': actionsList.length > 1
+          })}
+        >
+          {actionsList.map(({ url, onClick, ...action }, i) => (
+            <div key={i}>
+              {url ? (
+                <Form action={url} method='POST'>
+                  <Button size='lg' className='w-full' {...action} type='submit' />
+                </Form>
+              ) : (
+                <Button size='lg' {...action} className='w-full' onClick={onClick} type='button' />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

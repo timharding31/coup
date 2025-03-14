@@ -92,7 +92,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [blocker.id]: {
-          text: 'Block with',
+          text: 'BLOCK with',
           type: 'block',
           isWaiting: false,
           cardType: opponentResponses.claimedCard,
@@ -115,10 +115,11 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: 'Challenge',
+          text: 'CHALLENGE',
           type: 'challenge',
           isWaiting: false,
-          cardType: challengeResult.challengedCaracter
+          cardType: challengeResult.challengedCaracter,
+          sprite: 'challenge'
         },
         [actor.id]: {
           text: 'Proving',
@@ -138,10 +139,11 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
       }
       return {
         [challenger.id]: {
-          text: 'Challenge',
+          text: 'CHALLENGE',
           type: 'challenge',
           isWaiting: false,
-          cardType: challengeResult.challengedCaracter
+          cardType: challengeResult.challengedCaracter,
+          sprite: 'challenge'
         },
         [blocker.id]: {
           text: 'Proving',
@@ -210,7 +212,8 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
         [actor.id]: {
           text: 'Exchanging cards',
           type: 'success',
-          isWaiting: true
+          isWaiting: true,
+          sprite: 'exchange'
         }
       }
 

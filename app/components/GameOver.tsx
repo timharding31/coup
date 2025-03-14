@@ -3,6 +3,8 @@ import { Game } from '~/types'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
+import { useCoupContext } from '~/context/CoupContext'
+import { Button } from './Button'
 
 interface GameOverProps {
   playerId: string
@@ -13,6 +15,8 @@ export const GameOver: React.FC<GameOverProps> = ({
   playerId,
   game: { id: gameId, winnerId, status, players, eliminationOrder }
 }) => {
+  const { handleRematch } = useCoupContext()
+
   const allPlayers = useMemo(() => new Map(players.map(player => [player.id, player])), [players])
   const losers = eliminationOrder?.slice().reverse()
 
@@ -28,11 +32,18 @@ export const GameOver: React.FC<GameOverProps> = ({
     <GameTableDialog
       heading='Game Over'
       className='gap-1'
-      actions={{
-        url: `/api/games/${gameId}/leave?playerId=${playerId}`,
-        variant: 'secondary',
-        children: 'Exit'
-      }}
+      actions={[
+        {
+          url: `/api/games/${gameId}/leave?playerId=${playerId}`,
+          variant: 'danger',
+          children: 'Exit'
+        },
+        {
+          onClick: handleRematch,
+          variant: 'secondary',
+          children: 'Rematch'
+        }
+      ]}
     >
       {winner ? (
         <div className='w-full max-w-md flex-auto flex flex-col items-stretch -mt-2'>
