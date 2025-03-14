@@ -22,7 +22,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
   return (
     <main className='relative flex flex-col h-full'>
       <div
-        className={classNames('px-4 py-2 flex-auto grid grid-cols-4 gap-x-8 gap-y-4 min-h-0', {
+        className={classNames('px-6 py-2 flex-auto grid grid-cols-4 gap-x-8 gap-y-4 min-h-0', {
           'grid-rows-1': opponentsCount <= 2,
           'grid-rows-2': opponentsCount > 2 && opponentsCount < 5,
           'grid-rows-3': opponentsCount >= 5

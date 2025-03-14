@@ -11,7 +11,11 @@
     "typecheck": "tsc",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "firebase:init": "cd functions && yarn install",
+    "firebase:serve": "cd functions && yarn serve",
+    "firebase:deploy": "cd functions && yarn deploy",
+    "firebase:logs": "cd functions && yarn logs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -52,6 +56,7 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-simple-import-sort": "^12.1.1",
+    "firebase-tools": "^13.0.2",
     "postcss": "^8.4.38",
     "prettier": "^3.4.2",
     "tailwindcss": "^3.4.4",
