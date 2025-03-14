@@ -32,6 +32,7 @@ export interface IGameService {
   updatePlayer(playerId: string, data: Partial<Omit<Player, 'influence' | 'coins'>>): Promise<{ player: Player | null }>
   addBot(gameId: string): Promise<{ botId: string }>
   rematch(gameId: string, hostId: string): Promise<{ newGameId: string; pin: string }>
+  advanceTurnState(gameId: string): Promise<{ game: Game | null }>
 }
 
 export class GameService implements IGameService {
@@ -50,6 +51,11 @@ export class GameService implements IGameService {
     this.actionService = new ActionService(this.gamesRef)
     this.deckService = new DeckService(this.gamesRef)
     this.turnService = new TurnService(this.gamesRef, this.actionService, this.deckService, this.cleanupGame.bind(this))
+  }
+
+  async advanceTurnState(gameId: string) {
+    await this.turnService.handleNextPhase(gameId)
+    return this.getGame(gameId)
   }
 
   async createGame(hostId: string) {
@@ -299,8 +305,7 @@ export class GameService implements IGameService {
     if (humanPlayerCount < 1) {
       if (pin) await this.pinService.removeGamePin(pin)
       await this.playerService.updatePlayer(playerId, { currentGameId: null })
-      await this.gamesRef.child(gameId).remove()
-      await this.botsRef.child(gameId).remove()
+      await this.removeGame(gameId)
     } else if (updatedGame?.status === 'COMPLETED') {
       await this.cleanupGame(gameId)
     }
@@ -510,11 +515,17 @@ export class GameService implements IGameService {
 
     // Save the new game and update player references
     await Promise.all([
+      this.removeGame(originalGame.id),
       newGameRef.set(newGame),
       this.pinService.saveGameIdByPin(pin, newGameId),
       ...players.map(player => this.playerService.updatePlayer(player.id, { currentGameId: newGameId }))
     ])
 
     return { newGameId, pin }
+  }
+
+  private async removeGame(gameId: string) {
+    await this.gamesRef.child(gameId).remove()
+    await this.botsRef.child(gameId).remove()
   }
 }

@@ -33,6 +33,7 @@ export interface ITurnService {
   handleFailedChallengerCard(gameId: string, challengerId: string, cardId: string): Promise<void>
   handleExchangeReturn(gameId: string, playerId: string, cardIds: string[]): Promise<void>
   handleBotTurn(game: Game): Promise<void>
+  handleNextPhase(gameId: string): Promise<void>
 }
 
 export class TurnService implements ITurnService {
@@ -53,6 +54,11 @@ export class TurnService implements ITurnService {
     this.actionService = actionService
     this.deckService = deckService
     this.onGameEnded = onGameEnded
+  }
+
+  async handleNextPhase(gameId: string) {
+    const result = await this.gamesRef.child(gameId).transaction(game => game)
+    await this.progressToNextPhase(result)
   }
 
   async handleChallengeDefenseCard(gameId: string, defenderId: string, cardId: string) {

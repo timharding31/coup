@@ -25,10 +25,8 @@ export const handleGameTimeouts = functions
   .database.ref('/games/{gameId}/currentTurn')
   .onWrite(async (change, context) => {
     const { gameId } = context.params
-    console.log(`[TIMEOUT FUNCTION] Triggered for game: ${gameId}`)
-    
+
     const turnData = change.after.val() as TurnState | null
-    console.log(`[TIMEOUT FUNCTION] Current turn data:`, JSON.stringify(turnData, null, 2))
 
     // If there's no turn data or no timeout, exit early
     if (!turnData || !turnData.timeoutAt) {
@@ -40,50 +38,37 @@ export const handleGameTimeouts = functions
 
     // Only process timeouts for waiting phases
     if (!isWaitingPhase(timeoutPhase)) {
-      console.log(`[TIMEOUT FUNCTION] Not a waiting phase (${timeoutPhase}), skipping`)
       return null
     }
 
     // Calculate how long to wait until the timeout
     const now = Date.now()
     const timeoutDelay = timeoutAt - now
-    console.log(`[TIMEOUT FUNCTION] Current time: ${now}, timeout at: ${timeoutAt}, delay: ${timeoutDelay}ms`)
 
     // If timeout is in the past or too short, process immediately
     if (timeoutDelay <= 0) {
-      console.log(`[TIMEOUT FUNCTION] Timeout already expired, processing immediately`)
       return processTimeout(gameId)
     }
 
     // If timeout is too far in the future (> 8 minutes), schedule it for later
     if (timeoutDelay > 480000) {
-      console.log(`[TIMEOUT FUNCTION] Timeout too far in future (${timeoutDelay}ms). Exiting.`)
       return null
     }
 
     // Wait until the timeout should trigger (add buffer for safety)
-    console.log(`[TIMEOUT FUNCTION] Scheduling timeout for game ${gameId} in ${timeoutDelay}ms`)
     await new Promise(resolve => setTimeout(resolve, timeoutDelay + BUFFER_MS))
-    console.log(`[TIMEOUT FUNCTION] Timeout wait completed for game ${gameId}`)
 
     // Check if the timeout is still relevant before processing
     const gameRef = db.ref(`games/${gameId}`)
     const snapshot = await gameRef.get()
     const game = snapshot.val()
-    console.log(`[TIMEOUT FUNCTION] Game state after waiting:`, JSON.stringify({
-      id: game?.id,
-      hasCurrentTurn: !!game?.currentTurn,
-      phase: game?.currentTurn?.phase,
-      timeoutAt: game?.currentTurn?.timeoutAt
-    }, null, 2))
 
     if (!game?.currentTurn || game.currentTurn.phase !== timeoutPhase || game.currentTurn.timeoutAt !== timeoutAt) {
-      console.log('[TIMEOUT FUNCTION] Timeout is no longer relevant')
       return null
     }
 
     // Process the timeout
-    console.log(`[TIMEOUT FUNCTION] Processing timeout for game ${gameId}`)
+
     return processTimeout(gameId)
   })
 
@@ -91,11 +76,10 @@ export const handleGameTimeouts = functions
  * Process a game timeout by updating the database
  */
 async function processTimeout(gameId: string): Promise<void> {
-  console.log(`[TIMEOUT FUNCTION] Starting timeout processing for game ${gameId}`)
   const gameRef = db.ref(`games/${gameId}`)
 
   // Transaction to safely handle the timeout
-  await gameRef.transaction((game: Game | null): Game | null => {
+  const result = await gameRef.transaction((game: Game | null): Game | null => {
     if (!game?.currentTurn) return game
 
     const turn = game.currentTurn
@@ -165,6 +149,13 @@ async function processTimeout(gameId: string): Promise<void> {
       updatedAt: Date.now()
     }
   })
+
+  if (result.committed) {
+    await fetch(`https://polarcoup.app/api/games/${gameId}/turns/next`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
 }
 
 /**
