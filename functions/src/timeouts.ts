@@ -22,7 +22,8 @@ const appUrl = functions.config().app.url || 'https://polarcoup.app'
 export const handleGameTimeouts = functions
   .runWith({
     timeoutSeconds: 540, // 9 minutes max runtime
-    memory: '256MB'
+    memory: '256MB',
+    secrets: ['SERVICE_TOKEN']
   })
   .database.ref('/games/{gameId}/currentTurn/timeoutAt')
   .onWrite(async (change, context) => {
@@ -160,7 +161,13 @@ async function processTimeout(gameId: string): Promise<void> {
       }
 
       const url = `${appUrl}/api/games/${gameId}/turns/next`
-      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.SERVICE_TOKEN}`
+        }
+      })
     } catch (error) {
       console.error(error)
     }

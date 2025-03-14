@@ -21,6 +21,7 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
       return
     }
     isProcessingRef.current = true
+    console.log(gameUpdatesQueueRef.current.length)
     const game = gameUpdatesQueueRef.current.shift()!
     const nextGame = gameUpdatesQueueRef.current.at(0)
     const delay = getDelayFromGame(game, nextGame)
@@ -55,17 +56,17 @@ function getDelayFromGame(game: Game<'client'>, nextGame: Game<'client'> | null 
     return 200 + Math.random() * 600
   }
   if (isPendingBotDecision(game)) {
-    return 200
+    return 100 + Math.random() * 300
   }
   if (game.currentTurn?.phase === 'ACTION_EXECUTION') {
-    return 500
+    return 200
   }
-  return 0
+  return 200
 }
 
 function isChallengeDefenseCardVisible(game: Game<'client'> | null): boolean {
   const { phase } = game?.currentTurn || {}
-  if (phase! == 'REPLACING_CHALLENGE_DEFENSE_CARD') {
+  if (phase !== 'REPLACING_CHALLENGE_DEFENSE_CARD') {
     return false
   }
   const allCards = game?.players.flatMap(player => player.influence) || []
@@ -92,20 +93,24 @@ function isPendingBotDecision(game: Game<'client'> | null): boolean {
   if (!game.players?.some(player => player.id.startsWith('bot-') && player.influence.some(card => !card.isRevealed))) {
     return false
   }
+  const { playerId: actor, targetPlayerId: target } = game.currentTurn?.action || {}
+  const { block: blocker, challenge: challenger } = game.currentTurn?.opponentResponses || {}
   switch (game.currentTurn?.phase) {
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+      return !!actor?.startsWith('bot-') || !!blocker?.startsWith('bot-')
+
     case 'AWAITING_ACTOR_DEFENSE':
-      return game.currentTurn.action.playerId.startsWith('bot-')
+      return !!actor?.startsWith('bot-')
 
     case 'AWAITING_TARGET_SELECTION':
     case 'AWAITING_TARGET_BLOCK_RESPONSE':
-      return !!game.currentTurn.action.targetPlayerId?.startsWith('bot-')
+      return !!target?.startsWith('bot-')
 
     case 'AWAITING_BLOCKER_DEFENSE':
-      return !!game.currentTurn.opponentResponses?.block?.startsWith('bot-')
+      return !!blocker?.startsWith('bot-')
 
     case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
-      return !!game.currentTurn.challengeResult?.challengerId?.startsWith('bot-')
+      return !!challenger?.startsWith('bot-')
 
     default:
       return false

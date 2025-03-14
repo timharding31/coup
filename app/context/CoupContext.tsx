@@ -61,7 +61,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const turnPhaseRef = useRef<TurnPhase | null>(null)
   const opponentResponsesRef = useRef<OpponentBlockResponse | OpponentChallengeResponse | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
-  const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessageQueue()
+  const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessageQueue({ delayMs: 0 })
   const navigate = useNavigate()
 
   const onGameCallback = useCallback(
