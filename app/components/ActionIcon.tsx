@@ -2,7 +2,7 @@ import React from 'react'
 import { ActionType, NordColor } from '~/types'
 import { CoinStack } from './CoinStack'
 import { Sprite, SpriteId } from './Sprite'
-import cn from 'classnames'
+import classNames from 'classnames'
 
 const ACTION_COUNTS: { [K in Extract<ActionType, 'INCOME' | 'FOREIGN_AID' | 'TAX'>]: number } = {
   INCOME: 1,
@@ -56,7 +56,7 @@ export const SpriteWithMargin: React.FC<SpriteWithMarginProps> = ({ id, color, s
       id={id}
       size={size}
       color={color}
-      className={cn({
+      className={classNames({
         'mr-4': size === 'lg',
         'mr-3': size === 'base',
         'mr-0.5': size === 'sm'
@@ -78,7 +78,7 @@ export const CoinStackWithMargin: React.FC<CoinStackWithMarginProps> = ({ count,
       count={count}
       color={color}
       bgColor={bgColor}
-      className={cn({
+      className={classNames({
         '-ml-[4px]': count === 1,
         '-ml-[8px]': count === 2,
         '-ml-[12px]': count === 3,

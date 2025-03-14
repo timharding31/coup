@@ -1,4 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react'
+import { CoupRobot } from '~/services/robot.server'
 import { Game } from '~/types'
 
 export function useThrottledGameCallback(callback: (value: Game<'client'>) => void) {
@@ -49,12 +50,16 @@ function getDelayFromGame(game: Game<'client'>, nextGame: Game<'client'> | null 
   if (isActiveBotExchangeReturn(game) && !isActiveBotExchangeReturn(nextGame)) {
     return 1_000
   }
-
   // Simulate thinking by adding a random delay of ~0.5s
-  if (game.botActionInProgress) {
+  if (game.botActionInProgress || nextGame?.botActionInProgress) {
     return 200 + Math.random() * 600
   }
-
+  if (isPendingBotDecision(game)) {
+    return 200
+  }
+  if (game.currentTurn?.phase === 'ACTION_EXECUTION') {
+    return 500
+  }
   return 0
 }
 
@@ -77,4 +82,32 @@ function isActiveBotExchangeReturn(game: Game<'client'> | null): boolean {
     return false
   }
   return actor.influence.length > 2
+}
+
+function isPendingBotDecision(game: Game<'client'> | null): boolean {
+  if (!game) {
+    return false
+  }
+  // If no alive bots, return false
+  if (!game.players?.some(player => player.id.startsWith('bot-') && player.influence.some(card => !card.isRevealed))) {
+    return false
+  }
+  switch (game.currentTurn?.phase) {
+    case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+    case 'AWAITING_ACTOR_DEFENSE':
+      return game.currentTurn.action.playerId.startsWith('bot-')
+
+    case 'AWAITING_TARGET_SELECTION':
+    case 'AWAITING_TARGET_BLOCK_RESPONSE':
+      return !!game.currentTurn.action.targetPlayerId?.startsWith('bot-')
+
+    case 'AWAITING_BLOCKER_DEFENSE':
+      return !!game.currentTurn.opponentResponses?.block?.startsWith('bot-')
+
+    case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
+      return !!game.currentTurn.challengeResult?.challengerId?.startsWith('bot-')
+
+    default:
+      return false
+  }
 }

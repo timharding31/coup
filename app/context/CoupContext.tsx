@@ -15,7 +15,7 @@ import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { prepareGameForClient } from '~/utils/game'
 import { useMessageQueue } from '~/hooks/useMessageQueue'
-import { getPlayerActionMessages, getResponderMessage, MessageData } from '~/utils/messages'
+import { getPlayerActionMessages, MessageData } from '~/utils/messages'
 import { useThrottledGameCallback } from '~/hooks/useThrottledGameCallback'
 
 export interface CoupContextType {
@@ -76,10 +76,10 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         // Create a map of responder messages using our new data structure
         const responderMessages: Record<string, MessageData> = {}
         for (const playerId of respondedPlayers) {
-          const message = getResponderMessage(playerId, actorId || '', turn?.phase, blockerId, challengerId)
-          if (message) {
-            responderMessages[playerId] = message
-          }
+          if (playerId === actorId) continue
+          if (playerId === challengerId) continue
+          if (playerId === blockerId) continue
+          responderMessages[playerId] = { text: '✓', type: 'success' }
         }
         updateMessages(responderMessages)
       }

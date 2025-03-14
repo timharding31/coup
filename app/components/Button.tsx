@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { useMergedRefs } from '~/hooks/useMergedRefs'
 import { Sprite, SpriteId } from './Sprite'
 import { CoinStack } from './CoinStack'
@@ -136,7 +136,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       return ''
     }
 
-    const classes = cn(
+    const classes = classNames(
       // Base classes
       'relative flex items-center transition-all duration-200 focus-visible:outline-none',
       'disabled:pointer-events-none disabled:opacity-50 font-bold rounded-xl',
@@ -178,7 +178,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           <PlayerNameTag {...nameTag} userClassName={props.disabled ? 'font-normal' : undefined} />
         ) : children ? (
           <span
-            className={cn('relative font-sansation font-bold translate-y-[0.0625em]', {
+            className={classNames('relative font-sansation font-bold translate-y-[0.0625em]', {
               'flex flex-auto': hasIcon,
               'leading-[2.25rem]': size === 'sm',
               'leading-[2.5rem]': size === 'base',

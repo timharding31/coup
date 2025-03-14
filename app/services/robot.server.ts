@@ -162,7 +162,8 @@ export class CoupRobot implements ICoupRobot {
   }
 
   static isBotGame(game: Game | null = null): boolean {
-    return !!game?.players.some(p => p.id.startsWith('bot-'))
+    const alivePlayers = game?.players?.filter(p => p.influence.some(c => !c.isRevealed)) || []
+    return alivePlayers.some(p => p.id.startsWith('bot-'))
   }
 
   static getRandomUsername(existingBots: string[] = []): string {

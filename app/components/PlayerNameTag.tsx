@@ -1,5 +1,5 @@
 import React from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { NordColor, Player } from '~/types'
 import { CoinStack } from './CoinStack'
 import { Sprite } from './Sprite'
@@ -36,12 +36,12 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
 }) => {
   return (
     <div
-      className={cn(
+      className={classNames(
         `text-${textColor} text-${size} flex justify-between items-center relative gap-4 w-full`,
         className
       )}
     >
-      <span className={cn('inline-flex items-center font-bold gap-1.5 overflow-hidden', userClassName)}>
+      <span className={classNames('inline-flex items-center font-bold gap-1.5 overflow-hidden', userClassName)}>
         {isBot ? <Sprite id={isBot ? 'robot' : 'avatar'} size={iconSize} color={iconColor} /> : null}
         <span className='flex-auto overflow-hidden text-ellipsis whitespace-nowrap'>
           {username}

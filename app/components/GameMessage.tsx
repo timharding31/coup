@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { MessageData, MessageType } from '~/utils/messages'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ActionType, CardType, NordColor } from '~/types'
 import { Sprite } from './Sprite'
-import { colorSchemes as characterColorSchemes, textColors as characterTextColors } from '~/components/PlayingCard'
 import { ActionIcon } from './ActionIcon'
 
 const DEFAULT_STYLE = 'bg-nord-6 text-nord-0'
@@ -40,7 +39,7 @@ const LoadingBackground: React.FC<{ type?: MessageType }> = ({ type }) => {
     case 'failure':
     case 'success':
       return (
-        <div className={cn('absolute inset-0 overflow-hidden rounded-md -z-10', MESSAGE_STYLE[type])}>
+        <div className={classNames('absolute inset-0 overflow-hidden rounded-md -z-10', MESSAGE_STYLE[type])}>
           <motion.div
             className='absolute inset-0 striped-background'
             style={
@@ -110,7 +109,7 @@ interface GameMessageProps {
 }
 
 export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '' }) => {
-  const { text, type, isWaiting, cardType = null, target = null, delayMs = 0, action = null } = message
+  const { text, type, isWaiting, cardType = null, target = null, delayMs = 0, action = null, sprite = null } = message
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -130,13 +129,15 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
   const textArray: React.ReactNode[] = text.split('')
   if (action) {
     textArray.unshift(<ActionIcon action={action} size='sm' color='nord-0' />)
+  } else if (sprite) {
+    textArray.unshift(<Sprite id={sprite} size='sm' />)
   }
 
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.span
-          className={cn(
+          className={classNames(
             'relative w-fit max-w-full inline-flex items-center justify-center text-center px-3 py-1 rounded-md shadow-lg overflow-hidden',
             MESSAGE_STYLE[type],
             className,

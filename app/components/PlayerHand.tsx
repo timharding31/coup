@@ -5,7 +5,7 @@ import { useGame } from '~/context/CoupContext'
 import { PlayerNameTag } from './PlayerNameTag'
 import { useDrawerHeight } from './Drawer'
 import { AnimatePresence, LayoutGroup } from 'framer-motion'
-import cn from 'classnames'
+import classNames from 'classnames'
 
 export interface PlayerHandProps extends Player<'client'> {
   game: Game<'client'>
@@ -43,7 +43,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
       <PlayerNameTag id={playerId} {...nameTagProps} className='my-1.5' size='lg' bgColor='nord-0' isActiveGame />
       <AnimatePresence>
         <div
-          className={cn('h-[64cqi] grid items-center gap-4', {
+          className={classNames('h-[64cqi] grid items-center gap-4', {
             'grid-cols-2': influence.length < 3,
             'grid-cols-4': influence.length > 2
           })}

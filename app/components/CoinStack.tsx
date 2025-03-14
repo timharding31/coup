@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Sprite, SpriteProps, SpriteSize } from './Sprite'
 import { NordColor } from '~/types'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { AnimatePresence, motion } from 'framer-motion'
 import _ from 'lodash'
 
@@ -65,14 +65,14 @@ export const CoinStack: React.FC<CoinStackProps> = ({
   return (
     <div className='relative'>
       <div
-        className={cn('flex flex-row-reverse justify-center', className, {
+        className={classNames('flex flex-row-reverse justify-center', className, {
           'gap-1': size === 'lg',
           'gap-0.5': size !== 'lg'
         })}
       >
         {count > 0 && (
           <span
-            className={cn(
+            className={classNames(
               `text-shadow-1 font-robotica translate-y-[0.125em] text-${size} text-${color} inline-block w-[1em] text-center no-underline`,
               {
                 'leading-[18px]': size === 'sm',
@@ -119,7 +119,7 @@ export const CoinStack: React.FC<CoinStackProps> = ({
             className='absolute -top-4 right-0 z-[60]'
           >
             <div
-              className={cn('text-sm text-right whitespace-nowrap font-robotica font-normal', {
+              className={classNames('text-sm text-right whitespace-nowrap font-robotica font-normal', {
                 'text-nord-14': changeAmount > 0,
                 'text-nord-11': changeAmount < 0
               })}

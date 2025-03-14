@@ -1,3 +1,4 @@
+import { SpriteId } from '~/components/Sprite'
 import { Game, CardType, TurnPhase, ActionType } from '~/types'
 import { ActionVerbValue, getActionObject, getActionVerb } from '~/utils/action'
 import { getActor, getTarget, getBlocker, getChallenger } from '~/utils/game'
@@ -12,6 +13,7 @@ export interface MessageData {
   target?: string
   delayMs?: number
   action?: ActionType
+  sprite?: SpriteId
 }
 
 export type MessageMap = Record<string, MessageData>
@@ -93,7 +95,8 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
           text: 'Block with',
           type: 'block',
           isWaiting: false,
-          cardType: opponentResponses.claimedCard
+          cardType: opponentResponses.claimedCard,
+          sprite: 'shield'
         },
         [actor.id]: {
           text: 'Responding',
@@ -229,25 +232,20 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
 }
 
 // Helper for response messages
-export function getResponderMessage(
+function getResponderMessage(
   playerId: string,
-  actorId: string,
-  phase: TurnPhase | null = null,
+  actorId: string = '',
   blockerId: string = '',
   challengerId: string = ''
 ): MessageData | null {
-  if (phase === 'AWAITING_OPPONENT_RESPONSES') {
-    if (playerId === actorId) {
-      return null
-    }
-    if (playerId === blockerId) {
-      return { text: '✗', type: 'block' }
-    }
-    if (playerId === challengerId) {
-      return { text: '⁉️', type: 'challenge' }
-    }
-    return { text: '✓', type: 'success' }
+  if (playerId === actorId) {
+    return null
   }
-
-  return null
+  if (playerId === blockerId) {
+    return { text: '✗', type: 'block' }
+  }
+  if (playerId === challengerId) {
+    return { text: '⁉️', type: 'challenge' }
+  }
+  return { text: '✓', type: 'success' }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Card } from '~/types'
 
@@ -63,7 +63,7 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deck }) => {
             }}
           >
             <div
-              className={cn('card-container court-deck-card', {
+              className={classNames('card-container court-deck-card', {
                 shuffling: isShuffling
               })}
               style={{

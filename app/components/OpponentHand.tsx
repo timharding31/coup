@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { PlayingCard } from './PlayingCard'
 import { useGame, usePlayerMessage } from '~/context/CoupContext'
 import { Player } from '~/types'
@@ -56,35 +56,47 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
 
   return (
     <div
-      className={cn(
-        'flex flex-col items-center justify-center container-type-inline-size gap-1 transition-all ease-in-out',
-        className,
-        {
-          'scale-100': !isActor,
-          'scale-110': isActor
-        }
+      className={classNames(
+        'flex flex-col items-center justify-center container-type-inline-size gap-1 transition-all ease-in-out duration-300 scale-100 z-10',
+        { 'scale-110': isActor },
+        className
       )}
     >
       <div className='relative self-stretch'>
         <div
-          className='mx-auto w-full max-w-[20vh]'
+          className='mx-auto w-full max-w-[23vh]'
           // style={(maxWidth ? { maxWidth: `${maxWidth.toFixed(2)}px` } : {}) as React.CSSProperties}
         >
           <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' textColor='nord-4' isActiveGame />
         </div>
+        <AnimatePresence>
+          {isActor && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1, opacity: [1, 0.25, 1] }}
+              exit={{ scale: 0 }}
+              transition={{
+                scale: { type: 'spring', damping: 15, stiffness: 200, duration: 0.2, delay: 0.5 },
+                opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+              }}
+              className='rounded-full absolute -left-3 top-1.5 bg-nord-12 w-2 h-2'
+            >
+              &nbsp;
+            </motion.div>
+          )}
+        </AnimatePresence>
         {isPopoverOpen && <TooltipGameMessage message={message} />}
       </div>
 
       <AnimatePresence>
         <ul
           ref={cardsListRef}
-          className={cn(
-            'list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2 transition-all'
+          className={classNames(
+            'list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2'
           )}
           style={{
             gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
-            aspectRatio: `${Math.max(2, influence.length) * 10} / 13`,
-            filter: isActor ? 'drop-shadow(0 4px 12px rgba(208, 135, 112, 0.25))' : 'none'
+            aspectRatio: `${Math.max(2, influence.length) * 10} / 13`
           }}
         >
           {influence.map((card, i) => {

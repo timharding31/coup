@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { Button, ButtonProps } from './Button'
 import { Form } from '@remix-run/react'
 
@@ -17,7 +17,7 @@ export const GameTableDialog: React.FC<GameTableDialogProps> = ({ heading, actio
   return (
     <div className='absolute inset-0' role='dialog' aria-labelledby='overlay-heading' tabIndex={-1}>
       <div
-        className={cn(
+        className={classNames(
           'flex flex-col items-stretch w-full h-full px-6 overflow-y-scroll no-scrollbar relative',
           className
         )}

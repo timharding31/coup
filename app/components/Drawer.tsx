@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Drawer as DrawerPrimitive } from 'vaul'
 import { atom, useAtomValue, useSetAtom } from 'jotai'
-import cn from 'classnames'
+import classNames from 'classnames'
 
 const drawerHeightAtom = atom<number | null>(null)
 
@@ -45,7 +45,7 @@ const DrawerContent = React.forwardRef<
           }
         }}
         onCloseAutoFocus={e => setDrawerHeight(null)}
-        className={cn(
+        className={classNames(
           'fixed left-max right-max bottom-0 z-50 flex h-auto flex-col  rounded-t-[24px] bg-nord-1 nord-shadow drawer duration-500 pb-4',
           className
         )}

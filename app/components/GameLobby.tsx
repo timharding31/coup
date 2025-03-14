@@ -5,7 +5,7 @@ import { WaitingEllipsis } from './WaitingEllipsis'
 import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
 import { useIsMobile } from '~/hooks/useIsMobile'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { Form } from '@remix-run/react'
 
 interface GameLobbyProps {
@@ -102,7 +102,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
 
       <div className='w-full max-w-md flex-auto flex flex-col'>
         <div
-          className={cn('flex items-center justify-between mb-2', {
+          className={classNames('flex items-center justify-between mb-2', {
             'mb-4': false
           })}
         >

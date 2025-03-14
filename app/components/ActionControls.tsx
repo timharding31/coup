@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { useCoupContext } from '~/context/CoupContext'
 import type { ActionType, Player, TargetedActionType, UntargetedActionType } from '~/types'
 import { Button } from './Button'
@@ -55,7 +55,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
       <DrawerContent className='p-4'>
         <div className='relative overflow-x-hidden'>
           <div
-            className={cn(SHARED_STYLES, 'h-[460px]', {
+            className={classNames(SHARED_STYLES, 'h-[460px]', {
               'translate-x-[-100%]': targetedAction
             })}
           >
@@ -92,7 +92,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
           </div>
 
           <div
-            className={cn(SHARED_STYLES, 'absolute top-0 left-0 right-0', {
+            className={classNames(SHARED_STYLES, 'absolute top-0 left-0 right-0', {
               'translate-x-[100%]': !targetedAction
             })}
           >

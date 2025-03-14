@@ -1,5 +1,5 @@
 import React from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { NordColor } from '~/types'
 
 export type SpriteId =
@@ -110,7 +110,13 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
   }
 
   return (
-    <span className={cn('flex items-center justify-center aspect-square', `w-[${width}px] text-${color}`, className)}>
+    <span
+      className={classNames(
+        'flex items-center justify-center aspect-square',
+        `w-[${width}px] text-${color}`,
+        className
+      )}
+    >
       <svg width={width} height={width} viewBox={viewBox} className={svgClassName}>
         <use href={`#${id}`}></use>
       </svg>

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { motion } from 'framer-motion'
 import { Card, CardType } from '~/types'
 
@@ -55,7 +55,7 @@ const PlayingCard: React.FC<PlayingCardProps> = ({
     return (
       <div className='card-container nord-shadow'>
         <div
-          className={cn('rounded-card w-full h-full relative', colorSchemes[character], {
+          className={classNames('rounded-card w-full h-full relative', colorSchemes[character], {
             'rotate-180 grayscale-[80%] transform-origin-center': isRevealed
           })}
         >
@@ -102,7 +102,7 @@ export { MemoPlayingCard as PlayingCard }
 // Simplified FaceDownCard component that works better with animations
 export const FaceDownCard: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, ...props }) => {
   return (
-    <div className={cn('card-container', className)} {...props}>
+    <div className={classNames('card-container', className)} {...props}>
       <div className='w-full h-full relative rounded-card nord-shadow'>
         <svg className='absolute inset-0 w-full h-full bg-nord-10 text-nord-9' viewBox='0 0 404 539'>
           <use href='#card-back' />

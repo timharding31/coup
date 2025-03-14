@@ -846,7 +846,7 @@ export class TurnService implements ITurnService {
     const { targetPlayerId } = game.currentTurn.action
     const targetPlayer = game.players.find(p => p.id === targetPlayerId)
 
-    if (!targetPlayer || !CoupRobot.isBotPlayer(targetPlayer)) return
+    if (!targetPlayer || !CoupRobot.isBotPlayer(targetPlayer) || this.isPlayerEliminated(targetPlayer)) return
 
     await this.startBotProcessing(gameId)
     try {
@@ -927,7 +927,7 @@ export class TurnService implements ITurnService {
     if (!opponentResponses?.block) return
 
     const botPlayer = game.players.find(p => p.id === action.playerId)
-    if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
+    if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer) || this.isPlayerEliminated(botPlayer)) return
 
     await this.startBotProcessing(gameId)
     try {
@@ -1110,7 +1110,7 @@ export class TurnService implements ITurnService {
    */
   async handleBotTurn(game: Game): Promise<void> {
     const currentPlayer = game.players[game.currentPlayerIndex]
-    if (!currentPlayer || !CoupRobot.isBotPlayer(currentPlayer)) {
+    if (!currentPlayer || !CoupRobot.isBotPlayer(currentPlayer) || this.isPlayerEliminated(currentPlayer)) {
       return
     }
 

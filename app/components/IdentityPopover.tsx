@@ -1,5 +1,5 @@
 import React from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 import { Link } from '@remix-run/react'
 import { Popover, PopoverButton, PopoverPanel, Transition } from '@headlessui/react'
 import { Button, ButtonProps } from './Button'

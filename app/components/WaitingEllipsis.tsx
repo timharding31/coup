@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import cn from 'classnames'
+import classNames from 'classnames'
 
 const sizes = { sm: 8, base: 10, lg: 12 } as const
 
@@ -19,7 +19,7 @@ export const WaitingEllipsis: React.FC<WaitingEllipsisProps> = ({ size = 'base',
   }, [])
 
   return (
-    <span className={cn('text-left inline-block', className)} style={{ width: `${sizes[size]}px` }}>
+    <span className={classNames('text-left inline-block', className)} style={{ width: `${sizes[size]}px` }}>
       {'...'.slice(0, cursor)}
     </span>
   )

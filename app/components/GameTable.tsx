@@ -2,7 +2,7 @@ import React from 'react'
 import { CoupContextType } from '~/context/CoupContext'
 import { OpponentHand } from './OpponentHand'
 import { useDrawerHeight } from './Drawer'
-import cn from 'classnames'
+import classNames from 'classnames'
 
 interface GameTableProps extends Pick<CoupContextType, 'game' | 'players'>, React.PropsWithChildren {}
 
@@ -22,7 +22,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
   return (
     <main className='relative flex flex-col h-full'>
       <div
-        className={cn('px-4 py-2 flex-auto grid grid-cols-4 gap-x-8 gap-y-4 min-h-0', {
+        className={classNames('px-4 py-2 flex-auto grid grid-cols-4 gap-x-8 gap-y-4 min-h-0', {
           'grid-rows-1': opponentsCount <= 2,
           'grid-rows-2': opponentsCount > 2 && opponentsCount < 5,
           'grid-rows-3': opponentsCount >= 5
@@ -38,7 +38,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
                 isBlocker={blocker?.id === opponent.id}
                 isChallenger={challenger?.id === opponent.id}
                 isExchanging={game.currentTurn?.phase === 'AWAITING_EXCHANGE_RETURN' && actor.id === opponent.id}
-                className={cn('col-span-2', getOpponentClasses(index, opponentsCount))}
+                className={classNames('col-span-2', getOpponentClasses(index, opponentsCount))}
               />
             ))}
           </>
