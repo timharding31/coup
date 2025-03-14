@@ -1,6 +1,8 @@
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getDatabase } from 'firebase-admin/database'
 
+const isDev = process.env.NODE_ENV === 'development'
+
 if (!getApps().length) {
   initializeApp({
     credential: cert({
@@ -8,7 +10,7 @@ if (!getApps().length) {
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
     }),
-    databaseURL: process.env.FIREBASE_DATABASE_URL
+    databaseURL: isDev ? process.env.FIREBASE_DEV_DATABASE_URL : process.env.FIREBASE_DATABASE_URL
   })
 }
 

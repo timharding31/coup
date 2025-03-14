@@ -33,6 +33,8 @@ export const links: LinksFunction = () => [
   }
 ]
 
+const isDev = process.env.NODE_ENV === 'development'
+
 export const loader: LoaderFunction = async ({ request }) => {
   // Fetch the SVG sprite content from our own route
   const url = new URL(request.url)
@@ -43,7 +45,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   return {
     svgContent,
     ENV: {
-      FIREBASE_DATABASE_URL: process.env.FIREBASE_DATABASE_URL
+      FIREBASE_DATABASE_URL: isDev ? process.env.FIREBASE_DEV_DATABASE_URL : process.env.FIREBASE_DATABASE_URL
     }
   }
 }

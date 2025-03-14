@@ -13,6 +13,8 @@ try {
 }
 const BUFFER_MS = 500 // Buffer to prevent race conditions
 
+const appUrl = functions.config().app.url || 'https://polarcoup.app'
+
 /**
  * Cloud function that triggers when a game's timeoutAt field is updated
  * Handles game response timeouts independently from the main application
@@ -22,22 +24,24 @@ export const handleGameTimeouts = functions
     timeoutSeconds: 540, // 9 minutes max runtime
     memory: '256MB'
   })
-  .database.ref('/games/{gameId}/currentTurn')
+  .database.ref('/games/{gameId}/currentTurn/timeoutAt')
   .onWrite(async (change, context) => {
     const { gameId } = context.params
 
-    const turnData = change.after.val() as TurnState | null
+    const timeoutAt = change.after.val() as number | null
 
     // If there's no turn data or no timeout, exit early
-    if (!turnData || !turnData.timeoutAt) {
+    if (!timeoutAt) {
       return null
     }
 
-    const timeoutAt = turnData.timeoutAt
-    const timeoutPhase = turnData.phase
+    const turnRef = db.ref(`games/${gameId}/currentTurn`)
+    const turnData = (await turnRef.get()).val() as TurnState | null
+    const timeoutPhase = turnData?.phase
+    const timeoutActor = turnData?.action.playerId
 
     // Only process timeouts for waiting phases
-    if (!isWaitingPhase(timeoutPhase)) {
+    if (!turnData || !isWaitingPhase(turnData.phase)) {
       return null
     }
 
@@ -54,11 +58,15 @@ export const handleGameTimeouts = functions
     await new Promise(resolve => setTimeout(resolve, timeoutDelay + BUFFER_MS))
 
     // Check if the timeout is still relevant before processing
-    const turnRef = db.ref(`games/${gameId}/currentTurn`)
     const snapshot = await turnRef.get()
     const updatedTurn = snapshot.val() as TurnState | null
 
-    if (!updatedTurn || updatedTurn.phase !== timeoutPhase || updatedTurn.timeoutAt !== timeoutAt) {
+    if (
+      !updatedTurn ||
+      updatedTurn.action.playerId !== timeoutActor ||
+      updatedTurn.phase !== timeoutPhase ||
+      updatedTurn.timeoutAt !== timeoutAt
+    ) {
       return null
     }
 
@@ -145,12 +153,16 @@ async function processTimeout(gameId: string): Promise<void> {
   })
 
   if (result.committed) {
-    const updatedGame = result.snapshot.val() as Game | null
-    if (updatedGame?.currentTurn && ['ACTION_EXECUTION', 'ACTION_FAILED'].includes(updatedGame.currentTurn.phase)) {
-      fetch(`https://polarcoup.app/api/games/${gameId}/turns/next`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      })
+    try {
+      const game = result.snapshot.val() as Game | null
+      if (!game?.currentTurn || !['ACTION_EXECUTION', 'ACTION_FAILED'].includes(game.currentTurn.phase)) {
+        throw new Error('Game state is invalid')
+      }
+
+      const url = `${appUrl}/api/games/${gameId}/turns/next`
+      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+    } catch (error) {
+      console.error(error)
     }
   }
 }
