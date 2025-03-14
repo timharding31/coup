@@ -368,7 +368,7 @@ export class TurnService implements ITurnService {
         newTurn = {
           phase: 'ACTION_EXECUTION',
           action,
-          timeoutAt: 0, // No timeout for auto-resolve actions
+          timeoutAt: null, // No timeout for auto-resolve actions
           respondedPlayers: [],
           opponentResponses: null,
           challengeResult: null,
@@ -532,7 +532,7 @@ export class TurnService implements ITurnService {
           updatedTurn.opponentResponses = {
             challenge: playerId
           }
-          updatedTurn.timeoutAt = 0 // No timeout for challenge response
+          updatedTurn.timeoutAt = null // No timeout for challenge response
           updatedTurn.challengeResult = {
             challengerId: playerId,
             defenseSuccessful: null,
@@ -575,7 +575,7 @@ export class TurnService implements ITurnService {
       const updatedTurn: TurnState = {
         ...turn,
         respondedPlayers: [playerId],
-        timeoutAt: 0 // Always clear timeout for block response as we'll be moving to a non-timeout phase
+        timeoutAt: null // Always clear timeout for block response as we'll be moving to a non-timeout phase
       }
 
       if (response === 'accept') {

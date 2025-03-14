@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
 
 interface TimeoutProgressBarProps {
-  timeoutAt: number
+  timeoutAt?: number | null
 }
 
-export const TimeoutProgressBar: React.FC<TimeoutProgressBarProps> = ({ timeoutAt }) => {
+export const TimeoutProgressBar: React.FC<TimeoutProgressBarProps> = ({ timeoutAt = null }) => {
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export const TimeoutProgressBar: React.FC<TimeoutProgressBarProps> = ({ timeoutA
     return () => clearInterval(interval)
   }, [timeoutAt])
 
-  if (timeoutAt <= Date.now()) {
+  if (!timeoutAt || timeoutAt <= Date.now()) {
     return null
   }
 

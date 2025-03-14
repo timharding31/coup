@@ -34,7 +34,7 @@ export const sizeStyles = {
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof variantStyles
   size?: keyof typeof sizeStyles
-  timeoutAt?: number
+  timeoutAt?: number | null
   sprite?: SpriteId | 'arrow-left' | null
   coinStack?: number
   nameTag?: React.ComponentProps<typeof PlayerNameTag>
@@ -42,7 +42,13 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   isLoading?: boolean
 }
 
-const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: keyof typeof variantStyles }) => {
+const TimerBackground = ({
+  timeoutAt = null,
+  variant
+}: {
+  timeoutAt?: number | null
+  variant: keyof typeof variantStyles
+}) => {
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
@@ -90,7 +96,7 @@ const TimerBackground = ({ timeoutAt, variant }: { timeoutAt: number; variant: k
       break
   }
 
-  if (timeoutAt <= Date.now()) {
+  if (!timeoutAt || timeoutAt <= Date.now()) {
     return null
   }
 
@@ -114,7 +120,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       className = '',
       variant = 'primary',
       size = 'base',
-      timeoutAt,
+      timeoutAt = null,
       sprite = null,
       coinStack = null,
       children = null,

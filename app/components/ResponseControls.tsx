@@ -6,7 +6,7 @@ import { useCoupContext } from '~/context/CoupContext'
 
 interface ResponseControlsProps {
   onResponse: (type: 'accept' | 'challenge' | 'block', blockCard?: CardType) => void
-  timeoutAt: number
+  timeoutAt?: number | null
   heading: React.ReactNode
   subheading?: React.ReactNode
   availableResponses: {
@@ -21,7 +21,7 @@ interface ResponseControlsProps {
 
 export const ResponseControls: React.FC<ResponseControlsProps> = ({
   onResponse,
-  timeoutAt,
+  timeoutAt = null,
   heading,
   subheading,
   availableResponses,

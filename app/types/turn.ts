@@ -58,7 +58,7 @@ export interface TurnChallengeResult {
 export interface TurnState {
   phase: TurnPhase
   action: Action
-  timeoutAt: number // timestamp for timeout.
+  timeoutAt: number | null // timestamp for timeout.
   respondedPlayers?: string[] // IDs of players who have explicitly responded.
 
   // Opponent responses (e.g., a block or a direct challenge).

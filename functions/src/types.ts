@@ -25,14 +25,7 @@ export interface Player {
   coins: number
 }
 
-export type ActionType =
-  | 'INCOME'
-  | 'FOREIGN_AID'
-  | 'COUP'
-  | 'TAX'
-  | 'ASSASSINATE'
-  | 'STEAL'
-  | 'EXCHANGE'
+export type ActionType = 'INCOME' | 'FOREIGN_AID' | 'COUP' | 'TAX' | 'ASSASSINATE' | 'STEAL' | 'EXCHANGE'
 
 export interface Action {
   playerId: string
@@ -75,7 +68,7 @@ export type TurnPhase =
 export interface TurnState {
   phase: TurnPhase
   action: Action
-  timeoutAt: number
+  timeoutAt: number | null
   respondedPlayers: string[]
   opponentResponses: OpponentResponses | null
   challengeResult: ChallengeResult | null
@@ -104,19 +97,19 @@ export interface Game {
  * Helper function to check if all players have responded
  */
 export function haveAllPlayersResponded(game: Game, turn: TurnState): boolean {
-  if (!turn.respondedPlayers) return false;
-  
+  if (!turn.respondedPlayers) return false
+
   // Count eligible responders (players who aren't eliminated and aren't the actor)
   const eligibleResponders = game.players.filter(p => {
     // Skip the actor
-    if (p.id === turn.action.playerId) return false;
+    if (p.id === turn.action.playerId) return false
     // Skip eliminated players
-    if (p.influence.every(c => c.isRevealed)) return false;
-    return true;
-  });
-  
+    if (p.influence.every(c => c.isRevealed)) return false
+    return true
+  })
+
   // Check if all eligible responders have responded
-  return turn.respondedPlayers.length >= eligibleResponders.length;
+  return turn.respondedPlayers.length >= eligibleResponders.length
 }
 
 /**
@@ -127,5 +120,5 @@ export function isWaitingPhase(phase: TurnPhase): boolean {
     'AWAITING_OPPONENT_RESPONSES',
     'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
     'AWAITING_TARGET_BLOCK_RESPONSE'
-  ].includes(phase);
+  ].includes(phase)
 }

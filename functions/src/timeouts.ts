@@ -50,25 +50,19 @@ export const handleGameTimeouts = functions
       return processTimeout(gameId)
     }
 
-    // If timeout is too far in the future (> 8 minutes), schedule it for later
-    if (timeoutDelay > 480000) {
-      return null
-    }
-
     // Wait until the timeout should trigger (add buffer for safety)
     await new Promise(resolve => setTimeout(resolve, timeoutDelay + BUFFER_MS))
 
     // Check if the timeout is still relevant before processing
-    const gameRef = db.ref(`games/${gameId}`)
-    const snapshot = await gameRef.get()
-    const game = snapshot.val()
+    const turnRef = db.ref(`games/${gameId}/currentTurn`)
+    const snapshot = await turnRef.get()
+    const updatedTurn = snapshot.val() as TurnState | null
 
-    if (!game?.currentTurn || game.currentTurn.phase !== timeoutPhase || game.currentTurn.timeoutAt !== timeoutAt) {
+    if (!updatedTurn || updatedTurn.phase !== timeoutPhase || updatedTurn.timeoutAt !== timeoutAt) {
       return null
     }
 
     // Process the timeout
-
     return processTimeout(gameId)
   })
 
@@ -89,8 +83,8 @@ async function processTimeout(gameId: string): Promise<void> {
       return game
     }
 
-    // Don't process timeouts that haven't actually expired
-    if (turn.timeoutAt > Date.now()) {
+    // Don't process timeouts that don't exist or haven't expired
+    if (!turn.timeoutAt || turn.timeoutAt > Date.now()) {
       return game
     }
 
@@ -125,18 +119,18 @@ async function processTimeout(gameId: string): Promise<void> {
       case 'AWAITING_OPPONENT_RESPONSES':
         if (haveAllPlayersResponded(game, updatedTurn)) {
           updatedTurn.phase = 'ACTION_EXECUTION'
-          updatedTurn.timeoutAt = 0 // Clear timeoutAt
+          updatedTurn.timeoutAt = null // Clear timeoutAt
         }
         break
 
       case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
         updatedTurn.phase = 'ACTION_FAILED'
-        updatedTurn.timeoutAt = 0 // Clear timeoutAt
+        updatedTurn.timeoutAt = null // Clear timeoutAt
         break
 
       case 'AWAITING_TARGET_BLOCK_RESPONSE':
         updatedTurn.phase = 'ACTION_EXECUTION'
-        updatedTurn.timeoutAt = 0 // Clear timeoutAt
+        updatedTurn.timeoutAt = null // Clear timeoutAt
         break
 
       default:
@@ -151,10 +145,13 @@ async function processTimeout(gameId: string): Promise<void> {
   })
 
   if (result.committed) {
-    await fetch(`https://polarcoup.app/api/games/${gameId}/turns/next`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    })
+    const updatedGame = result.snapshot.val() as Game | null
+    if (updatedGame?.currentTurn && ['ACTION_EXECUTION', 'ACTION_FAILED'].includes(updatedGame.currentTurn.phase)) {
+      fetch(`https://polarcoup.app/api/games/${gameId}/turns/next`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
   }
 }
 
@@ -177,9 +174,6 @@ function haveAllPlayersResponded(game: Game, turn: TurnState): boolean {
   return turn.respondedPlayers.length >= eligibleResponders.length
 }
 
-/**
- * Helper function to check if a phase should have timeouts
- */
 function isWaitingPhase(phase: string): boolean {
   return [
     'AWAITING_OPPONENT_RESPONSES',
