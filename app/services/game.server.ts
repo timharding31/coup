@@ -31,6 +31,7 @@ export interface IGameService {
   handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<{ game: Game | null }>
   updatePlayer(playerId: string, data: Partial<Omit<Player, 'influence' | 'coins'>>): Promise<{ player: Player | null }>
   addBot(gameId: string): Promise<{ botId: string }>
+  removeBot(gameId: string, botId: string): Promise<{ botId: string }>
   rematch(gameId: string, hostId: string): Promise<{ newGameId: string; pin: string }>
   advanceTurnState(gameId: string): Promise<{ game: Game | null }>
 }
@@ -405,9 +406,39 @@ export class GameService implements IGameService {
     return { player }
   }
 
-  /**
-   * Adds a bot player to the game
-   */
+  async removeBot(gameId: string, botId: string): Promise<{ botId: string }> {
+    const { game } = await this.getGame(gameId)
+    if (!game) {
+      throw new Error('Game not found')
+    }
+    if (game.status !== GameStatus.WAITING) {
+      throw new Error('Cannot remove bots after game has started')
+    }
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
+      if (!game || game.status !== GameStatus.WAITING) return game
+
+      const botPlayerIndex = game.players?.findIndex(p => p.id === botId) ?? -1
+      if (botPlayerIndex < 0) return game
+
+      const newDeck = this.deckService.shuffleDeck(game.deck.concat(game.players[botPlayerIndex].influence))
+      const newPlayers = game.players?.slice() || []
+      newPlayers.splice(botPlayerIndex, 1)
+
+      return {
+        ...game,
+        players: newPlayers,
+        deck: newDeck,
+        updatedAt: Date.now()
+      }
+    })
+
+    if (!result.committed) {
+      throw new Error('Failed to add bot to game')
+    }
+
+    return { botId }
+  }
+
   async addBot(gameId: string): Promise<{ botId: string }> {
     // Get the current game to check existing bots
     const { game } = await this.getGame(gameId)

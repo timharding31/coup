@@ -7,18 +7,23 @@ import { GameTableDialog } from './GameTableDialog'
 import { useIsMobile } from '~/hooks/useIsMobile'
 import classNames from 'classnames'
 import { Form } from '@remix-run/react'
+import { Sprite } from './Sprite'
 
 interface GameLobbyProps {
   game: Game<'client'>
   playerId: string
+  startGame: () => Promise<void>
   addBot: () => Promise<void>
+  removeBot: (botId: string) => Promise<void>
   isLoading: boolean
 }
 
 export const GameLobby: React.FC<GameLobbyProps> = ({
   playerId,
   game: { id: gameId, hostId, status, pin, players },
+  startGame,
   addBot,
+  removeBot,
   isLoading
 }) => {
   const isHost = playerId === hostId
@@ -62,7 +67,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
       actions={
         isHost
           ? {
-              url: `/api/games/${gameId}/start?hostId=${playerId}`,
+              onClick: startGame,
               variant: 'success',
               disabled: !canStart,
               children: 'Start Game'
@@ -121,18 +126,34 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
           )}
         </div>
         <ul className='list-reset pb-6 flex flex-col items-stretch flex-auto gap-2'>
-          {players.map((player, i) => (
-            <li key={player.id} className='w-full rounded-full px-4 pb-[2px] pt-[3px] bg-nord-15 text-base'>
-              <PlayerNameTag
-                {...player}
-                isHost={player.id === hostId}
-                cardCount={2}
-                coins={2}
-                textColor='nord-0'
-                bgColor='nord-0'
-              />
-            </li>
-          ))}
+          {players.map((player, i) => {
+            const isBot = player.id.startsWith('bot-')
+            return (
+              <li
+                key={player.id}
+                className={classNames('w-full rounded-full px-4 pb-[2px] pt-[3px] bg-nord-15 text-base relative', {
+                  'pr-8': isBot
+                })}
+              >
+                <PlayerNameTag
+                  {...player}
+                  isHost={player.id === hostId}
+                  cardCount={2}
+                  coins={2}
+                  textColor='nord-0'
+                  bgColor='nord-0'
+                />
+                {isBot && isHost && (
+                  <button
+                    className='appearance-none flex items-center justify-center absolute top-0 right-0 h-full rounded-full aspect-square bg-transparent'
+                    onClick={() => removeBot(player.id)}
+                  >
+                    <Sprite id='plus' className='rotate-45' size='sm' color='nord-0' />
+                  </button>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </div>
 

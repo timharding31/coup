@@ -1,45 +1,60 @@
 import { CardType } from './card'
 import { Action } from './turn'
 
-export const CoupRequestIntent = {
-  START_TURN: 'START_TURN',
-  SELECT_CARD: 'SELECT_CARD',
-  RETURN_CARDS: 'RETURN_CARDS',
-  RESPOND_TO_ACTION: 'RESPOND_TO_ACTION'
-} as const
-export type CoupRequestIntent = keyof typeof CoupRequestIntent
+type Merge<A, B> =
+  | (A & { [K in Exclude<keyof B, keyof A>]?: never })
+  | (B & { [K in Exclude<keyof A, keyof B>]?: never })
 
-export type CoupRequest = { playerId: string } & (
-  | {
-      intent: typeof CoupRequestIntent.START_TURN
-      action: Action
-      cardId?: never
-      cardIds?: never
-      response?: never
-      blockCard?: never
-    }
-  | {
-      intent: typeof CoupRequestIntent.SELECT_CARD
-      action?: never
-      cardId: string
-      cardIds?: never
-      response?: never
-      blockCard?: never
-    }
-  | {
-      intent: typeof CoupRequestIntent.RETURN_CARDS
-      action?: never
-      cardId?: never
-      cardIds: string[]
-      response?: never
-      blockCard?: never
-    }
-  | {
-      intent: typeof CoupRequestIntent.RESPOND_TO_ACTION
-      action?: never
-      cardId?: never
-      cardIds?: never
-      response: 'accept' | 'challenge' | 'block'
-      blockCard?: CardType
-    }
-)
+type DiscriminatedUnion<A, B, C = undefined, D = undefined> = D extends undefined
+  ? C extends undefined
+    ? Merge<A, B>
+    : Merge<Merge<A, B>, C>
+  : Merge<Merge<Merge<A, B>, C>, D>
+
+type CoupRequest<A, B, C = undefined, D = undefined> = { playerId: string } & DiscriminatedUnion<A, B, C, D>
+
+export const GameMethod = {
+  START: 'START',
+  REMATCH: 'REMATCH'
+} as const
+export type GameMethod = keyof typeof GameMethod
+
+export type GameRequest = CoupRequest<
+  { method: typeof GameMethod.START; gameId: string },
+  { method: typeof GameMethod.REMATCH; gameId: string }
+>
+
+export const TurnMethod = {
+  ACTION: 'ACTION',
+  RESPONSE: 'RESPONSE',
+  ADVANCE: 'ADVANCE'
+} as const
+export type TurnMethod = keyof typeof TurnMethod
+
+export type TurnRequest = CoupRequest<
+  { method: typeof TurnMethod.ACTION; action: Action },
+  { method: typeof TurnMethod.RESPONSE; response: 'accept' | 'challenge' | 'block'; blockCard?: CardType },
+  { method: typeof TurnMethod.ADVANCE }
+>
+
+export const CardMethod = {
+  SELECT: 'SELECT',
+  EXCHANGE: 'EXCHANGE'
+} as const
+export type CardMethod = keyof typeof CardMethod
+
+export type CardRequest = CoupRequest<
+  { method: typeof CardMethod.SELECT; cardId: string },
+  { method: typeof CardMethod.EXCHANGE; cardIds: string[] }
+>
+
+export const BotMethod = {
+  ADD: 'ADD',
+  REMOVE: 'REMOVE'
+} as const
+export type BotMethod = keyof typeof BotMethod
+
+export type BotRequest = CoupRequest<
+  { method: typeof BotMethod.ADD },
+  { method: typeof BotMethod.REMOVE; botId: string }
+>

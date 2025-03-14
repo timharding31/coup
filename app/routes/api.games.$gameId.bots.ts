@@ -1,5 +1,8 @@
-import { ActionFunctionArgs, json } from '@remix-run/node'
-import { gameService } from '~/services/index.server'
+import { ActionFunctionArgs } from '@remix-run/node'
+import { gameService, sessionService } from '~/services/index.server'
+import { Game } from '~/types'
+import { BotRequest } from '~/types/request'
+import { prepareGameForClient } from '~/utils/game'
 
 export async function action({ request, params }: ActionFunctionArgs) {
   if (request.method !== 'POST') {
@@ -7,19 +10,37 @@ export async function action({ request, params }: ActionFunctionArgs) {
     return Response.error()
   }
 
+  await sessionService.requireAuth(request)
+
   try {
     const { gameId } = params
-    if (!gameId) {
+    const { method, playerId, botId } = (await request.json()) as BotRequest
+
+    if (!gameId || !method) {
       console.error('Missing required fields')
       return Response.error()
     }
 
-    // Add a bot to the game
-    const { botId } = await gameService.addBot(gameId)
+    let game: Game | null = null
 
-    return Response.json({ success: true, botId })
+    switch (method) {
+      case 'ADD':
+        await gameService.addBot(gameId)
+        game = (await gameService.getGame(gameId)).game
+        break
+
+      case 'REMOVE':
+        await gameService.removeBot(gameId, botId)
+        game = (await gameService.getGame(gameId)).game
+        break
+    }
+
+    if (!game) {
+      throw new Error('Internal server error')
+    }
+
+    return Response.json({ game: prepareGameForClient(game, playerId) })
   } catch (error) {
-    console.error(error)
-    return Response.error()
+    return new Response(error instanceof Error ? error.message : 'Internal server error', { status: 500 })
   }
 }

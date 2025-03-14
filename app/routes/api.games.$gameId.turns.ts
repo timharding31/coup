@@ -1,7 +1,7 @@
 import type { ActionFunction } from '@remix-run/node'
 import { gameService, sessionService } from '~/services/index.server'
 import { Game } from '~/types'
-import { CardRequest } from '~/types/request'
+import { CardRequest, TurnRequest } from '~/types/request'
 import { prepareGameForClient } from '~/utils/game'
 
 export const action: ActionFunction = async ({ request, params }) => {
@@ -10,11 +10,11 @@ export const action: ActionFunction = async ({ request, params }) => {
     return Response.error()
   }
 
-  await sessionService.requireAuth(request)
+  const { type: authType } = await sessionService.requireAuth(request)
 
   try {
     const { gameId } = params
-    const { method, playerId, cardId, cardIds } = (await request.json()) as CardRequest
+    const { method, playerId, action, response, blockCard } = (await request.json()) as TurnRequest
 
     if (!gameId || !playerId || !method) {
       console.error('Missing required fields')
@@ -24,12 +24,20 @@ export const action: ActionFunction = async ({ request, params }) => {
     let game: Game | null = null
 
     switch (method) {
-      case 'SELECT':
-        game = (await gameService.handleCardSelection(gameId, playerId, cardId)).game
+      case 'ACTION':
+        game = (await gameService.startGameTurn(gameId, action)).game
         break
 
-      case 'EXCHANGE':
-        game = (await gameService.handleExchangeReturn(gameId, playerId, cardIds)).game
+      case 'RESPONSE':
+        game = (await gameService.handleResponse(gameId, playerId, response, blockCard)).game
+        break
+
+      case 'ADVANCE':
+        if (authType === 'service') {
+          game = (await gameService.advanceTurnState(gameId)).game
+        } else {
+          throw new Error('Players cannot advance turn state manually')
+        }
         break
     }
 

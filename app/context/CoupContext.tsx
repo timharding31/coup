@@ -17,6 +17,7 @@ import { prepareGameForClient } from '~/utils/game'
 import { useMessageQueue } from '~/hooks/useMessageQueue'
 import { getPlayerActionMessages, MessageData } from '~/utils/messages'
 import { useThrottledGameCallback } from '~/hooks/useThrottledGameCallback'
+import { BotRequest, CardRequest, GameRequest, TurnRequest } from '~/types/request'
 
 export interface CoupContextType {
   game: Game<'client'>
@@ -38,6 +39,8 @@ export interface CoupContextType {
   exchangeCards: (selectedCardIds: string[]) => Promise<void>
   updatePlayer: (update: Partial<Player>) => Promise<void>
   addBot: () => Promise<void>
+  removeBot: (botId: string) => Promise<void>
+  startGame: () => Promise<void>
   handleRematch: () => Promise<void>
 }
 
@@ -141,11 +144,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const performAction = useCallback(
     async (action: any) => {
       setIsLoading(true)
-      await handlePostApiRequest({
-        gameId,
-        playerId,
-        path: '/actions',
-        body: { action }
+      await handleTurnsPost('ACTION', { gameId, playerId, action }, setError).then(({ game }) => {
+        if (game) throttledOnGameCallback(game)
       })
       setIsLoading(false)
     },
@@ -171,12 +171,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const sendResponse = useCallback(
     async (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => {
       setIsLoading(true)
-      await handlePostApiRequest({
-        gameId,
-        playerId,
-        path: '/responses',
-        body: { response, blockCard },
-        onError: setError
+      await handleTurnsPost('RESPONSE', { gameId, playerId, response, blockCard }, setError).then(({ game }) => {
+        if (game) throttledOnGameCallback(game)
       })
       setIsLoading(false)
     },
@@ -186,12 +182,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const selectCard = useCallback(
     async (cardId: string) => {
       setIsLoading(true)
-      await handlePostApiRequest({
-        gameId,
-        playerId,
-        path: '/cards',
-        body: { cardId },
-        onError: setError
+      await handleCardsPost('SELECT', { gameId, playerId, cardId }, setError).then(({ game }) => {
+        if (game) throttledOnGameCallback(game)
       })
       setIsLoading(false)
     },
@@ -201,12 +193,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const exchangeCards = useCallback(
     async (cardIds: string[]) => {
       setIsLoading(true)
-      await handlePostApiRequest({
-        gameId,
-        playerId,
-        path: '/exchange',
-        body: { cardIds },
-        onError: setError
+      await handleCardsPost('EXCHANGE', { gameId, playerId, cardIds }, setError).then(({ game }) => {
+        if (game) throttledOnGameCallback(game)
       })
       setIsLoading(false)
     },
@@ -230,28 +218,37 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
   const addBot = useCallback(async () => {
     setIsLoading(true)
-    await handlePostApiRequest({
-      gameId,
-      playerId,
-      path: '/bots',
-      body: undefined,
-      onError: setError
+    await handleBotsPost('ADD', { gameId, playerId }, setError).then(({ game }) => {
+      // Don't use throttledGameCallback because this happens during WAITING phase
+      if (game) setGame(game)
     })
     setIsLoading(false)
-  }, [gameId])
+  }, [gameId, playerId])
+
+  const removeBot = useCallback(
+    async (botId: string) => {
+      setIsLoading(true)
+      await handleBotsPost('REMOVE', { gameId, playerId, botId }, setError).then(({ game }) => {
+        if (game) setGame(game)
+      })
+      setIsLoading(false)
+    },
+    [gameId, playerId]
+  )
+
+  const startGame = useCallback(async () => {
+    setIsLoading(true)
+    await handleGamesPost('START', { gameId, playerId }, setError).then(({ game }) => {
+      if (game) setGame(game)
+    })
+    setIsLoading(false)
+  }, [gameId, playerId])
 
   const handleRematch = useCallback(async () => {
     setIsLoading(true)
-    const { newGameId } = await handlePostApiRequest({
-      gameId,
-      playerId,
-      path: '/rematch',
-      body: { hostId: playerId },
-      onError: setError
+    await handleGamesPost('REMATCH', { gameId, playerId }, setError).then(({ game: newGame }) => {
+      if (newGame) navigate(`/games/${newGame.id}`)
     })
-    if (newGameId) {
-      navigate(`/games/${newGameId}`)
-    }
     setIsLoading(false)
   }, [gameId, playerId])
 
@@ -290,6 +287,8 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         exchangeCards,
         updatePlayer,
         addBot,
+        removeBot,
+        startGame,
         handleRematch,
         players: { myself, actor, blocker, challenger, target, all: game.players },
         playerMessages,
@@ -329,6 +328,93 @@ function isEqual<T = string>(a: T[], b: T[]): boolean {
     if (a[i] !== b[i]) return false
   }
   return true
+}
+
+async function handleGamesPost<T extends GameRequest>(
+  method: T extends { method: infer M } ? M : never,
+  body: Omit<T, 'method'>,
+  onError?: (msg: string) => void
+): Promise<{ game: Game<'client'> | null }> {
+  try {
+    const res = await fetch('/api/games', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method, ...body })
+    })
+    if (!res.ok) {
+      throw new Error(res.statusText)
+    }
+    return res.json()
+  } catch (err) {
+    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
+    return { game: null }
+  }
+}
+
+async function handleTurnsPost<T extends TurnRequest>(
+  method: T extends { method: infer M } ? M : never,
+  body: Omit<T, 'method'> & { gameId: string },
+  onError?: (msg: string) => void
+): Promise<{ game: Game<'client'> | null }> {
+  const { gameId, ...rest } = body
+  try {
+    const res = await fetch(`/api/games/${gameId}/turns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method, ...rest })
+    })
+    if (!res.ok) {
+      throw new Error(res.statusText)
+    }
+    return res.json()
+  } catch (err) {
+    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
+    return { game: null }
+  }
+}
+
+async function handleCardsPost<T extends CardRequest>(
+  method: T extends { method: infer M } ? M : never,
+  body: Omit<T, 'method'> & { gameId: string },
+  onError?: (msg: string) => void
+): Promise<{ game: Game<'client'> | null }> {
+  const { gameId, ...rest } = body
+  try {
+    const res = await fetch(`/api/games/${gameId}/cards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method, ...rest })
+    })
+    if (!res.ok) {
+      throw new Error(res.statusText)
+    }
+    return res.json()
+  } catch (err) {
+    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
+    return { game: null }
+  }
+}
+
+async function handleBotsPost<T extends BotRequest>(
+  method: T extends { method: infer M } ? M : never,
+  body: Omit<T, 'method'> & { gameId: string },
+  onError?: (msg: string) => void
+): Promise<{ game: Game<'client'> | null }> {
+  const { gameId, ...rest } = body
+  try {
+    const res = await fetch(`/api/games/${gameId}/bots`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method, ...rest })
+    })
+    if (!res.ok) {
+      throw new Error(res.statusText)
+    }
+    return res.json()
+  } catch (err) {
+    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
+    return { game: null }
+  }
 }
 
 async function handlePostApiRequest<T>({

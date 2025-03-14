@@ -160,13 +160,17 @@ async function processTimeout(gameId: string): Promise<void> {
         throw new Error('Game state is invalid')
       }
 
-      const url = `${appUrl}/api/games/${gameId}/turns/next`
+      const url = `${appUrl}/api/games/${gameId}/turns`
       await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${process.env.SERVICE_TOKEN}`
-        }
+        },
+        body: JSON.stringify({
+          method: 'ADVANCE',
+          playerId: game.hostId
+        })
       })
     } catch (error) {
       console.error(error)
