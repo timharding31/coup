@@ -3,7 +3,7 @@ import { Game, GameStatus, Player, TurnPhase } from '~/types'
 import { PlayingCard } from './PlayingCard'
 import { useGame } from '~/context/CoupContext'
 import { PlayerNameTag } from './PlayerNameTag'
-import { useDrawerHeight } from './Drawer'
+import { useDrawerHeight, useIsDrawerOpen } from './Drawer'
 import { AnimatePresence, LayoutGroup } from 'framer-motion'
 import classNames from 'classnames'
 
@@ -13,10 +13,11 @@ export interface PlayerHandProps extends Player<'client'> {
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, influence, ...nameTagProps }) => {
   const ref = useRef<HTMLDivElement>(null)
+  const isDrawerOpen = useIsDrawerOpen()
   const drawerHeight = useDrawerHeight()
 
   const translateAmount = useMemo(() => {
-    if (!drawerHeight || !ref.current) {
+    if (!isDrawerOpen || !drawerHeight || !ref.current) {
       return 0
     }
 
@@ -29,7 +30,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
     const maxOffset = elHeight - window.innerHeight + 1
 
     return Math.max(Math.min(0, ref.current.clientHeight - drawerHeight - offset), maxOffset)
-  }, [game.currentTurn?.phase, drawerHeight])
+  }, [game.currentTurn?.phase, isDrawerOpen, drawerHeight])
 
   return (
     <section
@@ -40,7 +41,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
         boxShadow: '0px 300px 0px 0px var(--nord-0)'
       }}
     >
-      <PlayerNameTag id={playerId} {...nameTagProps} className='my-1.5' size='lg' bgColor='nord-0' isActiveGame />
+      <PlayerNameTag
+        id={playerId}
+        {...nameTagProps}
+        className='my-1.5'
+        size='lg'
+        bgColor='nord-0'
+        isActiveGame={game.status === 'IN_PROGRESS'}
+      />
       <AnimatePresence>
         <div
           className={classNames('h-[64cqi] grid items-center gap-4', {

@@ -29,11 +29,10 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deck }) => {
   useEffect(() => {
     let timer: NodeJS.Timeout | undefined
     if (prevDeckCountRef.current < deck.length) {
-      setIsShuffling(true)
-
       timer = setTimeout(() => {
-        setIsShuffling(false)
-      }, 1_000)
+        setIsShuffling(true)
+        timer = setTimeout(() => setIsShuffling(false), 1_000)
+      }, 500)
     }
     prevDeckCountRef.current = deck.length
     return () => {

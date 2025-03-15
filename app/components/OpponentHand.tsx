@@ -57,7 +57,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   return (
     <div
       className={classNames(
-        'flex flex-col items-center justify-center container-type-inline-size gap-1 transition-all ease-in-out duration-300 scale-100 z-10',
+        'flex flex-col items-center justify-center container-type-inline-size transition-all ease-in-out duration-300 scale-100 z-10',
         { 'scale-110': isActor },
         className
       )}

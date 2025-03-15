@@ -21,7 +21,9 @@ export const variantStyles = {
   danger:
     'bg-nord-11 text-nord-6 hover:bg-nord-11-dark hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-11-dark active:translate-y-0 disabled:bg-[#cf717a]',
   warning:
-    'bg-nord-13 text-nord-0 hover:bg-nord-13-dark hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-13-dark active:translate-y-0 disabled:bg-[#fbdb9b]'
+    'bg-nord-13 text-nord-0 hover:bg-nord-13-dark hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-13-dark active:translate-y-0 disabled:bg-[#fbdb9b]',
+  active:
+    'bg-nord-12 text-nord-0 hover:bg-nord-12-dark hover:nord-shadow hover:-translate-y-0.5 active:bg-nord-12-dark active:translate-y-0 disabled:bg-[#88c0d0]'
 }
 
 // Size styles remain the same

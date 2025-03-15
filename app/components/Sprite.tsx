@@ -85,11 +85,8 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
       break
 
     case 'crown':
-      viewBox = '0 0 512 512'
-      break
-
     case 'steal':
-      viewBox = '-44 -44 556 556'
+      viewBox = '0 0 512 512'
       break
 
     case 'pencil':

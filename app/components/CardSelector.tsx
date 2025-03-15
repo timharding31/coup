@@ -28,9 +28,6 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
   selectedCardIds: initialSelectedCardIds,
   isLoading
 }) => {
-  // Manage open state internally if not provided externally
-  const [isOpen, setIsOpen] = useState(true)
-
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>(() => {
     if (initialSelectedCardIds) {
       return initialSelectedCardIds
@@ -63,21 +60,9 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
     warning: 'bg-nord-13'
   }[intent]
 
-  // Determine the best sprite based on intent
-  const getButtonSprite = () => {
-    switch (intent) {
-      case 'success':
-        return 'check'
-      case 'danger':
-        return 'cards'
-      default:
-        return 'options'
-    }
-  }
-
   return (
     <>
-      <Drawer open={isOpen} dismissible onOpenChange={setIsOpen}>
+      <Drawer>
         <DrawerContent className='p-4'>
           <div className='grid gap-4'>
             <div className='px-2'>
@@ -129,7 +114,7 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
         </DrawerContent>
       </Drawer>
 
-      <DrawerTrigger isOpen={isOpen} setIsOpen={setIsOpen} heading={heading} label={'Open card selector'} />
+      {/* <DrawerTrigger heading={heading} label={'Open card selector'} /> */}
     </>
   )
 }

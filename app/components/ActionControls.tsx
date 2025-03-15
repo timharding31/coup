@@ -1,9 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import classNames from 'classnames'
 import { useCoupContext } from '~/context/CoupContext'
 import type { ActionType, Player, TargetedActionType, UntargetedActionType } from '~/types'
 import { Button } from './Button'
-import { Drawer, DrawerContent } from './Drawer'
+import { Drawer, DrawerContent, useDrawerOpenAtom } from './Drawer'
 import { ACTION_REQUIREMENTS } from '~/utils/action'
 import { SpriteId } from './Sprite'
 import { action } from '../routes/_index'
@@ -51,12 +51,9 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
   const [targetedAction, setTargetedAction] = useState<TargetedActionType>()
   const forceCoup = playerCoins >= 10
 
-  // Manage open state internally if not provided externally
-  const [isOpen, setIsOpen] = useState(true)
-
   return (
     <>
-      <Drawer open={isOpen} dismissible onOpenChange={setIsOpen}>
+      <Drawer dismissible>
         <DrawerContent className='p-4'>
           <div className='relative overflow-x-hidden'>
             <div
@@ -147,7 +144,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
         </DrawerContent>
       </Drawer>
 
-      <DrawerTrigger isOpen={isOpen} setIsOpen={setIsOpen} size='lg' heading="It's your turn" label='Select action' />
+      <DrawerTrigger size='lg' heading="It's your turn" label='Select action' />
     </>
   )
 }

@@ -1,22 +1,38 @@
-import * as React from 'react'
+import React, { useEffect } from 'react'
 import { Drawer as DrawerPrimitive } from 'vaul'
-import { atom, useAtomValue, useSetAtom } from 'jotai'
+import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai'
 import classNames from 'classnames'
 
 const drawerHeightAtom = atom<number | null>(null)
-
+const drawerOpenAtom = atom(false)
 export const useDrawerHeight = () => useAtomValue(drawerHeightAtom)
+export const useIsDrawerOpen = () => useAtomValue(drawerOpenAtom)
+export const useDrawerOpenAtom = () => useAtom(drawerOpenAtom)
 
-const Drawer = ({
+const Drawer: React.FC<React.ComponentProps<typeof DrawerPrimitive.Root>> = ({
   shouldScaleBackground = true,
   dismissible = false,
+  onOpenChange,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root shouldScaleBackground={shouldScaleBackground} dismissible={dismissible} {...props} />
-)
-Drawer.displayName = 'Drawer'
+}) => {
+  const [isOpen, setIsOpen] = useDrawerOpenAtom()
+  useEffect(() => {
+    setIsOpen(true)
+  }, [])
+  return (
+    <DrawerPrimitive.Root
+      {...props}
+      shouldScaleBackground={shouldScaleBackground}
+      dismissible={dismissible}
+      open={dismissible ? isOpen : true}
+      onOpenChange={value => {
+        setIsOpen(value)
+        onOpenChange?.(value)
+      }}
+    />
+  )
+}
 
-const DrawerTrigger = DrawerPrimitive.Trigger
 const DrawerClose = DrawerPrimitive.Close
 const DrawerPortal = DrawerPrimitive.Portal
 
@@ -58,7 +74,7 @@ const DrawerContent = React.forwardRef<
 })
 DrawerContent.displayName = DrawerPrimitive.Content.displayName
 
-export { Drawer, DrawerTrigger, DrawerClose, DrawerContent }
+export { Drawer, DrawerClose, DrawerContent }
 
 // function getDrawerContainer() {
 //   if (typeof window === 'undefined') {

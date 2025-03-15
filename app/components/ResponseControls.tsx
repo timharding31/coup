@@ -30,7 +30,7 @@ export const ResponseControls: React.FC<ResponseControlsProps> = ({
   isLoading
 }) => {
   return (
-    <Drawer open>
+    <Drawer>
       <DrawerContent className='p-4'>
         <div className='px-2 mb-4'>
           <h3 className='text-xl font-bold'>{heading}</h3>
