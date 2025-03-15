@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import type { Card } from '~/types'
 import { Button, ButtonProps } from './Button'
 import { Drawer, DrawerContent } from './Drawer'
+import { DrawerTrigger } from './DrawerTrigger'
 import { PlayingCard } from './PlayingCard'
 
 interface CardSelectorProps {
@@ -27,6 +28,9 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
   selectedCardIds: initialSelectedCardIds,
   isLoading
 }) => {
+  // Manage open state internally if not provided externally
+  const [isOpen, setIsOpen] = useState(true)
+
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>(() => {
     if (initialSelectedCardIds) {
       return initialSelectedCardIds
@@ -59,57 +63,73 @@ export const CardSelector: React.FC<CardSelectorProps> = ({
     warning: 'bg-nord-13'
   }[intent]
 
+  // Determine the best sprite based on intent
+  const getButtonSprite = () => {
+    switch (intent) {
+      case 'success':
+        return 'check'
+      case 'danger':
+        return 'cards'
+      default:
+        return 'options'
+    }
+  }
+
   return (
-    <Drawer open>
-      <DrawerContent className='p-4'>
-        <div className='grid gap-4'>
-          <div className='px-2'>
-            <h3 className='text-xl font-bold'>{heading}</h3>
-            {subheading && <p className='text-base text-nord-4'>{subheading}</p>}
-          </div>
+    <>
+      <Drawer open={isOpen} dismissible onOpenChange={setIsOpen}>
+        <DrawerContent className='p-4'>
+          <div className='grid gap-4'>
+            <div className='px-2'>
+              <h3 className='text-xl font-bold'>{heading}</h3>
+              {subheading && <p className='text-base text-nord-4'>{subheading}</p>}
+            </div>
 
-          <div className='flex justify-center gap-2'>
-            {cards.map((card, i) => {
-              if (card.isRevealed) {
-                return null
-              }
-              return (
-                <button
-                  key={card.id}
-                  type='button'
-                  className={`appearance-none relative cursor-pointer transition-transform ${
-                    selectedCardIds.includes(card.id) ? 'scale-95' : ''
-                  }`}
-                  style={{ width: `${100 / Math.min(4, cards.length)}%`, maxWidth: '180px' }}
-                  onClick={() => toggleCard(card.id)}
-                >
-                  <PlayingCard {...card} />
-                  {selectedCardIds.includes(card.id) && (
-                    <div
-                      className={`absolute inset-0 ${bgClassName} rounded-lg flex items-center justify-center bg-opacity-50`}
-                    >
-                      <div className='w-8 h-8 rounded-full bg-nord-6 flex items-center justify-center font-bold text-nord-0'>
-                        ✓
+            <div className='flex justify-center gap-2'>
+              {cards.map((card, i) => {
+                if (card.isRevealed) {
+                  return null
+                }
+                return (
+                  <button
+                    key={card.id}
+                    type='button'
+                    className={`appearance-none relative cursor-pointer transition-transform ${
+                      selectedCardIds.includes(card.id) ? 'scale-95' : ''
+                    }`}
+                    style={{ width: `${100 / Math.min(4, cards.length)}%`, maxWidth: '180px' }}
+                    onClick={() => toggleCard(card.id)}
+                  >
+                    <PlayingCard {...card} />
+                    {selectedCardIds.includes(card.id) && (
+                      <div
+                        className={`absolute inset-0 ${bgClassName} rounded-lg flex items-center justify-center bg-opacity-50`}
+                      >
+                        <div className='w-8 h-8 rounded-full bg-nord-6 flex items-center justify-center font-bold text-nord-0'>
+                          ✓
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
 
-          <Button
-            size='lg'
-            variant={intent}
-            onClick={() => onSubmit(selectedCardIds)}
-            disabled={!canSubmit}
-            className='w-full mt-4'
-            isLoading={isLoading}
-          >
-            Confirm
-          </Button>
-        </div>
-      </DrawerContent>
-    </Drawer>
+            <Button
+              size='lg'
+              variant={intent}
+              onClick={() => onSubmit(selectedCardIds)}
+              disabled={!canSubmit}
+              className='w-full mt-4'
+              isLoading={isLoading}
+            >
+              Confirm
+            </Button>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <DrawerTrigger isOpen={isOpen} setIsOpen={setIsOpen} heading={heading} label={'Open card selector'} />
+    </>
   )
 }

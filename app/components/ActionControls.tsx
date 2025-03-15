@@ -7,6 +7,7 @@ import { Drawer, DrawerContent } from './Drawer'
 import { ACTION_REQUIREMENTS } from '~/utils/action'
 import { SpriteId } from './Sprite'
 import { action } from '../routes/_index'
+import { DrawerTrigger } from './DrawerTrigger'
 
 const SHARED_STYLES = 'transition-transform duration-200 ease-in-out w-full grid gap-3 grid-cols-1'
 
@@ -50,96 +51,103 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
   const [targetedAction, setTargetedAction] = useState<TargetedActionType>()
   const forceCoup = playerCoins >= 10
 
+  // Manage open state internally if not provided externally
+  const [isOpen, setIsOpen] = useState(true)
+
   return (
-    <Drawer open>
-      <DrawerContent className='p-4'>
-        <div className='relative overflow-x-hidden'>
-          <div
-            className={classNames(SHARED_STYLES, 'h-[460px]', {
-              'translate-x-[-100%]': targetedAction
-            })}
-          >
-            <div className='px-2'>
-              <h3 className='text-xl font-bold'>It's your turn</h3>
-              <p className='text-base text-nord-4'>Select an available action</p>
-            </div>
+    <>
+      <Drawer open={isOpen} dismissible onOpenChange={setIsOpen}>
+        <DrawerContent className='p-4'>
+          <div className='relative overflow-x-hidden'>
+            <div
+              className={classNames(SHARED_STYLES, 'h-[460px]', {
+                'translate-x-[-100%]': targetedAction
+              })}
+            >
+              <div className='px-2'>
+                <h3 className='text-xl font-bold'>It's your turn</h3>
+                <p className='text-base text-nord-4'>Select an available action</p>
+              </div>
 
-            {ALL_ACTIONS.map(actionType => {
-              const { coinCost } = ACTION_REQUIREMENTS[actionType]
-              let isDisabled = coinCost > Math.max(playerCoins, 0) || (forceCoup && actionType !== 'COUP')
-              return (
-                <Button
-                  key={actionType}
-                  size='lg'
-                  variant='primary'
-                  onClick={() => {
-                    if (isTargetedAction(actionType)) {
-                      setTargetedAction(actionType)
-                    } else {
-                      performUntargetedAction(actionType)
-                    }
-                  }}
-                  coinStack={getCoinGainAmountFromActionType(actionType)}
-                  sprite={getSpriteFromActionType(actionType)}
-                  coinCost={coinCost || undefined}
-                  disabled={isDisabled}
-                  isLoading={isLoading}
-                >
-                  {actionType.replace('_', ' ')}
-                </Button>
-              )
-            })}
-          </div>
-
-          <div
-            className={classNames(SHARED_STYLES, 'absolute top-0 left-0 right-0', {
-              'translate-x-[100%]': !targetedAction
-            })}
-          >
-            <div className='flex items-center mb-4'>
-              <Button
-                variant='primary'
-                size='sm'
-                sprite='arrow-left'
-                onClick={() => setTargetedAction(undefined)}
-                className='mr-2'
-              />
-              <h3 className='text-xl'>
-                {targetedAction}
-                {targetedAction === 'STEAL' ? ' from' : ''} which player?
-              </h3>
-            </div>
-            <div className='grid gap-4 grid-cols-1 mb-auto'>
-              {targets.map(target => {
-                const unrevealedCardCount = target.influence.reduce<number>(
-                  (ct, card) => ct + Number(!card.isRevealed),
-                  0
-                )
+              {ALL_ACTIONS.map(actionType => {
+                const { coinCost } = ACTION_REQUIREMENTS[actionType]
+                let isDisabled = coinCost > Math.max(playerCoins, 0) || (forceCoup && actionType !== 'COUP')
                 return (
                   <Button
-                    key={`target-${target.id}`}
+                    key={actionType}
                     size='lg'
                     variant='primary'
-                    className='w-full'
                     onClick={() => {
-                      if (targetedAction) {
-                        performTargetedAction(targetedAction, target.id)
+                      if (isTargetedAction(actionType)) {
+                        setTargetedAction(actionType)
+                      } else {
+                        performUntargetedAction(actionType)
                       }
                     }}
-                    disabled={unrevealedCardCount < 1 || (targetedAction === 'STEAL' && target.coins < 1)}
-                    nameTag={{
-                      ...target,
-                      cardCount: unrevealedCardCount,
-                      className: 'text-lg'
-                    }}
+                    coinStack={getCoinGainAmountFromActionType(actionType)}
+                    sprite={getSpriteFromActionType(actionType)}
+                    coinCost={coinCost || undefined}
+                    disabled={isDisabled}
                     isLoading={isLoading}
-                  />
+                  >
+                    {actionType.replace('_', ' ')}
+                  </Button>
                 )
               })}
             </div>
+
+            <div
+              className={classNames(SHARED_STYLES, 'absolute top-0 left-0 right-0', {
+                'translate-x-[100%]': !targetedAction
+              })}
+            >
+              <div className='flex items-center mb-4'>
+                <Button
+                  variant='primary'
+                  size='sm'
+                  sprite='arrow-left'
+                  onClick={() => setTargetedAction(undefined)}
+                  className='mr-2'
+                />
+                <h3 className='text-xl'>
+                  {targetedAction}
+                  {targetedAction === 'STEAL' ? ' from' : ''} which player?
+                </h3>
+              </div>
+              <div className='grid gap-4 grid-cols-1 mb-auto'>
+                {targets.map(target => {
+                  const unrevealedCardCount = target.influence.reduce<number>(
+                    (ct, card) => ct + Number(!card.isRevealed),
+                    0
+                  )
+                  return (
+                    <Button
+                      key={`target-${target.id}`}
+                      size='lg'
+                      variant='primary'
+                      className='w-full'
+                      onClick={() => {
+                        if (targetedAction) {
+                          performTargetedAction(targetedAction, target.id)
+                        }
+                      }}
+                      disabled={unrevealedCardCount < 1 || (targetedAction === 'STEAL' && target.coins < 1)}
+                      nameTag={{
+                        ...target,
+                        cardCount: unrevealedCardCount,
+                        className: 'text-lg'
+                      }}
+                      isLoading={isLoading}
+                    />
+                  )
+                })}
+              </div>
+            </div>
           </div>
-        </div>
-      </DrawerContent>
-    </Drawer>
+        </DrawerContent>
+      </Drawer>
+
+      <DrawerTrigger isOpen={isOpen} setIsOpen={setIsOpen} size='lg' heading="It's your turn" label='Select action' />
+    </>
   )
 }
