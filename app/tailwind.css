@@ -197,3 +197,54 @@ h4 {
     transform: translateY(0);
   }
 }
+
+.drawer-trigger-background {
+  animation-name: drawerTriggerBackground;
+  animation-timing-function: ease-in-out;
+  animation-duration: 0.5s;
+  animation-fill-mode: forwards;
+  opacity: 0;
+}
+
+@keyframes drawerTriggerBackground {
+  to {
+    opacity: 1;
+  }
+}
+
+.drawer-trigger {
+  animation-name: drawerTrigger;
+  animation-timing-function: linear(
+    0,
+    0.032 1.1%,
+    0.135 2.4%,
+    0.956 9.5%,
+    1.098 11.8%,
+    1.159 14.2%,
+    1.163 15.4%,
+    1.153 16.7%,
+    1.012 24.3%,
+    0.986 26.7%,
+    0.974 29.2%,
+    1.004 44.1%,
+    1
+  );
+  animation-duration: 0.6s;
+  animation-delay: 0.5s;
+  animation-fill-mode: forwards;
+  opacity: 0;
+  transform: translateY(-24px);
+  /* transform: scaleY(0); */
+  /* transform-origin: top; */
+}
+
+@keyframes drawerTrigger {
+  /* 50% {
+    opacity: 1;
+  } */
+  100% {
+    /* transform: scaleY(1); */
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

@@ -144,7 +144,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
         </DrawerContent>
       </Drawer>
 
-      <DrawerTrigger size='lg' heading="It's your turn" label='Select action' />
+      <DrawerTrigger size='lg' heading="It's your turn" label='Start' />
     </>
   )
 }
