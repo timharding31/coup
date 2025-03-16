@@ -37,7 +37,7 @@ export interface ITurnService {
 }
 
 export class TurnService implements ITurnService {
-  private readonly RESPONSE_TIMEOUT = 20_000 // 20 seconds
+  private readonly RESPONSE_TIMEOUT = 30_000 // 30 seconds
 
   private gamesRef: Reference
   private actionService: ActionService

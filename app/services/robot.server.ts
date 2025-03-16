@@ -251,13 +251,13 @@ export class CoupRobot implements ICoupRobot {
 
         this.playerInferences.set(player.id, {
           playerId: player.id,
-          // Start with equal probabilities for all card types
+          // Start with ~48% probability for each card type
           cardProbabilities: {
-            [CardType.DUKE]: 0.2,
-            [CardType.ASSASSIN]: 0.2,
-            [CardType.CONTESSA]: 0.2,
-            [CardType.CAPTAIN]: 0.2,
-            [CardType.AMBASSADOR]: 0.2
+            [CardType.DUKE]: 0.48,
+            [CardType.ASSASSIN]: 0.48,
+            [CardType.CONTESSA]: 0.48,
+            [CardType.CAPTAIN]: 0.48,
+            [CardType.AMBASSADOR]: 0.48
           },
           revealedCards,
           lastActions: []
@@ -337,48 +337,76 @@ export class CoupRobot implements ICoupRobot {
       inference.lastActions.shift()
     }
 
-    // Update probabilities based on action
+    const BASE_PROBABILITY = 0.48
+    const MAX_PROBABILITY = 0.9
+    const UNCHALLENGED_CLAIM_BOOST = 0.15
+    const UNCLAIMED_CARD_PENALTY = 0.1 // How much to reduce probability of unclaimed cards
+    const HISTORY_THRESHOLD = 5
+
     const probabilities = inference.cardProbabilities
 
-    // Actions that strongly suggest having specific cards
+    // Helper function to update probabilities when a card is claimed
+    const updateProbabilitiesForClaim = (claimedCard: CardType) => {
+      // Increase probability for claimed card
+      probabilities[claimedCard] = Math.min(MAX_PROBABILITY, BASE_PROBABILITY + UNCHALLENGED_CLAIM_BOOST)
+
+      // Decrease probability for all other cards
+      Object.values(CardType).forEach(cardType => {
+        if (cardType !== claimedCard) {
+          probabilities[cardType] = Math.max(
+            0.1, // Don't go too low - they might have exchanged cards
+            probabilities[cardType] - UNCLAIMED_CARD_PENALTY
+          )
+        }
+      })
+    }
+
+    // Update based on action type
     switch (actionType) {
       case 'TAX':
-        // Likely has DUKE
-        probabilities[CardType.DUKE] = Math.min(1, probabilities[CardType.DUKE] + 0.4)
+        updateProbabilitiesForClaim(CardType.DUKE)
         break
       case 'ASSASSINATE':
-        // Likely has ASSASSIN
-        probabilities[CardType.ASSASSIN] = Math.min(1, probabilities[CardType.ASSASSIN] + 0.4)
+        updateProbabilitiesForClaim(CardType.ASSASSIN)
         break
       case 'STEAL':
-        // Likely has CAPTAIN
-        probabilities[CardType.CAPTAIN] = Math.min(1, probabilities[CardType.CAPTAIN] + 0.4)
+        updateProbabilitiesForClaim(CardType.CAPTAIN)
         break
       case 'EXCHANGE':
-        // Likely has AMBASSADOR
-        probabilities[CardType.AMBASSADOR] = Math.min(1, probabilities[CardType.AMBASSADOR] + 0.4)
+        updateProbabilitiesForClaim(CardType.AMBASSADOR)
         break
     }
 
-    // If they successfully blocked with a card
+    // If they blocked with a card
     if (blockCard) {
-      switch (blockCard) {
-        case CardType.DUKE:
-          probabilities[CardType.DUKE] = Math.min(1, probabilities[CardType.DUKE] + 0.4)
-          break
-        case CardType.CONTESSA:
-          probabilities[CardType.CONTESSA] = Math.min(1, probabilities[CardType.CONTESSA] + 0.4)
-          break
-        case CardType.CAPTAIN:
-          probabilities[CardType.CAPTAIN] = Math.min(1, probabilities[CardType.CAPTAIN] + 0.4)
-          break
-        case CardType.AMBASSADOR:
-          probabilities[CardType.AMBASSADOR] = Math.min(1, probabilities[CardType.AMBASSADOR] + 0.4)
-          break
-      }
+      updateProbabilitiesForClaim(blockCard)
     }
 
-    // Normalize probabilities
+    // Decay old information if we have enough action history
+    if (inference.lastActions.length >= HISTORY_THRESHOLD) {
+      Object.keys(probabilities).forEach(cardType => {
+        const cardProbability = probabilities[cardType as CardType]
+        if (cardProbability > BASE_PROBABILITY) {
+          // Check if we haven't seen this card claimed in recent actions
+          const recentClaim = inference.lastActions
+            .slice(-HISTORY_THRESHOLD)
+            .some(
+              action =>
+                (action.type === 'TAX' && cardType === CardType.DUKE) ||
+                (action.type === 'ASSASSINATE' && cardType === CardType.ASSASSIN) ||
+                (action.type === 'STEAL' && cardType === CardType.CAPTAIN) ||
+                (action.type === 'EXCHANGE' && cardType === CardType.AMBASSADOR) ||
+                action.blockCard === cardType
+            )
+
+          if (!recentClaim) {
+            // Decay probability back toward base
+            probabilities[cardType as CardType] = Math.max(BASE_PROBABILITY, cardProbability - 0.1)
+          }
+        }
+      })
+    }
+
     this.playerInferences.set(playerId, inference)
   }
 
@@ -463,9 +491,10 @@ export class CoupRobot implements ICoupRobot {
       return true
     }
 
-    // If probability they have the card is low, might be safe to challenge
-    if (this.estimateCardProbability(playerId, cardType) < 0.3) {
-      return Math.random() < 0.7 // 70% chance to challenge if we think they're bluffing
+    // If probability they have the card is very low, might be safe to challenge
+    // Increased threshold from 0.3 to 0.2 to be more conservative
+    if (this.estimateCardProbability(playerId, cardType) < 0.2) {
+      return Math.random() < 0.4 // Reduced from 0.7 to 0.4 (40% chance to challenge)
     }
 
     return false

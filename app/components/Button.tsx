@@ -6,6 +6,8 @@ import { CoinStack } from './CoinStack'
 import { PlayerNameTag } from './PlayerNameTag'
 import { CoinStackWithMargin } from './ActionIcon'
 
+const isDev = process.env.NODE_ENV === 'development'
+
 export const variantStyles = {
   // Nord
   primary:
@@ -46,10 +48,12 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const TimerBackground = ({
   timeoutAt = null,
+  onTimeoutExpired,
   variant
 }: {
   timeoutAt?: number | null
   variant: keyof typeof variantStyles
+  onTimeoutExpired: () => void
 }) => {
   const [progress, setProgress] = useState(0)
 
@@ -59,18 +63,22 @@ const TimerBackground = ({
     }
 
     const updateProgress = () => {
-      const total = 20_000 // 20 seconds in milliseconds
+      const total = 30_000 // 30 seconds in milliseconds
       const now = Date.now()
       const remainingTime = timeoutAt - now
       const elapsedTime = total - remainingTime
       const calculated = (elapsedTime / total) * 100
-      setProgress(Math.min(100, Math.max(0, calculated)))
+      const progress = Math.min(100, Math.max(0, calculated))
+      setProgress(progress)
+      if (progress > 99) {
+        onTimeoutExpired?.()
+      }
     }
 
     updateProgress()
     const interval = setInterval(updateProgress, 1_000)
     return () => clearInterval(interval)
-  }, [timeoutAt])
+  }, [timeoutAt, onTimeoutExpired])
 
   let progressColor
 
@@ -136,7 +144,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const innerRef = useRef<HTMLButtonElement>(null)
     const isOutline = variant.endsWith('Outline')
     const hasIcon = sprite || coinStack
-    const isDisabled = isLoading || props.disabled
+    const [isTimeoutExpired, setIsTimeoutExpired] = useState(false)
+    const isDisabled = isLoading || props.disabled || (!isDev && isTimeoutExpired)
 
     const getContentGapClass = () => {
       if ((sprite || isDisabled) && size === 'lg') return 'gap-4'
@@ -166,7 +175,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <button className={classes} ref={useMergedRefs(forwardedRef, innerRef)} {...props} disabled={isDisabled}>
-        {!!timeoutAt && !isOutline && <TimerBackground timeoutAt={timeoutAt} variant={variant} />}
+        {!!timeoutAt && !isOutline && (
+          <TimerBackground timeoutAt={timeoutAt} variant={variant} onTimeoutExpired={() => setIsTimeoutExpired(true)} />
+        )}
 
         {isLoading && hasIcon ? (
           <Sprite id='loading' size={size} className='animate-spin duration-500' />
