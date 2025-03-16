@@ -14,7 +14,7 @@ import {
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { prepareGameForClient } from '~/utils/game'
-import { useMessageQueue } from '~/hooks/useMessageQueue'
+import { useMessages } from '~/hooks/useMessages'
 import { getPlayerActionMessages, MessageData } from '~/utils/messages'
 import { useThrottledGameCallback } from '~/hooks/useThrottledGameCallback'
 import { BotRequest, CardRequest, GameRequest, TurnRequest } from '~/types/request'
@@ -64,7 +64,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const turnPhaseRef = useRef<TurnPhase | null>(null)
   const opponentResponsesRef = useRef<OpponentBlockResponse | OpponentChallengeResponse | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
-  const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessageQueue({ delayMs: 0 })
+  const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessages()
   const navigate = useNavigate()
 
   const onGameCallback = useCallback(

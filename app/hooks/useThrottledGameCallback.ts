@@ -1,6 +1,5 @@
 import { useRef, useCallback, useEffect } from 'react'
-import { CoupRobot } from '~/services/robot.server'
-import { Game } from '~/types'
+import { Game, TurnPhase } from '~/types'
 
 export function useThrottledGameCallback(callback: (value: Game<'client'>) => void) {
   const isProcessingRef = useRef(false)
@@ -50,24 +49,28 @@ function getDelayFromGame(
   game: Game<'client'>,
   games: { next?: Game<'client'> | null; prev?: Game<'client'> | null }
 ): number {
-  if (isNewBlockOrChallenge(game, games.prev)) {
-    return 1_000
-  }
-  if (isChallengeDefenseCardVisible(game) && !isChallengeDefenseCardVisible(games.next)) {
+  if (isChallengeDefenseCardVisible(games.prev) && !isChallengeDefenseCardVisible(game)) {
     return 2_500
   }
-  if (isActiveBotExchangeReturn(game) && !isActiveBotExchangeReturn(games.next)) {
+  if (isActiveBotExchangeReturn(games.prev) && !isActiveBotExchangeReturn(game)) {
+    return 1_500
+  }
+  if (isTurnAboutToEnd(games.prev)) {
     return 1_000
   }
-  // Simulate thinking by adding a random delay of ~0.5s
-  if (game.botActionInProgress || games.next?.botActionInProgress) {
-    return 200 + Math.random() * 600
+  if (games.prev?.currentTurn && games.prev.currentTurn.phase !== game.currentTurn?.phase) {
+    return 1_000
   }
-  if (isPendingBotDecision(game)) {
-    return 100 + Math.random() * 300
-  }
-  if (game.currentTurn?.phase === 'ACTION_EXECUTION') {
-    return 200
+  // if (isPendingBotDecision(games.prev) && !isPendingBotDecision(game)) {
+  //   return 200 + Math.random() * 600
+  // }
+  if (games.prev?.botActionInProgress) {
+    // ~0.5s wait for bot thinking during phase that can time out
+    if (isWaitingPhase(games.prev.currentTurn?.phase)) {
+      return 200 + Math.random() * 600
+    }
+    // Otherwise, wait about 1s
+    return 400 + Math.random() * 1200
   }
   return 200
 }
@@ -82,6 +85,13 @@ function isNewBlockOrChallenge(game: Game<'client'> | null, prevGame: Game<'clie
     !!game.currentTurn.opponentResponses?.challenge && !prevGame?.currentTurn.opponentResponses?.challenge
   const isBotChallenger = !!game.currentTurn.opponentResponses?.challenge?.startsWith('bot-')
   return (isNewBlock && isBotBlocker) || (isNewChallenge && isBotChallenger)
+}
+
+function isTurnAboutToEnd(game: Game<'client'> | null = null): boolean {
+  if (!game?.currentTurn) {
+    return false
+  }
+  return ['ACTION_EXECUTION', 'ACTION_FAILED'].includes(game.currentTurn.phase)
 }
 
 function isChallengeDefenseCardVisible(game: Game<'client'> | null = null): boolean {
@@ -135,4 +145,13 @@ function isPendingBotDecision(game: Game<'client'> | null = null): boolean {
     default:
       return false
   }
+}
+
+function isWaitingPhase(phase?: TurnPhase): boolean {
+  if (!phase) return false
+  return [
+    'AWAITING_OPPONENT_RESPONSES',
+    'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
+    'AWAITING_TARGET_BLOCK_RESPONSE'
+  ].includes(phase)
 }
