@@ -144,9 +144,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const performAction = useCallback(
     async (action: any) => {
       setIsLoading(true)
-      await handleTurnsPost('ACTION', { gameId, playerId, action }, setError).then(({ game }) => {
-        if (game) throttledOnGameCallback(game)
-      })
+      await handleTurnsPost('ACTION', { gameId, playerId, action }, setError)
       setIsLoading(false)
     },
     [gameId, playerId]
@@ -171,9 +169,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const sendResponse = useCallback(
     async (response: 'accept' | 'challenge' | 'block', blockCard?: CardType) => {
       setIsLoading(true)
-      await handleTurnsPost('RESPONSE', { gameId, playerId, response, blockCard }, setError).then(({ game }) => {
-        if (game) throttledOnGameCallback(game)
-      })
+      await handleTurnsPost('RESPONSE', { gameId, playerId, response, blockCard }, setError)
       setIsLoading(false)
     },
     [gameId, playerId]
@@ -182,9 +178,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const selectCard = useCallback(
     async (cardId: string) => {
       setIsLoading(true)
-      await handleCardsPost('SELECT', { gameId, playerId, cardId }, setError).then(({ game }) => {
-        if (game) throttledOnGameCallback(game)
-      })
+      await handleCardsPost('SELECT', { gameId, playerId, cardId }, setError)
       setIsLoading(false)
     },
     [gameId, playerId]
@@ -193,9 +187,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const exchangeCards = useCallback(
     async (cardIds: string[]) => {
       setIsLoading(true)
-      await handleCardsPost('EXCHANGE', { gameId, playerId, cardIds }, setError).then(({ game }) => {
-        if (game) throttledOnGameCallback(game)
-      })
+      await handleCardsPost('EXCHANGE', { gameId, playerId, cardIds }, setError)
       setIsLoading(false)
     },
     [gameId, playerId]
@@ -218,38 +210,33 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
 
   const addBot = useCallback(async () => {
     setIsLoading(true)
-    await handleBotsPost('ADD', { gameId, playerId }, setError).then(({ game }) => {
-      // Don't use throttledGameCallback because this happens during WAITING phase
-      if (game) setGame(game)
-    })
+    const { game } = await handleBotsPost('ADD', { gameId, playerId }, setError)
     setIsLoading(false)
+    if (game) setGame(game)
   }, [gameId, playerId])
 
   const removeBot = useCallback(
     async (botId: string) => {
       setIsLoading(true)
-      await handleBotsPost('REMOVE', { gameId, playerId, botId }, setError).then(({ game }) => {
-        if (game) setGame(game)
-      })
+      const { game } = await handleBotsPost('REMOVE', { gameId, playerId, botId }, setError)
       setIsLoading(false)
+      if (game) setGame(game)
     },
     [gameId, playerId]
   )
 
   const startGame = useCallback(async () => {
     setIsLoading(true)
-    await handleGamesPost('START', { gameId, playerId }, setError).then(({ game }) => {
-      if (game) setGame(game)
-    })
+    const { game } = await handleGamesPost('START', { gameId, playerId }, setError)
     setIsLoading(false)
+    if (game) setGame(game)
   }, [gameId, playerId])
 
   const handleRematch = useCallback(async () => {
     setIsLoading(true)
-    await handleGamesPost('REMATCH', { gameId, playerId }, setError).then(({ game: newGame }) => {
-      if (newGame) navigate(`/games/${newGame.id}`)
-    })
+    const { game: newGame } = await handleGamesPost('REMATCH', { gameId, playerId }, setError)
     setIsLoading(false)
+    if (newGame) navigate(`/games/${newGame.id}`)
   }, [gameId, playerId])
 
   const actor = useMemo(() => game.players[game.currentPlayerIndex], [game.players, game.currentPlayerIndex])

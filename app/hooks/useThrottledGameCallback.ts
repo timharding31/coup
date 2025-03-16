@@ -5,7 +5,6 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
   const isProcessingRef = useRef(false)
   const gameUpdateTimeoutRef = useRef<NodeJS.Timeout>()
   const gameUpdatesQueueRef = useRef<Game<'client'>[]>([])
-  const prevGameRef = useRef<Game<'client'> | null>(null)
 
   useEffect(() => {
     return () => {
@@ -23,12 +22,10 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
     isProcessingRef.current = true
     const game = gameUpdatesQueueRef.current.shift()!
     const nextGame = gameUpdatesQueueRef.current.at(0)
-    const prevGame = prevGameRef.current
-    const delay = getDelayFromGame(game, { next: nextGame, prev: prevGame })
+    const delay = getDelayFromGame(game, nextGame)
 
+    callback(game)
     gameUpdateTimeoutRef.current = setTimeout(() => {
-      callback(game)
-      prevGameRef.current = game
       gameUpdateTimeoutRef.current = undefined
       processGameUpdate()
     }, delay)
@@ -45,34 +42,28 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
   )
 }
 
-function getDelayFromGame(
-  game: Game<'client'>,
-  games: { next?: Game<'client'> | null; prev?: Game<'client'> | null }
-): number {
-  if (isChallengeDefenseCardVisible(games.prev) && !isChallengeDefenseCardVisible(game)) {
+function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>): number {
+  if (isChallengeDefenseCardVisible(game) && !isChallengeDefenseCardVisible(nextGame)) {
     return 2_500
   }
-  if (isActiveBotExchangeReturn(games.prev) && !isActiveBotExchangeReturn(game)) {
+  if (isActiveBotExchangeReturn(game) && !isActiveBotExchangeReturn(nextGame)) {
     return 1_500
   }
-  if (isTurnAboutToEnd(games.prev)) {
+  if (isTurnAboutToEnd(game)) {
     return 1_000
   }
-  if (games.prev?.currentTurn && games.prev.currentTurn.phase !== game.currentTurn?.phase) {
-    return 1_000
-  }
-  // if (isPendingBotDecision(games.prev) && !isPendingBotDecision(game)) {
-  //   return 200 + Math.random() * 600
-  // }
-  if (games.prev?.botActionInProgress) {
+  if (game.botActionInProgress) {
     // ~0.5s wait for bot thinking during phase that can time out
-    if (isWaitingPhase(games.prev.currentTurn?.phase)) {
+    if (isWaitingPhase(game.currentTurn?.phase)) {
       return 200 + Math.random() * 600
     }
     // Otherwise, wait about 1s
     return 400 + Math.random() * 1200
   }
-  return 200
+  if (game.currentTurn?.phase !== nextGame?.currentTurn?.phase) {
+    return 500
+  }
+  return 50
 }
 
 function isNewBlockOrChallenge(game: Game<'client'> | null, prevGame: Game<'client'> | null = null): boolean {
@@ -99,8 +90,11 @@ function isChallengeDefenseCardVisible(game: Game<'client'> | null = null): bool
   if (phase !== 'REPLACING_CHALLENGE_DEFENSE_CARD') {
     return false
   }
-  const allCards = game?.players.flatMap(player => player.influence) || []
-  return allCards.some(card => card.isChallengeDefenseCard)
+  const actor = game?.players?.[game.currentPlayerIndex]
+  if (!actor) {
+    return false
+  }
+  return actor.influence.some(card => card.isChallengeDefenseCard)
 }
 
 function isActiveBotExchangeReturn(game: Game<'client'> | null = null): boolean {
