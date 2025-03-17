@@ -544,13 +544,9 @@ export class TurnService implements ITurnService {
     // No need to manually start timer here
 
     const updatedGame = result.snapshot.val() as Game | null
+    const { phase } = updatedGame?.currentTurn || {}
 
-    if (
-      updatedGame?.currentTurn &&
-      ['ACTION_EXECUTION', 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK', 'AWAITING_ACTOR_DEFENSE'].includes(
-        updatedGame.currentTurn.phase
-      )
-    ) {
+    if (phase && ['ACTION_EXECUTION', 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK', 'AWAITING_ACTOR_DEFENSE'].includes(phase)) {
       await this.progressToNextPhase(result)
     }
   }
@@ -678,9 +674,6 @@ export class TurnService implements ITurnService {
         break
 
       case 'ACTION_FAILED':
-        await this.endTurn(game.id)
-        break
-
       case 'TURN_COMPLETE':
         await this.endTurn(game.id)
         break
@@ -897,12 +890,15 @@ export class TurnService implements ITurnService {
     const botPlayer = game.players.find(p => p.id === action.playerId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
 
+    await this.startBotProcessing(gameId)
     try {
       const robot = await this.assembleRobotForPhase(game, botPlayer.id, ['AWAITING_EXCHANGE_RETURN'])
       const { cardIds } = await robot.decideExchangeCards()
       await this.handleExchangeReturn(game.id, action.playerId, cardIds)
     } catch (error) {
       console.error(`Error processing bot exchange: ${error}`)
+    } finally {
+      await this.endBotProcessing(gameId)
     }
   }
 
@@ -969,6 +965,7 @@ export class TurnService implements ITurnService {
       return
     }
 
+    await this.startBotProcessing(game.id)
     try {
       // Create a robot instance for this bot
       const robot = await CoupRobot.create(currentPlayer, game)
@@ -979,6 +976,8 @@ export class TurnService implements ITurnService {
       await this.startTurn(game.id, action)
     } catch (error) {
       console.error(`Error handling bot turn: ${error}`)
+    } finally {
+      await this.endBotProcessing(game.id)
     }
   }
 
@@ -1027,10 +1026,9 @@ export class TurnService implements ITurnService {
     switch (action.type) {
       case 'EXCHANGE':
         await this.dealExchangeCards(gameId, action.playerId)
-        if (actor && CoupRobot.isBotPlayer(actor)) {
+        if (isDevelopment && actor && CoupRobot.isBotPlayer(actor)) {
           await this.processBotExchangeReturn(gameId)
         }
-
         break
 
       case 'COUP':
@@ -1042,7 +1040,7 @@ export class TurnService implements ITurnService {
           await gameRef.child('currentTurn/phase').set('AWAITING_TARGET_SELECTION')
 
           // Check if the target is a bot, and if so, immediately process their card selection
-          if (target && CoupRobot.isBotPlayer(target)) {
+          if (isDevelopment && target && CoupRobot.isBotPlayer(target)) {
             await this.processBotCardSelection(gameId)
           }
         }

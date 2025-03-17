@@ -44,11 +44,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
         break
 
       case 'respond':
-        await handleBotActionResponses(game, botIds)
-        break
-
       case 'block-response':
-        await handleBotBlockResponse(game, botIds[0])
+        await handleBotActionResponses(game, botIds)
         break
 
       case 'defense':
@@ -101,80 +98,78 @@ async function handleBotTurn(game: Game, botId: string): Promise<void> {
  * and stop processing when one bot decides to block or challenge
  */
 async function handleBotActionResponses(game: Game, botIds: string[]): Promise<void> {
-  const currentTurn = game.currentTurn
+  const { currentTurn, players = [] } = game
   if (!currentTurn) return
 
-  for (const botId of botIds) {
-    // Get the bot player
-    const bot = game.players.find(p => p.id === botId)
-    if (!bot || !CoupRobot.isBotPlayer(bot)) {
-      console.log(`Bot ${botId} not found or not a bot, skipping...`)
-      continue
-    }
+  const allPlayers = new Map(players.map(player => [player.id, player]))
+  const botPlayers = botIds.map(id => allPlayers.get(id)).filter(nonNil)
 
-    // Create a robot instance for this bot
-    const robot = await CoupRobot.create(bot, game)
-
-    // Let the bot decide how to respond
-    const result = await robot.decideResponse()
-
-    try {
-      // Normal opponent response
-      if (currentTurn.phase === 'AWAITING_OPPONENT_RESPONSES') {
-        if (result.response === 'block') {
-          await gameService.handleResponse(game.id, bot.id, 'block', result.blockCard)
-
-          // Exit early after a block - changes the game phase
-          return
-        } else if (result.response === 'challenge') {
-          await gameService.handleResponse(game.id, bot.id, 'challenge')
-
-          // Exit early after a challenge - changes the game phase
-          return
-        } else {
-          await gameService.handleResponse(game.id, bot.id, 'accept')
-        }
+  try {
+    while (botPlayers.length) {
+      const randomIndex = Math.floor(Math.random() * botPlayers.length)
+      const [bot] = botPlayers.splice(randomIndex, 1)
+      if (!bot || !CoupRobot.isBotPlayer(bot)) {
+        console.error(`Bot not found or not a bot, skipping...`)
+        continue
       }
-      // Target response to already challenged and defended action
-      else if (currentTurn.phase === 'AWAITING_TARGET_BLOCK_RESPONSE') {
-        if (result.response === 'block') {
-          await gameService.handleResponse(game.id, bot.id, 'block', result.blockCard)
-        } else {
-          await gameService.handleResponse(game.id, bot.id, 'accept')
-        }
+      const robot = await CoupRobot.create(bot, game)
+      const result = await robot.decideResponse()
 
-        // Only one target can respond, so we can return after processing
-        return
+      switch (currentTurn.phase) {
+        case 'AWAITING_OPPONENT_RESPONSES':
+          switch (result.response) {
+            case 'block':
+              await gameService.handleResponse(game.id, bot.id, 'block', result.blockCard)
+              break
+
+            case 'challenge':
+            case 'accept':
+              await gameService.handleResponse(game.id, bot.id, result.response)
+              break
+          }
+          break
+
+        case 'AWAITING_TARGET_BLOCK_RESPONSE':
+          switch (result.response) {
+            case 'block':
+              await gameService.handleResponse(game.id, bot.id, 'block', result.blockCard)
+              break
+
+            case 'accept':
+              await gameService.handleResponse(game.id, bot.id, 'accept')
+              break
+
+            case 'challenge':
+              console.error('Cannot challenge in this phase')
+              break
+          }
+          break
+
+        case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+          switch (result.response) {
+            case 'block':
+              console.error('Cannot block in this phase')
+              break
+
+            case 'accept':
+            case 'challenge':
+              await gameService.handleResponse(game.id, bot.id, result.response)
+              break
+          }
+          break
+
+        default:
+          break
       }
-    } catch (error) {
-      console.error(`Error processing bot ${botId} response:`, error)
-      // Continue with next bot if one fails
+
+      if (result.response === 'block' || result.response === 'challenge') {
+        // Stop processing after a block or challenge is issued because we're moving to a new phase
+        break
+      }
     }
-
-    // Check if the game phase has changed
-    const { game: updatedGame } = await gameService.getGame(game.id)
-    if (updatedGame?.currentTurn?.phase !== currentTurn.phase) {
-      // Phase has changed, stop processing more bots
-      console.log(`Game phase changed to ${updatedGame?.currentTurn?.phase}, stopping bot processing`)
-      return
-    }
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : 'Error handling bot responses')
   }
-}
-
-/**
- * Handle bot response to a block
- */
-async function handleBotBlockResponse(game: Game, botId: string): Promise<void> {
-  const bot = game.players.find(p => p.id === botId)
-  if (!bot || !CoupRobot.isBotPlayer(bot)) {
-    throw new Error('Bot not found or not a bot')
-  }
-
-  const robot = await CoupRobot.create(bot, game)
-  const { response } = await robot.decideResponse()
-
-  // Handle the block response through gameService
-  await gameService.handleResponse(game.id, botId, response === 'challenge' ? 'challenge' : 'accept')
 }
 
 /**
@@ -190,7 +185,11 @@ async function handleBotDefense(game: Game, botId: string): Promise<void> {
   const { cardId } = await robot.decideCardSelection()
 
   // Use gameService for card selection
-  await gameService.handleCardSelection(game.id, botId, cardId)
+  try {
+    await gameService.handleCardSelection(game.id, botId, cardId)
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : 'Error handling bot defense')
+  }
 }
 
 /**
@@ -206,7 +205,11 @@ async function handleBotCardSelection(game: Game, botId: string): Promise<void> 
   const { cardId } = await robot.decideCardSelection()
 
   // Use gameService for card selection
-  await gameService.handleCardSelection(game.id, botId, cardId)
+  try {
+    await gameService.handleCardSelection(game.id, botId, cardId)
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : 'Error handling bot defense')
+  }
 }
 
 /**
@@ -223,4 +226,8 @@ async function handleBotExchangeReturn(game: Game, botId: string): Promise<void>
 
   // Use gameService for exchange
   await gameService.handleExchangeReturn(game.id, botId, cardIds)
+}
+
+function nonNil<T extends {}>(val?: T | null): val is T {
+  return !!val
 }
