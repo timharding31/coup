@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useDrawerOpenAtom } from './Drawer'
 import { GameMessage } from './GameMessage'
 
-interface DrawerTriggerProps extends Pick<ButtonProps, 'variant' | 'size'> {
+interface DrawerTriggerProps extends Pick<ButtonProps, 'variant' | 'size' | 'timeoutAt'> {
   heading: React.ReactNode
   label: React.ReactNode
   className?: string
