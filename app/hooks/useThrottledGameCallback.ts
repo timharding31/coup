@@ -5,6 +5,7 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
   const isProcessingRef = useRef(false)
   const gameUpdateTimeoutRef = useRef<NodeJS.Timeout>()
   const gameUpdatesQueueRef = useRef<Game<'client'>[]>([])
+  const prevGameRef = useRef<Game<'client'>>()
 
   useEffect(() => {
     return () => {
@@ -19,12 +20,17 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
       isProcessingRef.current = false
       return
     }
+
     isProcessingRef.current = true
+
     const game = gameUpdatesQueueRef.current.shift()!
     const nextGame = gameUpdatesQueueRef.current.at(0)
-    const delay = getDelayFromGame(game, nextGame)
+    const prevGame = prevGameRef.current
+    const delay = getDelayFromGame(game, nextGame, prevGame)
 
     callback(game)
+
+    prevGameRef.current = game
     gameUpdateTimeoutRef.current = setTimeout(() => {
       gameUpdateTimeoutRef.current = undefined
       processGameUpdate()
@@ -42,12 +48,18 @@ export function useThrottledGameCallback(callback: (value: Game<'client'>) => vo
   )
 }
 
-function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>): number {
+function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>, prevGame?: Game<'client'>): number {
   if (isChallengeDefenseCardVisible(game) && !isChallengeDefenseCardVisible(nextGame)) {
     return 2_500
   }
   if (isActiveBotExchangeReturn(game) && !isActiveBotExchangeReturn(nextGame)) {
     return 1_500
+  }
+  if (isNewBlockOrChallenge(game, prevGame)) {
+    const { block, challenge } = game.currentTurn?.opponentResponses || {}
+    if (block?.startsWith('bot-') || challenge?.startsWith('bot-')) {
+      return 1_000
+    }
   }
   if (isTurnAboutToEnd(game)) {
     return 1_000
@@ -63,7 +75,7 @@ function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>): numb
   if (game.currentTurn?.phase !== nextGame?.currentTurn?.phase) {
     return 500
   }
-  return 50
+  return 100
 }
 
 function isNewBlockOrChallenge(game: Game<'client'> | null, prevGame: Game<'client'> | null = null): boolean {

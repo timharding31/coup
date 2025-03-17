@@ -17,21 +17,6 @@ export const GameControls: React.FC<GameControlsProps> = ({
   exchangeCards,
   isLoading
 }) => {
-  const [isActionMenuVisible, setIsActionMenuVisible] = useState(false)
-
-  useEffect(() => {
-    let timeout: NodeJS.Timeout | undefined
-    if (!game.currentTurn?.phase) {
-      timeout = setTimeout(() => {
-        setIsActionMenuVisible(true)
-      }, 1_000)
-    }
-    return () => {
-      clearTimeout(timeout)
-      setIsActionMenuVisible(false)
-    }
-  }, [game.currentTurn?.phase])
-
   const { myself, actor, target, blocker, challenger } = players
 
   if (!myself.influence.some(card => !card.isRevealed)) {
@@ -39,11 +24,11 @@ export const GameControls: React.FC<GameControlsProps> = ({
     return null
   }
 
-  if (myself.id === actor.id && !game.currentTurn?.action && isActionMenuVisible) {
+  if (myself.id === actor.id && !game.currentTurn?.action) {
     return <ActionControls targets={game.players.filter(p => p.id !== myself.id)} coins={myself.coins} />
   }
 
-  if (!game.currentTurn || game.botActionInProgress) {
+  if (!game.currentTurn) {
     return null
   }
 

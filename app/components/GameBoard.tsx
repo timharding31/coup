@@ -56,14 +56,16 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
             case 'IN_PROGRESS':
               return (
                 <>
-                  <GameControls
-                    game={game}
-                    players={players}
-                    sendResponse={sendResponse}
-                    selectCard={selectCard}
-                    exchangeCards={exchangeCards}
-                    isLoading={isLoading}
-                  />
+                  {game.botActionInProgress ? null : (
+                    <GameControls
+                      game={game}
+                      players={players}
+                      sendResponse={sendResponse}
+                      selectCard={selectCard}
+                      exchangeCards={exchangeCards}
+                      isLoading={isLoading}
+                    />
+                  )}
                   <div className='flex-none pb-4 flex items-center justify-center'>
                     <CourtDeck deck={game.deck} />
                   </div>

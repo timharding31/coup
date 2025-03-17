@@ -5,6 +5,8 @@ import { haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
 import { CoupRobot } from './robot.server'
 
+const isDevelopment = process.env.NODE_ENV !== 'production'
+
 interface DataSnapshot<T = Game> {
   val(): T | null
 }
@@ -345,14 +347,9 @@ export class TurnService implements ITurnService {
   }
 
   async startTurn(gameId: string, action: Action) {
-    const gameRef = this.gamesRef.child(gameId)
-
-    const isBotActor = action.playerId.startsWith('bot-')
-    await gameRef.child('botActionInProgress').set(isBotActor)
-
     let opponentResponseTimeout: number | null = null
 
-    const result = await gameRef.transaction((game: Game | null): Game | null => {
+    const result = await this.gamesRef.child(gameId).transaction((game: Game | null): Game | null => {
       if (!game || (game.currentTurn && !this.isTurnComplete(game.currentTurn))) {
         return game
       }
@@ -397,7 +394,6 @@ export class TurnService implements ITurnService {
 
       return {
         ...game,
-        botActionInProgress: CoupRobot.isBotGame(game),
         currentTurn: newTurn,
         updatedAt: Date.now()
       }
@@ -405,16 +401,6 @@ export class TurnService implements ITurnService {
 
     if (!result.committed) {
       throw new Error('Failed to start turn')
-    }
-
-    const updatedGame = result.snapshot.val() as Game | null
-
-    // Timeouts are now handled by Firebase Cloud Functions
-    // Just process bot responses if needed
-    if (opponentResponseTimeout && opponentResponseTimeout > Date.now()) {
-      if (CoupRobot.isBotGame(updatedGame)) {
-        await this.processBotResponses(updatedGame)
-      }
     }
 
     if (action.coinCost) {
@@ -557,7 +543,16 @@ export class TurnService implements ITurnService {
     // Timeouts are now handled by Firebase Cloud Functions
     // No need to manually start timer here
 
-    await this.progressToNextPhase(result)
+    const updatedGame = result.snapshot.val() as Game | null
+
+    if (
+      updatedGame?.currentTurn &&
+      ['ACTION_EXECUTION', 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK', 'AWAITING_ACTOR_DEFENSE'].includes(
+        updatedGame.currentTurn.phase
+      )
+    ) {
+      await this.progressToNextPhase(result)
+    }
   }
 
   async handleBlockResponse(gameId: string, playerId: string, response: 'accept' | 'challenge') {
@@ -612,18 +607,6 @@ export class TurnService implements ITurnService {
     await this.progressToNextPhase(result)
   }
 
-  // Timeouts are now handled by Firebase Cloud Functions
-  // handleTimeout, startTimer, and clearTimer methods have been removed
-
-  private isWaitingPhase(phase: TurnPhase): boolean {
-    // Only these three phases should have timeouts that auto-progress the game
-    return [
-      'AWAITING_OPPONENT_RESPONSES',
-      'AWAITING_ACTIVE_RESPONSE_TO_BLOCK',
-      'AWAITING_TARGET_BLOCK_RESPONSE'
-    ].includes(phase)
-  }
-
   private async progressToNextPhase(result: TransactionResult): Promise<void> {
     if (!result.committed) {
       console.error('Transaction not committed')
@@ -637,33 +620,34 @@ export class TurnService implements ITurnService {
     }
     const currentPhase = game.currentTurn.phase
 
+    const needsBotProcessing = isDevelopment && CoupRobot.isBotGame(game)
+
+    // Process the current phase
     switch (currentPhase) {
       case 'AWAITING_OPPONENT_RESPONSES':
+        // In production, bot responses are handled by cloud functions
+        if (needsBotProcessing) {
+          await this.processBotResponses(game)
+        }
         break
 
       case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
         // Waiting for the active player's decision via handleBlockResponse.
-        // Bot response is handled by processBotBlockerResponse
-        if (CoupRobot.isBotGame(game)) {
+        if (needsBotProcessing) {
           await this.processBotBlockerResponse(game.id)
         }
         break
 
       case 'AWAITING_TARGET_BLOCK_RESPONSE':
-        if (CoupRobot.isBotGame(game)) {
+        if (needsBotProcessing) {
           await this.processBotTargetResponse(game.id)
         }
         break
 
       case 'AWAITING_ACTOR_DEFENSE':
-        if (CoupRobot.isBotGame(game)) {
-          await this.processBotDefense(game.id)
-        }
-        break
-
       case 'AWAITING_BLOCKER_DEFENSE':
-        // Waiting for the defender to select and reveal a card.
-        if (CoupRobot.isBotGame(game)) {
+        // Waiting for the defender to select and prove challenge card.
+        if (needsBotProcessing) {
           await this.processBotDefense(game.id)
         }
         break
@@ -674,25 +658,23 @@ export class TurnService implements ITurnService {
         // update the state to AWAITING_CHALLENGE_PENALTY_SELECTION
         break
 
-      case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
-        if (CoupRobot.isBotGame(game)) {
-          await this.processBotCardSelection(game.id)
-        }
-        break
-
       case 'ACTION_EXECUTION':
         await this.resolveAction(game.id, game.currentTurn.action)
         break
 
+      case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
       case 'AWAITING_TARGET_SELECTION':
         // Waiting for the target to select a card to lose (handled via selectCardToLose).
-        if (CoupRobot.isBotGame(game)) {
+        if (needsBotProcessing) {
           await this.processBotCardSelection(game.id)
         }
         break
 
       case 'AWAITING_EXCHANGE_RETURN':
         // Waiting for the active player to select cards to return (handled via handleExchangeReturn).
+        if (needsBotProcessing) {
+          await this.processBotExchangeReturn(game.id)
+        }
         break
 
       case 'ACTION_FAILED':
@@ -720,7 +702,6 @@ export class TurnService implements ITurnService {
 
     if (!targetPlayer || !CoupRobot.isBotPlayer(targetPlayer) || this.isPlayerEliminated(targetPlayer)) return
 
-    await this.startBotProcessing(gameId)
     try {
       const robot = await CoupRobot.create(targetPlayer, game)
       const { response, blockCard } = await robot.decideResponse()
@@ -728,7 +709,6 @@ export class TurnService implements ITurnService {
     } catch (error) {
       console.error(`Error processing bot response: ${error}`)
     }
-    await this.endBotProcessing(gameId)
   }
 
   /**
@@ -754,37 +734,40 @@ export class TurnService implements ITurnService {
 
     await this.startBotProcessing(game.id)
 
-    while (respondingBots.length > 0) {
-      // Randomly select a bot to respond
-      const bot = respondingBots.splice(Math.floor(Math.random() * respondingBots.length), 1)[0]
-      try {
-        const robot = await CoupRobot.create(bot, game)
-        const { response, blockCard } = await robot.decideResponse()
+    try {
+      while (respondingBots.length > 0) {
+        // Randomly select a bot to respond
+        const randomIndex = Math.floor(Math.random() * respondingBots.length)
+        const [botPlayer] = respondingBots.splice(randomIndex, 1)
+        try {
+          const robot = await CoupRobot.create(botPlayer, game)
+          const { response, blockCard } = await robot.decideResponse()
 
-        if (response === 'block') {
-          blockingBot = bot
-          botBlockCard = blockCard!
-          break
+          if (response === 'block') {
+            blockingBot = botPlayer
+            botBlockCard = blockCard!
+            break
+          }
+          if (response === 'challenge') {
+            challengingBot = botPlayer
+            break
+          }
+          if (response === 'accept') {
+            await this.handleActionResponse(game.id, botPlayer.id, response, blockCard)
+          }
+        } catch (error) {
+          console.error(`Error processing bot response: ${error}`)
         }
-        if (response === 'challenge') {
-          challengingBot = bot
-          break
-        }
-        if (response === 'accept') {
-          await this.handleActionResponse(game.id, bot.id, response, blockCard)
-        }
-      } catch (error) {
-        console.error(`Error processing bot response: ${error}`)
       }
-    }
 
-    if (blockingBot) {
-      await this.handleActionResponse(game.id, blockingBot.id, 'block', botBlockCard)
-    } else if (challengingBot) {
-      await this.handleActionResponse(game.id, challengingBot.id, 'challenge')
+      if (blockingBot) {
+        await this.handleActionResponse(game.id, blockingBot.id, 'block', botBlockCard)
+      } else if (challengingBot) {
+        await this.handleActionResponse(game.id, challengingBot.id, 'challenge')
+      }
+    } finally {
+      await this.endBotProcessing(game.id)
     }
-
-    await this.endBotProcessing(game.id)
   }
 
   /**
@@ -808,8 +791,9 @@ export class TurnService implements ITurnService {
       await this.handleBlockResponse(game.id, action.playerId, response === 'challenge' ? 'challenge' : 'accept')
     } catch (error) {
       console.error(`Error processing bot block response: ${error}`)
+    } finally {
+      await this.endBotProcessing(gameId)
     }
-    await this.endBotProcessing(game.id)
   }
 
   /**
@@ -849,8 +833,9 @@ export class TurnService implements ITurnService {
       await this.handleChallengeDefenseCard(game.id, defenderId, cardId)
     } catch (error) {
       console.error(`Error processing bot defense: ${error}`)
+    } finally {
+      await this.endBotProcessing(gameId)
     }
-    await this.endBotProcessing(gameId)
   }
 
   /**
@@ -894,8 +879,9 @@ export class TurnService implements ITurnService {
       }
     } catch (error) {
       console.error(`Error processing bot card selection: ${error}`)
+    } finally {
+      await this.endBotProcessing(gameId)
     }
-    await this.endBotProcessing(gameId)
   }
 
   /**
@@ -911,7 +897,6 @@ export class TurnService implements ITurnService {
     const botPlayer = game.players.find(p => p.id === action.playerId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
 
-    await this.startBotProcessing(game.id)
     try {
       const robot = await this.assembleRobotForPhase(game, botPlayer.id, ['AWAITING_EXCHANGE_RETURN'])
       const { cardIds } = await robot.decideExchangeCards()
@@ -919,7 +904,6 @@ export class TurnService implements ITurnService {
     } catch (error) {
       console.error(`Error processing bot exchange: ${error}`)
     }
-    await this.endBotProcessing(game.id)
   }
 
   private async assembleRobotForPhase(
@@ -969,7 +953,8 @@ export class TurnService implements ITurnService {
 
       // If game is still in progress, check if the next player is a bot
       // Handle bot turn asynchronously to allow quick response to client
-      if (updatedGame.status === GameStatus.IN_PROGRESS) {
+      // In production, cloud functions will handle bot turns
+      if (isDevelopment && updatedGame.status === GameStatus.IN_PROGRESS) {
         await this.handleBotTurn(updatedGame)
       }
     }
@@ -984,7 +969,6 @@ export class TurnService implements ITurnService {
       return
     }
 
-    await this.startBotProcessing(game.id)
     try {
       // Create a robot instance for this bot
       const robot = await CoupRobot.create(currentPlayer, game)
@@ -996,7 +980,6 @@ export class TurnService implements ITurnService {
     } catch (error) {
       console.error(`Error handling bot turn: ${error}`)
     }
-    await this.endBotProcessing(game.id)
   }
 
   private async startBotProcessing(gameId: string) {

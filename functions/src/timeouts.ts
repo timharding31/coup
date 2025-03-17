@@ -1,16 +1,8 @@
 import * as functions from 'firebase-functions'
-import * as admin from 'firebase-admin'
 import { Game, TurnState } from './types'
+import { getDatabase } from './utils/db'
 
-// Use existing admin initialization or initialize if needed
-let db: admin.database.Database
-try {
-  db = admin.database()
-} catch (e) {
-  // Only initialize if it hasn't been initialized yet
-  admin.initializeApp()
-  db = admin.database()
-}
+const db = getDatabase()
 const BUFFER_MS = 500 // Buffer to prevent race conditions
 
 const appUrl = functions.config().app.url || 'https://polarcoup.app'
