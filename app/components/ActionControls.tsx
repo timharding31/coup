@@ -46,7 +46,7 @@ interface ActionControlsProps {
   coins: number
 }
 
-export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: playerCoins }) => {
+const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: playerCoins }) => {
   const { performTargetedAction, performUntargetedAction, isLoading } = useCoupContext()
   const [targetedAction, setTargetedAction] = useState<TargetedActionType>()
   const forceCoup = playerCoins >= 10
@@ -148,3 +148,18 @@ export const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: 
     </>
   )
 }
+
+const ActionControlsWithDelay: React.FC<ActionControlsProps> = props => {
+  const [isOpen, setIsOpen] = useState(false)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsOpen(true)
+    }, 1_000)
+    return () => {
+      clearTimeout(timeout)
+    }
+  }, [])
+  return isOpen ? <ActionControls {...props} /> : null
+}
+
+export { ActionControlsWithDelay as ActionControls }

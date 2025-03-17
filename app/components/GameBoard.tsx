@@ -62,7 +62,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
                     sendResponse={sendResponse}
                     selectCard={selectCard}
                     exchangeCards={exchangeCards}
-                    isLoading={isLoading}
+                    isLoading={isLoading || !!game.botActionInProgress}
                   />
                   <div className='flex-none pb-4 flex items-center justify-center'>
                     <CourtDeck deck={game.deck} />
