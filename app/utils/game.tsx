@@ -57,14 +57,14 @@ export function getResponseMenuProps(
     case 'AWAITING_TARGET_BLOCK_RESPONSE':
       const { content: infinitiveVerb, target } = getActionVerb(myself.id, action, 'infinitive', targetPlayer)
       return {
-        heading: `${actor.username} chose to ${infinitiveVerb}${target ? ` ${target}` : ''}`,
+        heading: `${actor.username} wants to ${infinitiveVerb}${target ? ` ${target}` : ''}`,
         subheading: 'How will you respond?'
       }
 
     case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
       if (!blocker) return {}
       return {
-        heading: `${blocker.username} chose to BLOCK your ${getActionObject(action)}`,
+        heading: `${blocker.username} BLOCKED your ${getActionObject(action)}`,
         subheading: 'How will you respond?'
       }
 
@@ -91,7 +91,7 @@ export function getResponseMenuProps(
     case 'AWAITING_TARGET_SELECTION':
       const pastTenseVerb = getActionVerb(myself.id, action, 'past', targetPlayer).content
       return {
-        heading: `${actor.username} ${pastTenseVerb} you`,
+        heading: `${actor.username} ${pastTenseVerb} YOU`,
         subheading: 'Choose a card to lose'
       }
 

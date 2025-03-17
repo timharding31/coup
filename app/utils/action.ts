@@ -78,7 +78,7 @@ export function getActionVerb(
   }
   return TARGETED_ACTION_VERBS[action.type as TargetedActionType][tense].call(
     null,
-    target.id === playerId ? 'you' : target.username
+    target.id === playerId ? 'YOU' : target.username
   )
 }
 

@@ -14,31 +14,44 @@ interface DrawerTriggerProps extends Pick<ButtonProps, 'variant' | 'size' | 'tim
 export const DrawerTrigger: React.FC<DrawerTriggerProps> = ({
   heading,
   label,
-  variant = 'primary',
+  variant = 'success',
   size = 'base',
   className
 }) => {
   const [isOpen, setIsOpen] = useDrawerOpenAtom()
   return isOpen ? null : (
     <div className='drawer-trigger-background fixed left-max right-max bottom-0 aspect-[138/100] z-[60] grid place-content-center backdrop-blur-[1px]'>
-      <div className='drawer-trigger rounded-xl flex flex-col items-stretch mx-auto mb-[14cqi] w-32 max-w-[90cqi] bg-transparent'>
+      <div className='drawer-trigger rounded-xl flex flex-col items-stretch mx-auto mb-[14cqi] w-fit max-w-[90cqi] bg-transparent gap-4'>
         {typeof heading === 'string' && (
           <div className='min-h-[28px] mx-auto'>
-            <GameMessage
-              message={{ type: 'info', text: heading, isWaiting: true, delayMs: 800 }}
-              className='px-[18.75px]'
-            />
+            <GameMessage message={{ type: 'info', text: heading, isWaiting: true, delayMs: 500 }} size='lg' />
           </div>
         )}
-        <Button
-          type='button'
-          onClick={() => setIsOpen(prev => !prev)}
-          variant={variant}
-          size={size}
-          className='mt-2 w-full'
+        <motion.div
+          initial={{
+            opacity: 0,
+            scale: 0.5,
+            y: -20,
+            rotateX: 90
+          }}
+          animate={{
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            rotateX: 0
+          }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.5 }}
         >
-          {label}
-        </Button>
+          <Button
+            type='button'
+            onClick={() => setIsOpen(prev => !prev)}
+            variant={variant}
+            size={size}
+            className='w-full'
+          >
+            {label}
+          </Button>
+        </motion.div>
       </div>
     </div>
   )

@@ -65,10 +65,26 @@ const LoadingBackground: React.FC<{ type?: MessageType }> = ({ type }) => {
   }
 }
 
-const CardTag: React.FC<{ type: CardType }> = ({ type }) => {
+const getTagSizeClass = (size: 'base' | 'sm' | 'lg') => {
+  switch (size) {
+    case 'sm':
+      return 'text-[12px]'
+
+    case 'base':
+      return 'text-[14px]'
+
+    case 'lg':
+      return 'text-[16px]'
+  }
+}
+
+const CardTag: React.FC<{ type: CardType; size?: 'sm' | 'base' | 'lg' }> = ({ type, size = 'base' }) => {
   return (
     <motion.span
-      className='inline-flex items-center mx-1 rounded-md tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle'
+      className={classNames(
+        'inline-flex items-center mx-1 rounded-md tracking-wide font-normal font-robotica gap-1 align-middle',
+        getTagSizeClass(size)
+      )}
       initial={{ x: 10, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{
@@ -84,10 +100,17 @@ const CardTag: React.FC<{ type: CardType }> = ({ type }) => {
   )
 }
 
-const TargetTag: React.FC<{ name: string; isBot?: boolean }> = ({ name, isBot = true }) => {
+const TargetTag: React.FC<{ name: string; isBot?: boolean; size?: 'sm' | 'base' | 'lg' }> = ({
+  name,
+  isBot = true,
+  size = 'base'
+}) => {
   return (
     <motion.span
-      className='inline-flex items-center mx-1 rounded-md tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle'
+      className={classNames(
+        'inline-flex items-center mx-1 rounded-md tracking-wide text-[14px] font-normal font-robotica gap-1 align-middle',
+        getTagSizeClass(size)
+      )}
       initial={{ x: 10, opacity: 0, skewX: 0 }}
       animate={{ x: 0, opacity: 1, skewX: -4 }}
       transition={{
@@ -105,10 +128,11 @@ const TargetTag: React.FC<{ name: string; isBot?: boolean }> = ({ name, isBot = 
 
 interface GameMessageProps {
   message: MessageData
+  size?: 'base' | 'sm' | 'lg'
   className?: string
 }
 
-export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '' }) => {
+export const GameMessage: React.FC<GameMessageProps> = ({ message, size = 'base', className = '' }) => {
   const { text, type, isWaiting, cardType = null, target = null, delayMs = 0, action = null, sprite = null } = message
   const [isVisible, setIsVisible] = useState(false)
 
@@ -138,11 +162,14 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
       {isVisible && (
         <motion.span
           className={classNames(
-            'relative w-fit max-w-full inline-flex items-center justify-center text-center px-3 py-1 rounded-md shadow-lg overflow-hidden',
+            'relative w-fit max-w-full inline-flex items-center justify-center text-center rounded-md shadow-lg overflow-hidden',
             MESSAGE_STYLE[type],
             className,
             {
               'bg-transparent': isWaiting,
+              'px-2 py-0.5': size === 'sm',
+              'px-3 py-1': size === 'base',
+              'px-6 py-2': size === 'lg',
               'pl-5': action === 'INCOME' || action === 'FOREIGN_AID' || action === 'TAX'
             }
           )}
@@ -165,13 +192,18 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
             transition: { duration: 0.3 }
           }}
           transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-          layout
         >
           {isWaiting && <LoadingBackground type={type} />}
 
           <div className='flex flex-wrap items-center justify-center gap-1 max-w-full'>
             {/* Message text with staggered character animation */}
-            <div className='inline-flex items-center font-bold text-[16px] leading-5 relative'>
+            <div
+              className={classNames('inline-flex items-center font-bold leading-5 relative', {
+                'text-[14px]': size === 'sm',
+                'text-[16px]': size === 'base',
+                'text-[20px]': size === 'lg'
+              })}
+            >
               {textArray.map((char, i) => (
                 <motion.span
                   key={i}
@@ -192,8 +224,8 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, className = '
 
             {cardType || target ? (
               <div className='inline-flex flex-wrap'>
-                {cardType && <CardTag type={cardType} />}
-                {target && <TargetTag name={target} />}
+                {cardType && <CardTag type={cardType} size={size} />}
+                {target && <TargetTag name={target} size={size} />}
               </div>
             ) : null}
           </div>
