@@ -40,6 +40,7 @@ export interface IGameService {
 export class GameService implements IGameService {
   private gamesRef: Reference = db.ref('games')
   private botsRef: Reference = db.ref('bots')
+  private botResponsesRef: Reference = db.ref('botResponseRequests')
 
   private actionService: ActionService
   private deckService: DeckService
@@ -52,7 +53,13 @@ export class GameService implements IGameService {
     this.pinService = new PinService()
     this.actionService = new ActionService(this.gamesRef)
     this.deckService = new DeckService(this.gamesRef)
-    this.turnService = new TurnService(this.gamesRef, this.actionService, this.deckService, this.cleanupGame.bind(this))
+    this.turnService = new TurnService(
+      this.gamesRef,
+      this.botResponsesRef,
+      this.actionService,
+      this.deckService,
+      this.cleanupGame.bind(this)
+    )
   }
 
   async setBotActionInProgress(gameId: string, value: boolean): Promise<void> {
@@ -386,7 +393,8 @@ export class GameService implements IGameService {
     await Promise.all([
       this.pinService.removeGamePin(game.pin),
       gameRef.update({ status: GameStatus.COMPLETED, winnerId: winnerId || null, completedAt: Date.now() }),
-      this.botsRef.child(gameId).remove()
+      this.botsRef.child(gameId).remove(),
+      this.botResponsesRef.child(gameId).remove()
     ])
   }
 
@@ -563,5 +571,6 @@ export class GameService implements IGameService {
   private async removeGame(gameId: string) {
     await this.gamesRef.child(gameId).remove()
     await this.botsRef.child(gameId).remove()
+    await this.botResponsesRef.child(gameId).remove()
   }
 }

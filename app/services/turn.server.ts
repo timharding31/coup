@@ -43,18 +43,20 @@ export class TurnService implements ITurnService {
   private readonly RESPONSE_TIMEOUT = 30_000 // 30 seconds
 
   private gamesRef: Reference
-  private botResponsesRef: Reference = db.ref('botResponseRequests')
+  private botResponsesRef: Reference
   private actionService: ActionService
   private deckService: DeckService
   private onGameEnded: (gameId: string, winnerId?: string) => Promise<void>
 
   constructor(
     gamesRef: Reference,
+    botResponsesRef: Reference,
     actionService: ActionService,
     deckService: DeckService,
     onGameEnded: (gameId: string, winnerId?: string) => Promise<void>
   ) {
     this.gamesRef = gamesRef
+    this.botResponsesRef = botResponsesRef
     this.actionService = actionService
     this.deckService = deckService
     this.onGameEnded = onGameEnded
@@ -964,8 +966,6 @@ export class TurnService implements ITurnService {
 
     const updatedGame = result.committed && (result.snapshot.val() as Game | null)
     if (updatedGame) {
-      await this.botResponsesRef.child(gameId).remove()
-
       // Check game completion
       await this.checkGameStatus(updatedGame)
 
