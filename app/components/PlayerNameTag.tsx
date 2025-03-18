@@ -8,7 +8,6 @@ interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
   textColor?: NordColor
   size?: 'xs' | 'sm' | 'base' | 'lg'
   iconSize?: 'xs' | 'sm' | 'base' | 'lg'
-  iconColor?: NordColor
   bgColor?: NordColor
   className?: string
   userClassName?: string
@@ -25,7 +24,6 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   textColor = 'nord-4',
   size = 'base',
   iconSize = 'xs',
-  iconColor = textColor,
   bgColor = 'nord-1',
   cardCount,
   isHost = false,
@@ -42,7 +40,7 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
       )}
     >
       <span className={classNames('inline-flex items-center font-bold gap-1.5 overflow-hidden', userClassName)}>
-        {isBot ? <Sprite id={isBot ? 'robot' : 'avatar'} size={iconSize} color={iconColor} /> : null}
+        {isBot ? <Sprite id='robot' size={iconSize} /> : null}
         <span className='flex-auto overflow-hidden text-ellipsis whitespace-nowrap'>
           {username}
           {isHost && (

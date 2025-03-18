@@ -120,7 +120,7 @@ const TargetTag: React.FC<{ name: string; isBot?: boolean; size?: 'sm' | 'base' 
         delay: 0.2
       }}
     >
-      <Sprite id={isBot ? 'robot' : 'avatar'} size='sm' color='nord-0' />
+      <Sprite id={isBot ? 'robot' : 'avatar'} size='sm' />
       <span className='translate-y-[0.125em]'>{name}</span>
     </motion.span>
   )

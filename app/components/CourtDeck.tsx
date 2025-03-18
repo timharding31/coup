@@ -42,10 +42,10 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deck }) => {
 
   return (
     <AnimatePresence>
-      <div
+      <motion.div
         className='relative w-[6vh] aspect-[3/4] nord-shadow'
         style={{
-          transform: `translateX(-${(OFFSET_X * deck.length) / 2}px)`
+          x: -(OFFSET_X * deck.length) / 2
         }}
       >
         {deck.map((card, i) => (
@@ -76,7 +76,7 @@ export const CourtDeck: React.FC<CourtDeckProps> = ({ deck }) => {
             </div>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
     </AnimatePresence>
   )
 }

@@ -44,7 +44,12 @@ export interface SpriteProps {
   color?: NordColor | 'purple-400' | 'emerald-400' | 'amber-400'
 }
 
-export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) => {
+export const Sprite: React.FC<SpriteProps> = ({
+  id,
+  size,
+  color = id === 'robot' ? 'nord-0' : undefined,
+  className
+}) => {
   let width = typeof size === 'number' ? size : SpriteSize[size],
     viewBox: string,
     svgClassName: string | undefined
@@ -114,11 +119,7 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
     <span
       className={classNames(
         'flex items-center justify-center aspect-square',
-        `w-[${width}px]`,
-        {
-          [`text-${color}`]: id !== 'robot',
-          'text-nord-0 bg-nord-15': id === 'robot'
-        },
+        `w-[${width}px] text-${color}`,
         className
       )}
     >
