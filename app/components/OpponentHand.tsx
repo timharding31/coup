@@ -57,7 +57,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   return (
     <div
       className={classNames(
-        'flex flex-col items-center justify-center container-type-inline-size transition-all ease-in-out duration-300 scale-100 z-10',
+        'flex flex-col items-center justify-center container-type-inline-size transition-all ease-in-out duration-300 scale-100 z-50',
         { 'scale-110': isActor },
         className
       )}
@@ -73,11 +73,11 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
           {isActor && (
             <motion.div
               initial={{ scale: 0 }}
-              animate={{ scale: 1, opacity: [1, 0.25, 1] }}
+              animate={{ scale: 1, opacity: [1, 0.5, 1] }}
               exit={{ scale: 0 }}
               transition={{
                 scale: { type: 'spring', damping: 15, stiffness: 200, duration: 0.2, delay: 0.5 },
-                opacity: { duration: 2, repeat: Infinity, ease: 'easeInOut' }
+                opacity: { duration: 1, repeat: Infinity, ease: 'easeInOut' }
               }}
               className='rounded-full absolute -left-3 top-1.5 bg-nord-12 w-2 h-2'
             >
@@ -85,25 +85,25 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
-        {isPopoverOpen && <TooltipGameMessage message={message} />}
       </div>
 
-      <AnimatePresence>
-        <ul
-          ref={cardsListRef}
-          className={classNames(
-            'list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2'
-          )}
-          style={{
-            gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
-            aspectRatio: `${Math.max(2, influence.length) * 10} / 13`
-          }}
-        >
+      <ul
+        ref={cardsListRef}
+        className={classNames(
+          'relative list-reset mx-auto flex-auto max-w-full max-h-[65cqi] aspect-[20/13] items-center grid gap-2'
+        )}
+        style={{
+          gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+          aspectRatio: `${Math.max(2, influence.length) * 10} / 13`
+        }}
+      >
+        <AnimatePresence>
           {influence.map((card, i) => {
             return <PlayingCard key={card.id} isAnimated animationDelay={i * 0.08} {...card} />
           })}
-        </ul>
-      </AnimatePresence>
+        </AnimatePresence>
+        {isPopoverOpen && <TooltipGameMessage message={message} />}
+      </ul>
     </div>
   )
 }

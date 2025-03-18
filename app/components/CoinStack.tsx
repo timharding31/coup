@@ -116,7 +116,7 @@ export const CoinStack: React.FC<CoinStackProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ type: 'spring', stiffness: 200, damping: 15, duration: 0.1 }}
-            className='absolute -top-4 right-0 z-[60]'
+            className='absolute -top-4 right-0 z-[70]'
           >
             <div
               className={classNames('text-sm text-right whitespace-nowrap font-robotica font-normal', {

@@ -16,6 +16,7 @@ export const DrawerTrigger: React.FC<DrawerTriggerProps> = ({
   label,
   variant = 'success',
   size = 'base',
+  timeoutAt,
   className
 }) => {
   const [isOpen, setIsOpen] = useDrawerOpenAtom()
@@ -48,6 +49,7 @@ export const DrawerTrigger: React.FC<DrawerTriggerProps> = ({
             variant={variant}
             size={size}
             className='w-full'
+            timeoutAt={timeoutAt}
           >
             {label}
           </Button>
