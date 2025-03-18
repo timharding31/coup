@@ -964,6 +964,8 @@ export class TurnService implements ITurnService {
 
     const updatedGame = result.committed && (result.snapshot.val() as Game | null)
     if (updatedGame) {
+      await this.botResponsesRef.child(gameId).remove()
+
       // Check game completion
       await this.checkGameStatus(updatedGame)
 
