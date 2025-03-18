@@ -11,6 +11,7 @@ export interface MessageData {
   isWaiting?: boolean
   cardType?: CardType
   target?: string
+  isTargetBot?: boolean
   delayMs?: number
   action?: ActionType
   sprite?: SpriteId
@@ -56,6 +57,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
                 type: 'info',
                 isWaiting: false,
                 target: actionVerb.target,
+                isTargetBot: target?.id.startsWith('bot-'),
                 action: action.type
               }
             }
@@ -189,6 +191,7 @@ export function getPlayerActionMessages(game: Game<'client'>): MessageMap | null
             type: 'info',
             isWaiting: false,
             target: actionVerb.target,
+            isTargetBot: target?.id.startsWith('bot-'),
             action: action.type
           }
         }

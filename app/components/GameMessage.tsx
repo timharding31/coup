@@ -102,7 +102,7 @@ const CardTag: React.FC<{ type: CardType; size?: 'sm' | 'base' | 'lg' }> = ({ ty
 
 const TargetTag: React.FC<{ name: string; isBot?: boolean; size?: 'sm' | 'base' | 'lg' }> = ({
   name,
-  isBot = true,
+  isBot = false,
   size = 'base'
 }) => {
   return (
@@ -133,7 +133,17 @@ interface GameMessageProps {
 }
 
 export const GameMessage: React.FC<GameMessageProps> = ({ message, size = 'base', className = '' }) => {
-  const { text, type, isWaiting, cardType = null, target = null, delayMs = 0, action = null, sprite = null } = message
+  const {
+    text,
+    type,
+    isWaiting,
+    cardType = null,
+    target = null,
+    isTargetBot,
+    delayMs = 0,
+    action = null,
+    sprite = null
+  } = message
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -225,7 +235,7 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, size = 'base'
             {cardType || target ? (
               <div className='inline-flex flex-wrap'>
                 {cardType && <CardTag type={cardType} size={size} />}
-                {target && <TargetTag name={target} size={size} />}
+                {target && <TargetTag name={target} size={size} isBot={isTargetBot} />}
               </div>
             ) : null}
           </div>

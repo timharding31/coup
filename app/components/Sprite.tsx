@@ -106,7 +106,7 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
       break
 
     case 'robot':
-      viewBox = '-20 -84 680 680'
+      viewBox = '0 0 16 16'
       break
   }
 
@@ -114,7 +114,11 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
     <span
       className={classNames(
         'flex items-center justify-center aspect-square',
-        `w-[${width}px] text-${color}`,
+        `w-[${width}px]`,
+        {
+          [`text-${color}`]: id !== 'robot',
+          'text-nord-0 bg-nord-15': id === 'robot'
+        },
         className
       )}
     >
@@ -124,3 +128,7 @@ export const Sprite: React.FC<SpriteProps> = ({ id, size, color, className }) =>
     </span>
   )
 }
+
+/*
+
+*/
