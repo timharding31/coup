@@ -4,6 +4,7 @@ import { ActionService } from './action.server'
 import { haveAllPlayersResponded } from '~/utils/action'
 import { DeckService } from './deck.server'
 import { CoupRobot } from './robot.server'
+import { db } from './firebase.server'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -42,6 +43,7 @@ export class TurnService implements ITurnService {
   private readonly RESPONSE_TIMEOUT = 30_000 // 30 seconds
 
   private gamesRef: Reference
+  private botResponsesRef: Reference = db.ref('botResponseRequests')
   private actionService: ActionService
   private deckService: DeckService
   private onGameEnded: (gameId: string, winnerId?: string) => Promise<void>
@@ -616,7 +618,7 @@ export class TurnService implements ITurnService {
     }
     const currentPhase = game.currentTurn.phase
 
-    const needsBotProcessing = isDevelopment && CoupRobot.isBotGame(game)
+    const needsBotProcessing = CoupRobot.isBotGame(game)
 
     // Process the current phase
     switch (currentPhase) {
@@ -695,6 +697,11 @@ export class TurnService implements ITurnService {
 
     if (!targetPlayer || !CoupRobot.isBotPlayer(targetPlayer) || this.isPlayerEliminated(targetPlayer)) return
 
+    if (!isDevelopment) {
+      await this.botResponsesRef.child(game.id).set({ phase: game.currentTurn.phase, botIds: [targetPlayer.id] })
+      return
+    }
+
     try {
       const robot = await CoupRobot.create(targetPlayer, game)
       const { response, blockCard } = await robot.decideResponse()
@@ -710,7 +717,7 @@ export class TurnService implements ITurnService {
   private async processBotResponses(game: Game | null): Promise<void> {
     if (!game?.currentTurn) return
 
-    const { action, respondedPlayers = [] } = game.currentTurn
+    const { phase, action, respondedPlayers = [] } = game.currentTurn
 
     // Get all bot players who need to respond
     const respondingBots = game.players.filter(player => {
@@ -720,6 +727,11 @@ export class TurnService implements ITurnService {
       if (this.isPlayerEliminated(player)) return false
       return true
     })
+
+    if (!isDevelopment) {
+      await this.botResponsesRef.child(game.id).set({ phase, botIds: respondingBots.map(p => p.id) })
+      return
+    }
 
     let challengingBot: Player | undefined
     let blockingBot: Player | undefined
@@ -770,22 +782,24 @@ export class TurnService implements ITurnService {
     const { game } = await this.getGame(gameId)
     if (!game?.currentTurn) return
 
-    const { action, opponentResponses } = game.currentTurn
+    const { phase, action, opponentResponses } = game.currentTurn
 
     if (!opponentResponses?.block) return
 
     const botPlayer = game.players.find(p => p.id === action.playerId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer) || this.isPlayerEliminated(botPlayer)) return
 
-    await this.startBotProcessing(gameId)
+    if (!isDevelopment) {
+      await this.botResponsesRef.child(game.id).set({ phase, botIds: [botPlayer.id] })
+      return
+    }
+
     try {
       const robot = await this.assembleRobotForPhase(game, action.playerId, ['AWAITING_ACTIVE_RESPONSE_TO_BLOCK'])
       const { response } = await robot.decideResponse()
       await this.handleBlockResponse(game.id, action.playerId, response === 'challenge' ? 'challenge' : 'accept')
     } catch (error) {
       console.error(`Error processing bot block response: ${error}`)
-    } finally {
-      await this.endBotProcessing(gameId)
     }
   }
 
@@ -814,7 +828,11 @@ export class TurnService implements ITurnService {
     const botPlayer = game.players.find(p => p.id === defenderId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
 
-    await this.startBotProcessing(gameId)
+    if (!isDevelopment) {
+      await this.botResponsesRef.child(game.id).set({ phase, botIds: [botPlayer.id] })
+      return
+    }
+
     try {
       const robot = await this.assembleRobotForPhase(game, botPlayer.id, [
         'AWAITING_ACTOR_DEFENSE',
@@ -826,8 +844,6 @@ export class TurnService implements ITurnService {
       await this.handleChallengeDefenseCard(game.id, defenderId, cardId)
     } catch (error) {
       console.error(`Error processing bot defense: ${error}`)
-    } finally {
-      await this.endBotProcessing(gameId)
     }
   }
 
@@ -854,7 +870,11 @@ export class TurnService implements ITurnService {
     const botPlayer = game.players.find(p => p.id === botId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
 
-    await this.startBotProcessing(gameId)
+    if (!isDevelopment) {
+      await this.botResponsesRef.child(game.id).set({ phase, botIds: [botPlayer.id] })
+      return
+    }
+
     try {
       const robot = await this.assembleRobotForPhase(game, botPlayer.id, [
         'AWAITING_TARGET_SELECTION',
@@ -872,8 +892,6 @@ export class TurnService implements ITurnService {
       }
     } catch (error) {
       console.error(`Error processing bot card selection: ${error}`)
-    } finally {
-      await this.endBotProcessing(gameId)
     }
   }
 
@@ -884,21 +902,23 @@ export class TurnService implements ITurnService {
     const { game } = await this.getGame(gameId)
     if (!game?.currentTurn) return
 
-    const { action } = game.currentTurn
+    const { action, phase } = game.currentTurn
 
     // Check if the player doing the exchange is a bot
     const botPlayer = game.players.find(p => p.id === action.playerId)
     if (!botPlayer || !CoupRobot.isBotPlayer(botPlayer)) return
 
-    await this.startBotProcessing(gameId)
+    if (!isDevelopment) {
+      await this.botResponsesRef.child(game.id).set({ phase, botIds: [botPlayer.id] })
+      return
+    }
+
     try {
       const robot = await this.assembleRobotForPhase(game, botPlayer.id, ['AWAITING_EXCHANGE_RETURN'])
       const { cardIds } = await robot.decideExchangeCards()
       await this.handleExchangeReturn(game.id, action.playerId, cardIds)
     } catch (error) {
       console.error(`Error processing bot exchange: ${error}`)
-    } finally {
-      await this.endBotProcessing(gameId)
     }
   }
 
@@ -950,7 +970,7 @@ export class TurnService implements ITurnService {
       // If game is still in progress, check if the next player is a bot
       // Handle bot turn asynchronously to allow quick response to client
       // In production, cloud functions will handle bot turns
-      if (isDevelopment && updatedGame.status === GameStatus.IN_PROGRESS) {
+      if (updatedGame.status === GameStatus.IN_PROGRESS) {
         await this.handleBotTurn(updatedGame)
       }
     }
@@ -965,7 +985,11 @@ export class TurnService implements ITurnService {
       return
     }
 
-    await this.startBotProcessing(game.id)
+    if (!isDevelopment) {
+      await this.botResponsesRef.child(game.id).set({ phase: 'AWAITING_BOT_ACTION', botIds: [currentPlayer.id] })
+      return
+    }
+
     try {
       // Create a robot instance for this bot
       const robot = await CoupRobot.create(currentPlayer, game)
@@ -976,8 +1000,6 @@ export class TurnService implements ITurnService {
       await this.startTurn(game.id, action)
     } catch (error) {
       console.error(`Error handling bot turn: ${error}`)
-    } finally {
-      await this.endBotProcessing(game.id)
     }
   }
 
@@ -1020,13 +1042,22 @@ export class TurnService implements ITurnService {
 
     await this.actionService.resolveCoinUpdates(game, action)
 
-    const actor = game.players.find(p => p.id === action.playerId)
-    const target = game.players.find(p => p.id === action.targetPlayerId)
+    const { players = [] } = game
+
+    const actor = players.find(p => p.id === action.playerId)
+    const target = players.find(p => p.id === action.targetPlayerId)
+
+    // End turn (triggers game end callback) before resolving action if the game is over
+    const alivePlayerCount = players.reduce((ct, p) => (this.isPlayerEliminated(p) ? ct : ct + 1), 0)
+    if (alivePlayerCount === 1) {
+      await this.endTurn(gameId)
+      return
+    }
 
     switch (action.type) {
       case 'EXCHANGE':
         await this.dealExchangeCards(gameId, action.playerId)
-        if (isDevelopment && actor && CoupRobot.isBotPlayer(actor)) {
+        if (actor && CoupRobot.isBotPlayer(actor)) {
           await this.processBotExchangeReturn(gameId)
         }
         break
@@ -1040,7 +1071,7 @@ export class TurnService implements ITurnService {
           await gameRef.child('currentTurn/phase').set('AWAITING_TARGET_SELECTION')
 
           // Check if the target is a bot, and if so, immediately process their card selection
-          if (isDevelopment && target && CoupRobot.isBotPlayer(target)) {
+          if (target && CoupRobot.isBotPlayer(target)) {
             await this.processBotCardSelection(gameId)
           }
         }

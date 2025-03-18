@@ -1,6 +1,6 @@
 import { Card, CardType } from './card'
 import { Player } from './player'
-import { Action, TurnState } from './turn'
+import { Action, TurnPhase, TurnState } from './turn'
 
 export const GameStatus = {
   WAITING: 'WAITING',

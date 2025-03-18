@@ -93,6 +93,11 @@ export interface Game {
   completedAt?: number
 }
 
+export interface BotResponse {
+  phase: TurnPhase | 'AWAITING_BOT_ACTION'
+  botIds: string[]
+}
+
 /**
  * Helper function to check if all players have responded
  */

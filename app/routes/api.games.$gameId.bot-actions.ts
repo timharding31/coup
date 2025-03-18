@@ -19,7 +19,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
   await sessionService.requireAuth(request)
 
   const { gameId } = params
-  await gameService.setBotActionInProgress(gameId!, true)
   try {
     const { botId, action } = (await request.json()) as BotActionRequest
 
@@ -44,6 +43,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
         break
 
       case 'respond':
+        await gameService.setBotActionInProgress(gameId!, true)
+        await handleBotActionResponses(game, botIds)
+        await gameService.setBotActionInProgress(gameId!, false)
+        break
+
       case 'block-response':
         await handleBotActionResponses(game, botIds)
         break
@@ -68,8 +72,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
   } catch (error) {
     console.error('Error processing bot action:', error)
     return new Response(error instanceof Error ? error.message : 'Internal server error', { status: 500 })
-  } finally {
-    await gameService.setBotActionInProgress(gameId!, false)
   }
 }
 

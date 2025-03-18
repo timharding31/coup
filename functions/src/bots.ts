@@ -1,7 +1,6 @@
 import * as functions from 'firebase-functions'
 import { getDatabase } from './utils/db'
-import { getBotsNeedingResponse } from './utils/bots'
-import { Game } from './types'
+import { BotResponse, Game } from './types'
 
 // Get shared database reference
 const db = getDatabase()
@@ -16,14 +15,12 @@ export const processBotActions = functions
     memory: '256MB',
     secrets: ['SERVICE_TOKEN']
   })
-  .database.ref('/games/{gameId}/currentTurn/phase')
+  .database.ref('/botResponseRequests/{gameId}')
   .onWrite(async (change, context) => {
     const { gameId } = context.params
 
     // Skip if value is being deleted (this happens when a turn ends)
     if (!change.after.exists()) {
-      // Check if we need to process a bot's turn
-      await processBotTurn(gameId)
       return null
     }
 
@@ -35,73 +32,60 @@ export const processBotActions = functions
     }
 
     const game = gameSnapshot.val() as Game
+    const botResponseValue = change.after.val() as BotResponse
+    const { phase, botIds } = botResponseValue
 
     try {
-      // Determine which bots need to respond
-      const { botIds, responseType } = getBotsNeedingResponse(game)
-
-      if (botIds.length === 0) {
-        // No bots need to respond
-        console.log(`No bots need to respond for game ${gameId} in phase ${game.currentTurn?.phase}`)
-        return null
+      if (game.status !== 'IN_PROGRESS') {
+        throw new Error(`Will not process bot actions for game in status: ${game.status}`)
       }
 
-      console.log(`Processing ${responseType} for bots ${botIds.join(', ')} in game ${gameId}`)
+      if (game.currentTurn && phase !== game.currentTurn.phase) {
+        throw new Error(`Phase mismatch: ${phase} !== ${game.currentTurn.phase}`)
+      }
 
-      // Process bot responses based on type
-      switch (responseType) {
-        case 'turn':
+      if (!botIds.length) {
+        throw new Error(`No bots need to respond for game ${gameId} in phase ${game.currentTurn?.phase}`)
+      }
+
+      switch (phase) {
+        case 'AWAITING_BOT_ACTION':
           await handleBotTurn(gameId, botIds[0])
           break
 
-        case 'action':
+        case 'AWAITING_OPPONENT_RESPONSES':
           await handleBotActionResponse(gameId, botIds)
           break
 
-        case 'block':
+        case 'AWAITING_TARGET_BLOCK_RESPONSE':
           await handleBotBlockResponse(gameId, botIds[0])
           break
 
-        case 'defense':
+        case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+          await handleBotBlockResponse(gameId, botIds[0])
+          break
+
+        case 'AWAITING_ACTOR_DEFENSE':
+        case 'AWAITING_BLOCKER_DEFENSE':
           await handleBotDefense(gameId, botIds[0])
           break
 
-        case 'card':
+        case 'AWAITING_CHALLENGE_PENALTY_SELECTION':
+        case 'AWAITING_TARGET_SELECTION':
           await handleBotCardSelection(gameId, botIds[0])
           break
 
-        case 'exchange':
+        case 'AWAITING_EXCHANGE_RETURN':
           await handleBotExchangeReturn(gameId, botIds[0])
           break
       }
     } catch (error) {
       console.error(`Error processing bot actions for game ${gameId}:`, error)
     } finally {
-      // Always reset the bot action in progress flag
+      await db.ref(`games/${gameId}/botResponseRequested`).set(null)
     }
-
     return null
   })
-
-/**
- * Process a bot's turn when it's their turn to act
- */
-async function processBotTurn(gameId: string): Promise<void> {
-  // Get the current game state
-  const gameSnapshot = await db.ref(`games/${gameId}`).get()
-  if (!gameSnapshot.exists()) {
-    return
-  }
-
-  const game = gameSnapshot.val() as Game
-
-  // Check if it's a bot's turn to play
-  const { botIds } = getBotsNeedingResponse(game)
-
-  if (botIds.length > 0) {
-    await handleBotTurn(gameId, botIds[0])
-  }
-}
 
 /**
  * Handle a bot's turn by choosing an action
