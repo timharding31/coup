@@ -53,41 +53,36 @@ function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>, prevG
     return 2_500
   }
   if (isActiveBotExchangeReturn(game) && !isActiveBotExchangeReturn(nextGame)) {
-    return 1_500
+    return 1_000
   }
   if (isNewBlockOrChallenge(game, prevGame)) {
-    const { block, challenge } = game.currentTurn?.opponentResponses || {}
-    if (block?.startsWith('bot-') || challenge?.startsWith('bot-')) {
-      return 1_000
-    }
+    return 1_000
   }
   if (isTurnAboutToEnd(game)) {
     return 1_000
   }
   if (game.botActionInProgress) {
-    // ~0.5s wait for bot thinking during phase that can time out
-    if (isWaitingPhase(game.currentTurn?.phase)) {
-      return 200 + Math.random() * 600
-    }
-    // Otherwise, wait about 1s
-    return 400 + Math.random() * 1200
+    return 200 + Math.random() * 600
   }
   if (game.currentTurn?.phase !== nextGame?.currentTurn?.phase) {
     return 500
   }
-  return 100
+  return 200
 }
 
 function isNewBlockOrChallenge(game: Game<'client'> | null, prevGame: Game<'client'> | null = null): boolean {
-  if (!game?.currentTurn || !prevGame?.currentTurn) {
+  const turn = game?.currentTurn
+  const prevTurn = prevGame?.currentTurn
+  if (!turn || !prevTurn) {
     return false
   }
-  const isNewBlock = !!game.currentTurn.opponentResponses?.block && !prevGame?.currentTurn.opponentResponses?.block
-  const isBotBlocker = !!game.currentTurn.opponentResponses?.block?.startsWith('bot-')
-  const isNewChallenge =
-    !!game.currentTurn.opponentResponses?.challenge && !prevGame?.currentTurn.opponentResponses?.challenge
-  const isBotChallenger = !!game.currentTurn.opponentResponses?.challenge?.startsWith('bot-')
-  return (isNewBlock && isBotBlocker) || (isNewChallenge && isBotChallenger)
+  if (turn.opponentResponses?.block && !prevTurn.opponentResponses?.block) {
+    return true
+  }
+  if (turn.opponentResponses?.challenge && !prevTurn.opponentResponses?.challenge) {
+    return true
+  }
+  return false
 }
 
 function isTurnAboutToEnd(game: Game<'client'> | null = null): boolean {
