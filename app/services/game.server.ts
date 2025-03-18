@@ -28,6 +28,15 @@ export interface IGameService {
     response: 'accept' | 'challenge' | 'block',
     claimedCardForBlock?: CardType
   ): Promise<{ game: Game | null }>
+  handleResponses(
+    gameId: string,
+    responses: Array<
+      { playerId: string } & (
+        | { response: 'accept' | 'challenge'; blockCard?: never }
+        | { response: 'block'; blockCard: CardType }
+      )
+    >
+  ): Promise<{ game: Game | null }>
   handleCardSelection(gameId: String, playerId: string, cardId: string): Promise<{ game: Game | null }>
   updatePlayer(playerId: string, data: Partial<Omit<Player, 'influence' | 'coins'>>): Promise<{ player: Player | null }>
   addBot(gameId: string): Promise<{ botId: string }>
@@ -127,8 +136,25 @@ export class GameService implements IGameService {
     response: 'accept' | 'challenge' | 'block',
     claimedCardForBlock?: CardType
   ) {
-    const gameRef = this.gamesRef.child(gameId)
-    const game = (await gameRef.get()).val() as Game
+    if (response === 'block') {
+      if (!claimedCardForBlock) {
+        throw new Error('Block response requires a claimed card for block')
+      }
+      return this.handleResponses(gameId, [{ playerId, response, blockCard: claimedCardForBlock! }])
+    }
+    return this.handleResponses(gameId, [{ playerId, response }])
+  }
+
+  async handleResponses(
+    gameId: string,
+    responses: Array<
+      { playerId: string } & (
+        | { response: 'accept' | 'challenge'; blockCard?: never }
+        | { response: 'block'; blockCard: CardType }
+      )
+    >
+  ) {
+    const { game } = await this.getGame(gameId)
 
     if (!game?.currentTurn) {
       throw new Error('No active turn')
@@ -136,35 +162,44 @@ export class GameService implements IGameService {
 
     const { phase, action } = game.currentTurn
 
-    switch (phase) {
-      case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
-        if (playerId !== action.playerId) {
-          throw new Error('Not your turn to respond')
-        }
-        if (response === 'block') {
-          throw new Error('Invalid response. You cannot block a block')
-        }
-        await this.turnService.handleBlockResponse(gameId, playerId, response)
-        break
+    try {
+      for (const { playerId, response, blockCard } of responses) {
+        switch (phase) {
+          case 'AWAITING_OPPONENT_RESPONSES':
+            await this.turnService.handleActionResponse(gameId, playerId, response, blockCard)
+            if (response === 'block' || response === 'challenge') {
+              // Stop processing responses if moving to new phase
+              return this.getGame(gameId)
+            }
+            break
 
-      case 'AWAITING_OPPONENT_RESPONSES':
-        await this.turnService.handleActionResponse(gameId, playerId, response, claimedCardForBlock)
-        break
+          case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
+            if (playerId !== action.playerId) {
+              throw new Error('Not your turn to respond')
+            }
+            if (response === 'block') {
+              throw new Error('Invalid response. You cannot block a block')
+            }
+            await this.turnService.handleBlockResponse(gameId, playerId, response)
+            break
 
-      case 'AWAITING_TARGET_BLOCK_RESPONSE':
-        if (playerId !== action.targetPlayerId) {
-          throw new Error('Not your turn to respond')
-        }
-        if (response === 'challenge') {
-          throw new Error('Invalid response. You cannot challenge in this phase')
-        }
-        await this.turnService.handleTargetResponse(gameId, playerId, response, claimedCardForBlock)
-        break
+          case 'AWAITING_TARGET_BLOCK_RESPONSE':
+            if (playerId !== action.targetPlayerId) {
+              throw new Error('Not your turn to respond')
+            }
+            if (response === 'challenge') {
+              throw new Error('Invalid response. You cannot challenge in this phase')
+            }
+            await this.turnService.handleTargetResponse(gameId, playerId, response, blockCard)
+            break
 
-      default:
-        throw new Error(`Invalid phase for response: ${phase}`)
+          default:
+            throw new Error(`Invalid phase for response: ${phase}`)
+        }
+      }
+    } catch (error) {
+      console.error('Error handling responses:', error)
     }
-
     return this.getGame(gameId)
   }
 

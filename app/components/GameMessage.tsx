@@ -245,7 +245,7 @@ export const GameMessage: React.FC<GameMessageProps> = ({ message, size = 'base'
 // Tooltip wrapper for GameMessage
 export const TooltipGameMessage: React.FC<GameMessageProps> = props => {
   return (
-    <div className='absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex items-center justify-center z-50 w-fit max-w-[calc(100%+1rem)]'>
+    <div className='absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex items-center justify-center z-50 w-fit max-w-[calc(100cqi+1rem)]'>
       <GameMessage key={props.message.text} {...props} />
     </div>
   )

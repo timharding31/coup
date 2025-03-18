@@ -18,7 +18,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   // Use the existing auth method
   await sessionService.requireAuth(request)
 
-  const { gameId } = params
+  const gameId = params.gameId!
   try {
     const { botId, action } = (await request.json()) as BotActionRequest
 
@@ -43,9 +43,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
         break
 
       case 'respond':
-        await gameService.setBotActionInProgress(gameId!, true)
+        await gameService.setBotActionInProgress(gameId, true)
         await handleBotActionResponses(game, botIds)
-        await gameService.setBotActionInProgress(gameId!, false)
+        await gameService.setBotActionInProgress(gameId, false)
         break
 
       case 'block-response':
@@ -107,6 +107,17 @@ async function handleBotActionResponses(game: Game, botIds: string[]): Promise<v
   const botPlayers = botIds.map(id => allPlayers.get(id)).filter(nonNil)
 
   try {
+    const botResponses: Map<
+      string,
+      | {
+          response: 'block'
+          blockCard: CardType
+        }
+      | {
+          response: 'accept' | 'challenge'
+          blockCard?: never
+        }
+    > = new Map()
     while (botPlayers.length) {
       const randomIndex = Math.floor(Math.random() * botPlayers.length)
       const [bot] = botPlayers.splice(randomIndex, 1)
@@ -117,58 +128,12 @@ async function handleBotActionResponses(game: Game, botIds: string[]): Promise<v
       const robot = await CoupRobot.create(bot, game)
       const result = await robot.decideResponse()
 
-      switch (currentTurn.phase) {
-        case 'AWAITING_OPPONENT_RESPONSES':
-          switch (result.response) {
-            case 'block':
-              await gameService.handleResponse(game.id, bot.id, 'block', result.blockCard)
-              break
-
-            case 'challenge':
-            case 'accept':
-              await gameService.handleResponse(game.id, bot.id, result.response)
-              break
-          }
-          break
-
-        case 'AWAITING_TARGET_BLOCK_RESPONSE':
-          switch (result.response) {
-            case 'block':
-              await gameService.handleResponse(game.id, bot.id, 'block', result.blockCard)
-              break
-
-            case 'accept':
-              await gameService.handleResponse(game.id, bot.id, 'accept')
-              break
-
-            case 'challenge':
-              console.error('Cannot challenge in this phase')
-              break
-          }
-          break
-
-        case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK':
-          switch (result.response) {
-            case 'block':
-              console.error('Cannot block in this phase')
-              break
-
-            case 'accept':
-            case 'challenge':
-              await gameService.handleResponse(game.id, bot.id, result.response)
-              break
-          }
-          break
-
-        default:
-          break
-      }
-
-      if (result.response === 'block' || result.response === 'challenge') {
-        // Stop processing after a block or challenge is issued because we're moving to a new phase
-        break
-      }
+      botResponses.set(bot.id, result)
     }
+    await gameService.handleResponses(
+      game.id,
+      Array.from(botResponses.keys()).map(playerId => ({ playerId, ...botResponses.get(playerId)! }))
+    )
   } catch (err) {
     console.error(err instanceof Error ? err.message : 'Error handling bot responses')
   }
