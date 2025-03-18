@@ -44,7 +44,7 @@ export const processBotActions = functions
         throw new Error(`Phase mismatch: ${phase} !== ${game.currentTurn.phase}`)
       }
 
-      if (!botIds.length) {
+      if (!botIds?.length) {
         throw new Error(`No bots need to respond for game ${gameId} in phase ${game.currentTurn?.phase}`)
       }
 
@@ -81,8 +81,6 @@ export const processBotActions = functions
       }
     } catch (error) {
       console.error(`Error processing bot actions for game ${gameId}:`, error)
-    } finally {
-      await db.ref(`games/${gameId}/botResponseRequested`).set(null)
     }
     return null
   })
@@ -112,8 +110,8 @@ async function handleBotTurn(gameId: string, botId: string): Promise<void> {
 /**
  * Handle bot action responses
  */
-async function handleBotActionResponse(gameId: string, botIds: string[]): Promise<void> {
-  if (botIds.length === 0) return
+async function handleBotActionResponse(gameId: string, botIds: string[] | null = []): Promise<void> {
+  if (!botIds?.length) return
 
   try {
     // Send all botIds at once to reduce race conditions
