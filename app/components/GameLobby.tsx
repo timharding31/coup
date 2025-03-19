@@ -6,7 +6,7 @@ import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
 import { useIsMobile } from '~/hooks/useIsMobile'
 import classNames from 'classnames'
-import { useFetcher } from '@remix-run/react'
+import { useFetcher, useSubmit } from '@remix-run/react'
 import { Sprite } from './Sprite'
 
 interface GameLobbyProps {
@@ -21,10 +21,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
   const isHost = playerId === hostId
   const canStart = players.length >= 2 && isHost
 
-  const botsFetcher = useFetcher({ key: 'bots' })
-  const gamesFetcher = useFetcher({ key: 'games' })
+  const { submit: submitBots, state: botsFetcherState } = useFetcher({ key: 'bots' })
+  // Fetcher does not force a reload, while useSubmit does
+  const submitGames = useSubmit()
   const handleAddBot = () => {
-    botsFetcher.submit(
+    submitBots(
       {
         type: 'ADD',
         playerId
@@ -36,7 +37,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
     )
   }
   const handleRemoveBot = (botId: string) => {
-    botsFetcher.submit(
+    submitBots(
       {
         type: 'REMOVE',
         playerId,
@@ -49,7 +50,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
     )
   }
   const handleStartGame = () => {
-    gamesFetcher.submit(
+    submitGames(
       {
         type: 'START',
         gameId,
@@ -62,7 +63,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
     )
   }
   const handleLeaveGame = () => {
-    gamesFetcher.submit(
+    submitGames(
       {
         type: 'LEAVE',
         gameId,
@@ -116,8 +117,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               onClick: handleStartGame,
               variant: 'success',
               disabled: !canStart,
-              children: 'Start Game',
-              isLoading: gamesFetcher.state !== 'idle'
+              children: 'Start Game'
             }
           : null
       }
@@ -163,7 +163,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
               variant='secondary'
               onClick={handleAddBot}
               disabled={players.length > 5}
-              isLoading={botsFetcher.state !== 'idle'}
+              isLoading={botsFetcherState !== 'idle'}
               sprite='plus'
             >
               Bot Player

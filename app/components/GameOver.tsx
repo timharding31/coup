@@ -3,9 +3,7 @@ import { Game } from '~/types'
 import { Sprite } from './Sprite'
 import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
-import { useCoupContext } from '~/context/CoupContext'
-import { Button } from './Button'
-import { useFetcher } from '@remix-run/react'
+import { useSubmit } from '@remix-run/react'
 
 interface GameOverProps {
   playerId: string
@@ -16,9 +14,9 @@ export const GameOver: React.FC<GameOverProps> = ({
   playerId,
   game: { id: gameId, winnerId, status, players, eliminationOrder }
 }) => {
-  const fetcher = useFetcher()
+  const submit = useSubmit()
   const handleRematch = () => {
-    fetcher.submit(
+    submit(
       {
         type: 'REMATCH',
         gameId,
@@ -30,8 +28,8 @@ export const GameOver: React.FC<GameOverProps> = ({
       }
     )
   }
-  const handleLeave = () => {
-    fetcher.submit(
+  const handleLeaveGame = () => {
+    submit(
       {
         type: 'LEAVE',
         gameId,
@@ -61,16 +59,14 @@ export const GameOver: React.FC<GameOverProps> = ({
       className='gap-1'
       actions={[
         {
-          onClick: handleLeave,
+          onClick: handleLeaveGame,
           variant: 'danger',
-          children: 'Exit',
-          isLoading: fetcher.state !== 'idle'
+          children: 'Exit'
         },
         {
           onClick: handleRematch,
           variant: 'secondary',
-          children: 'Rematch',
-          isLoading: fetcher.state !== 'idle'
+          children: 'Rematch'
         }
       ]}
     >
