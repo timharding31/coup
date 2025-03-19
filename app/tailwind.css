@@ -188,7 +188,7 @@ h4 {
   opacity: 0;
   transform: translateY(-16px);
   animation: delayedFadeIn 0.5s ease-in-out forwards;
-  animation-delay: var(--delay, 5s);
+  animation-delay: var(--delay, 2s);
 }
 
 @keyframes delayedFadeIn {

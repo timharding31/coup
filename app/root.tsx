@@ -71,7 +71,6 @@ export default function App() {
         <div id='root'>
           <Outlet />
         </div>
-        <LoadingSpinner loading={navigationState !== 'idle'} />
         <ScrollRestoration />
         <Scripts />
         <script
