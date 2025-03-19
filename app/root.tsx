@@ -51,7 +51,6 @@ export const loader: LoaderFunction = async ({ request }) => {
 }
 
 export default function App() {
-  const { state: navigationState } = useNavigation()
   const { ENV, svgContent } = useLoaderData<{ svgContent: string } & (typeof globalThis)['window']>()
   return (
     <html lang='en' translate='no'>
