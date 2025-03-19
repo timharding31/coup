@@ -19,7 +19,7 @@ const GameBoardSkeleton: React.FC<GameBoardSkeletonProps> = ({
       <main className='flex items-center justify-center'>{children}</main>
       {isPlayerHandVisible ? (
         <section className='grid grid-rows-[auto_auto] px-4 pb-4 flex-none bg-nord-0 border-t border-nord-3 container-type-inline-size nord-shadow z-50'>
-          <PlayerNameTag className='my-1.5' size='lg' bgColor='nord-0' id='' username='' coins={0} />
+          <PlayerNameTag className='my-1.5' size='lg' bgColor='nord-0' id='' username='᠁' coins={0} />
 
           <div className='h-[64cqi] grid items-center gap-4 grid-cols-2'>
             {Array.from({ length: 2 }).map((_, i) => {
