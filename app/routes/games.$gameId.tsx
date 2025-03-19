@@ -2,7 +2,7 @@ import { CardType, type Game } from '~/types'
 import { redirect, LoaderFunction, LinksFunction, defer } from '@remix-run/node'
 import { Await, Outlet, useLoaderData, useNavigation } from '@remix-run/react'
 import { CoupContextProvider, useCoupContext } from '~/context/CoupContext'
-import { gameService, sessionService } from '~/services/index.server'
+import { gameService, playerService, sessionService } from '~/services/index.server'
 import { prepareGameForClient } from '~/utils/game'
 import { GameBoard } from '~/components/GameBoard'
 import { Header } from '~/components/Header'
@@ -20,14 +20,18 @@ export const links: LinksFunction = () => {
 
 export const loader: LoaderFunction = async ({ request, params }) => {
   const { playerId } = await sessionService.requirePlayerSession(request)
+  const { player } = await playerService.getPlayer(playerId)
   const gameId = params.gameId!
+
+  if (player?.currentGameId && player.currentGameId !== gameId) {
+    throw redirect(`/games/${player.currentGameId}`)
+  }
 
   const gamePromise: Promise<Game<'client'>> = gameService.getGame(gameId).then(({ game }) => {
     const { players = [] } = game || {}
     const player = players.find(p => p.id === playerId)
 
     if (!game || !player) {
-      // throw redirect('/')
       return Promise.reject(new Error('Game not found'))
     }
 
