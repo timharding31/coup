@@ -1,4 +1,4 @@
-import { ActionFunction } from '@remix-run/node'
+import { ActionFunction, LoaderFunction, redirect } from '@remix-run/node'
 import { gameService, sessionService } from '~/services/index.server'
 import { Game } from '~/types'
 import { GameRequest } from '~/types/request'
@@ -24,17 +24,17 @@ export const action: ActionFunction = async ({ request }) => {
 
     switch (type) {
       case 'LEAVE':
-        const { success } = await gameService.leaveGame(playerId, gameId)
-        return Response.json({ success })
+        await gameService.leaveGame(playerId, gameId)
+        return redirect('/')
 
       case 'START':
         game = (await gameService.startGame(gameId, playerId)).game
+        if (game) return redirect(`/games/${game.id}`)
         break
 
       case 'REMATCH':
         const { newGameId } = await gameService.rematch(gameId, playerId)
-        game = (await gameService.getGame(newGameId)).game
-        break
+        return redirect(`/games/${newGameId}`)
 
       default:
         game = null
