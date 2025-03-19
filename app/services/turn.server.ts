@@ -739,8 +739,6 @@ export class TurnService implements ITurnService {
     let blockingBot: Player | undefined
     let botBlockCard: CardType | undefined
 
-    await this.startBotProcessing(game.id)
-
     try {
       while (respondingBots.length > 0) {
         // Randomly select a bot to respond
@@ -772,8 +770,8 @@ export class TurnService implements ITurnService {
       } else if (challengingBot) {
         await this.handleActionResponse(game.id, challengingBot.id, 'challenge')
       }
-    } finally {
-      await this.endBotProcessing(game.id)
+    } catch (error) {
+      console.error(`Error processing bot responses: ${error}`)
     }
   }
 
@@ -957,7 +955,6 @@ export class TurnService implements ITurnService {
 
       return {
         ...game,
-        botActionInProgress: false,
         currentPlayerIndex: nextPlayerIndex,
         currentTurn: null,
         updatedAt: Date.now()
@@ -1003,14 +1000,6 @@ export class TurnService implements ITurnService {
     } catch (error) {
       console.error(`Error handling bot turn: ${error}`)
     }
-  }
-
-  private async startBotProcessing(gameId: string) {
-    await this.gamesRef.child(gameId + '/botActionInProgress').set(true)
-  }
-
-  private async endBotProcessing(gameId: string) {
-    await this.gamesRef.child(gameId + '/botActionInProgress').set(false)
   }
 
   private getNextPlayerIndex(game: Game): number {

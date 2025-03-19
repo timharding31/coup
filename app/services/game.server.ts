@@ -43,7 +43,6 @@ export interface IGameService {
   removeBot(gameId: string, botId: string): Promise<{ botId: string }>
   rematch(gameId: string, hostId: string): Promise<{ newGameId: string; pin: string }>
   advanceTurnState(gameId: string): Promise<{ game: Game | null }>
-  setBotActionInProgress(gameId: string, value: boolean): Promise<void>
 }
 
 export class GameService implements IGameService {
@@ -69,10 +68,6 @@ export class GameService implements IGameService {
       this.deckService,
       this.cleanupGame.bind(this)
     )
-  }
-
-  async setBotActionInProgress(gameId: string, value: boolean): Promise<void> {
-    await this.gamesRef.child(gameId + '/botActionInProgress').set(value)
   }
 
   async advanceTurnState(gameId: string) {

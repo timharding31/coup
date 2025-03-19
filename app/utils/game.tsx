@@ -1,4 +1,4 @@
-import { Card, Game, Player } from '~/types'
+import { Card, Game, Player, TurnPhase } from '~/types'
 import { getActionObject, getActionVerb } from './action'
 
 export function prepareGameForClient(game: Game<'server' | 'client'>, playerId: string): Game<'client'> {
@@ -129,4 +129,26 @@ export function getChallenger<T extends 'server' | 'client' = 'client'>(game: Ga
 
 export function getTarget<T extends 'server' | 'client' = 'client'>(game: Game<T>): Player<T> | null {
   return game.players.find(p => p.id === game.currentTurn?.action.targetPlayerId) || null
+}
+
+export function isBotActionInProgress<T extends 'server' | 'client' = 'client'>({
+  actor = '',
+  phase,
+  respondedPlayers = [],
+  players = []
+}: {
+  phase?: TurnPhase
+  respondedPlayers?: string[]
+  actor?: string
+  players?: Player<T>[]
+}): boolean {
+  if (phase !== 'AWAITING_OPPONENT_RESPONSES') {
+    return false
+  }
+  const activeBots = players.filter(p => p.id.startsWith('bot-') && !p.influence.every(c => c.isRevealed))
+  const respondingBots = activeBots.filter(bot => bot.id !== actor)
+  if (respondingBots.length === 0) {
+    return false
+  }
+  return respondingBots.some(bot => !respondedPlayers.includes(bot.id))
 }

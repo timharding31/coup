@@ -3,6 +3,7 @@ import { gameService, sessionService } from '~/services/index.server'
 import { CoupRobot } from '~/services/robot.server'
 import { Game, Player } from '~/types'
 import { CardType } from '~/types/card'
+import { nonNil } from '~/utils'
 
 type BotActionRequest = {
   botId: string | string[]
@@ -43,11 +44,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
         break
 
       case 'respond':
-        await gameService.setBotActionInProgress(gameId, true)
-        await handleBotActionResponses(game, botIds)
-        await gameService.setBotActionInProgress(gameId, false)
-        break
-
       case 'block-response':
         await handleBotActionResponses(game, botIds)
         break
@@ -193,8 +189,4 @@ async function handleBotExchangeReturn(game: Game, botId: string): Promise<void>
 
   // Use gameService for exchange
   await gameService.handleExchangeReturn(game.id, botId, cardIds)
-}
-
-function nonNil<T extends {}>(val?: T | null): val is T {
-  return !!val
 }

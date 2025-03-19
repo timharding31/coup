@@ -7,7 +7,10 @@ import { getResponseMenuProps } from '~/utils/game'
 import { TimeoutProgressBar } from './TimeoutProgressBar'
 
 export interface GameControlsProps
-  extends Pick<CoupContextType, 'game' | 'players' | 'sendResponse' | 'selectCard' | 'exchangeCards' | 'isLoading'> {}
+  extends Pick<
+    CoupContextType,
+    'game' | 'players' | 'sendResponse' | 'selectCard' | 'exchangeCards' | 'isLoading' | 'isBotActionInProgress'
+  > {}
 
 export const GameControls: React.FC<GameControlsProps> = ({
   game,
@@ -15,7 +18,8 @@ export const GameControls: React.FC<GameControlsProps> = ({
   sendResponse,
   selectCard,
   exchangeCards,
-  isLoading
+  isLoading,
+  isBotActionInProgress
 }) => {
   const { myself, actor, target, blocker, challenger } = players
 
@@ -63,7 +67,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
             }}
             label={action.requiredCharacter || action.type.replace('_', ' ')}
             blockableBy={blockableBy}
-            isLoading={isLoading}
+            isLoading={isLoading || isBotActionInProgress}
           />
         )
       }

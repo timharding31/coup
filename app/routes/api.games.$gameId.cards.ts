@@ -14,21 +14,27 @@ export const action: ActionFunction = async ({ request, params }) => {
 
   try {
     const { gameId } = params
-    const { method, playerId, cardId, cardIds } = (await request.json()) as CardRequest
+    const { type, playerId, cardId, cardIds } = (await request.json()) as CardRequest
 
-    if (!gameId || !playerId || !method) {
+    if (!gameId || !playerId || !type) {
       console.error('Missing required fields')
       return Response.error()
     }
 
     let game: Game | null = null
 
-    switch (method) {
+    switch (type) {
       case 'SELECT':
+        if (!cardId) {
+          throw new Error('Missing required fields')
+        }
         game = (await gameService.handleCardSelection(gameId, playerId, cardId)).game
         break
 
       case 'EXCHANGE':
+        if (!Array.isArray(cardIds) || !cardIds.length) {
+          throw new Error('Missing required fields')
+        }
         game = (await gameService.handleExchangeReturn(gameId, playerId, cardIds)).game
         break
     }

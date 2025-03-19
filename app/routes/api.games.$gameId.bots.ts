@@ -14,22 +14,29 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   try {
     const { gameId } = params
-    const { method, playerId, botId } = (await request.json()) as BotRequest
+    const formData = await request.formData()
+    const type = formData.get('type')?.toString()
+    const playerId = formData.get('playerId')?.toString()
+    const botId = formData.get('botId')?.toString()
 
-    if (!gameId || !method) {
+    if (!gameId || !type || !playerId) {
       console.error('Missing required fields')
       return Response.error()
     }
 
     let game: Game | null = null
 
-    switch (method) {
+    switch (type) {
       case 'ADD':
         await gameService.addBot(gameId)
         game = (await gameService.getGame(gameId)).game
         break
 
       case 'REMOVE':
+        if (!botId) {
+          console.error('Missing required fields')
+          return Response.error()
+        }
         await gameService.removeBot(gameId, botId)
         game = (await gameService.getGame(gameId)).game
         break

@@ -1,7 +1,7 @@
 import type { ActionFunction } from '@remix-run/node'
 import { gameService, sessionService } from '~/services/index.server'
 import { Game } from '~/types'
-import { CardRequest, TurnRequest } from '~/types/request'
+import { TurnRequest } from '~/types/request'
 import { prepareGameForClient } from '~/utils/game'
 
 export const action: ActionFunction = async ({ request, params }) => {
@@ -14,21 +14,27 @@ export const action: ActionFunction = async ({ request, params }) => {
 
   try {
     const { gameId } = params
-    const { method, playerId, action, response, blockCard } = (await request.json()) as TurnRequest
+    const { type, playerId, action, response, blockCard } = (await request.json()) as TurnRequest
 
-    if (!gameId || !playerId || !method) {
+    if (!gameId || !playerId || !type) {
       console.error('Missing required fields')
       return Response.error()
     }
 
     let game: Game | null = null
 
-    switch (method) {
+    switch (type) {
       case 'ACTION':
+        if (!action) {
+          throw new Error('Missing required fields')
+        }
         game = (await gameService.startGameTurn(gameId, action)).game
         break
 
       case 'RESPONSE':
+        if (!response) {
+          throw new Error('Missing required fields')
+        }
         game = (await gameService.handleResponse(gameId, playerId, response, blockCard)).game
         break
 

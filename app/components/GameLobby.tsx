@@ -6,28 +6,74 @@ import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
 import { useIsMobile } from '~/hooks/useIsMobile'
 import classNames from 'classnames'
-import { Form } from '@remix-run/react'
+import { useFetcher } from '@remix-run/react'
 import { Sprite } from './Sprite'
 
 interface GameLobbyProps {
   game: Game<'client'>
   playerId: string
-  startGame: () => Promise<void>
-  addBot: () => Promise<void>
-  removeBot: (botId: string) => Promise<void>
-  isLoading: boolean
 }
 
 export const GameLobby: React.FC<GameLobbyProps> = ({
   playerId,
-  game: { id: gameId, hostId, status, pin, players },
-  startGame,
-  addBot,
-  removeBot,
-  isLoading
+  game: { id: gameId, hostId, status, pin, players }
 }) => {
   const isHost = playerId === hostId
   const canStart = players.length >= 2 && isHost
+
+  const botsFetcher = useFetcher({ key: 'bots' })
+  const gamesFetcher = useFetcher({ key: 'games' })
+  const handleAddBot = () => {
+    botsFetcher.submit(
+      {
+        type: 'ADD',
+        playerId
+      },
+      {
+        action: `/api/games/${gameId}/bots`,
+        method: 'POST'
+      }
+    )
+  }
+  const handleRemoveBot = (botId: string) => {
+    botsFetcher.submit(
+      {
+        type: 'REMOVE',
+        playerId,
+        botId
+      },
+      {
+        action: `/api/games/${gameId}/bots`,
+        method: 'POST'
+      }
+    )
+  }
+  const handleStartGame = () => {
+    gamesFetcher.submit(
+      {
+        type: 'START',
+        gameId,
+        playerId
+      },
+      {
+        action: '/api/games',
+        method: 'POST'
+      }
+    )
+  }
+  const handleLeaveGame = () => {
+    gamesFetcher.submit(
+      {
+        type: 'LEAVE',
+        gameId,
+        playerId
+      },
+      {
+        action: '/api/games',
+        method: 'POST'
+      }
+    )
+  }
 
   const [shareButtonText, setShareButtonText] = useState<string | null>(null)
   const [wasPinCopied, setWasPinCopied] = useState(false)
@@ -67,10 +113,11 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
       actions={
         isHost
           ? {
-              onClick: startGame,
+              onClick: handleStartGame,
               variant: 'success',
               disabled: !canStart,
-              children: 'Start Game'
+              children: 'Start Game',
+              isLoading: gamesFetcher.state !== 'idle'
             }
           : null
       }
@@ -95,11 +142,9 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
         )}
       </div>
       <div className='grid grid-cols-[auto_1fr_auto] items-center gap-2 mt-1 mb-6'>
-        <Form action={`/api/games/${gameId}/leave?playerId=${playerId}`} method='POST'>
-          <Button size='base' sprite='arrow-left' variant='danger' type='submit'>
-            Leave
-          </Button>
-        </Form>
+        <Button size='base' sprite='arrow-left' variant='danger' onClick={handleLeaveGame}>
+          Leave
+        </Button>
         <Button size='base' variant='primary' onClick={handleShare} sprite='link'>
           {shareButtonText || 'Invite Players'}
         </Button>
@@ -116,9 +161,9 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
             <Button
               size='sm'
               variant='secondary'
-              onClick={addBot}
+              onClick={handleAddBot}
               disabled={players.length > 5}
-              isLoading={isLoading}
+              isLoading={botsFetcher.state !== 'idle'}
               sprite='plus'
             >
               Bot Player
@@ -146,7 +191,7 @@ export const GameLobby: React.FC<GameLobbyProps> = ({
                 {isBot && isHost && (
                   <button
                     className='appearance-none flex items-center justify-center absolute top-0 right-0 h-full rounded-full aspect-square bg-transparent'
-                    onClick={() => removeBot(player.id)}
+                    onClick={() => handleRemoveBot(player.id)}
                   >
                     <Sprite id='plus' className='rotate-45' size='sm' color='nord-0' />
                   </button>

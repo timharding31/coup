@@ -20,8 +20,8 @@ export const GameMethod = {
 export type GameMethod = keyof typeof GameMethod
 
 export type GameRequest = CoupRequest<
-  { method: typeof GameMethod.START; gameId: string },
-  { method: typeof GameMethod.REMATCH; gameId: string }
+  { type: typeof GameMethod.START; gameId: string },
+  { type: typeof GameMethod.REMATCH; gameId: string }
 >
 
 export const TurnMethod = {
@@ -32,9 +32,9 @@ export const TurnMethod = {
 export type TurnMethod = keyof typeof TurnMethod
 
 export type TurnRequest = CoupRequest<
-  { method: typeof TurnMethod.ACTION; action: Action },
-  { method: typeof TurnMethod.RESPONSE; response: 'accept' | 'challenge' | 'block'; blockCard?: CardType },
-  { method: typeof TurnMethod.ADVANCE }
+  { type: typeof TurnMethod.ACTION; action: Action },
+  { type: typeof TurnMethod.RESPONSE; response: 'accept' | 'challenge' | 'block'; blockCard?: CardType },
+  { type: typeof TurnMethod.ADVANCE }
 >
 
 export const CardMethod = {
@@ -44,8 +44,8 @@ export const CardMethod = {
 export type CardMethod = keyof typeof CardMethod
 
 export type CardRequest = CoupRequest<
-  { method: typeof CardMethod.SELECT; cardId: string },
-  { method: typeof CardMethod.EXCHANGE; cardIds: string[] }
+  { type: typeof CardMethod.SELECT; cardId: string },
+  { type: typeof CardMethod.EXCHANGE; cardIds: string[] }
 >
 
 export const BotMethod = {
@@ -54,7 +54,4 @@ export const BotMethod = {
 } as const
 export type BotMethod = keyof typeof BotMethod
 
-export type BotRequest = CoupRequest<
-  { method: typeof BotMethod.ADD },
-  { method: typeof BotMethod.REMOVE; botId: string }
->
+export type BotRequest = CoupRequest<{ type: typeof BotMethod.ADD }, { type: typeof BotMethod.REMOVE; botId: string }>

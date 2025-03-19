@@ -11,11 +11,22 @@ export const action: ActionFunction = async ({ request }) => {
   await sessionService.requireAuth(request)
 
   try {
-    const { method, gameId, playerId } = (await request.json()) as GameRequest
+    const formData = await request.formData()
+    const type = formData.get('type')?.toString()
+    const gameId = formData.get('gameId')?.toString()
+    const playerId = formData.get('playerId')?.toString()
+
+    if (!type || !gameId || !playerId) {
+      return new Response('Bad Request', { status: 400 })
+    }
 
     let game: Game | null
 
-    switch (method) {
+    switch (type) {
+      case 'LEAVE':
+        const { success } = await gameService.leaveGame(playerId, gameId)
+        return Response.json({ success })
+
       case 'START':
         game = (await gameService.startGame(gameId, playerId)).game
         break

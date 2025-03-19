@@ -3,7 +3,8 @@ import classNames from 'classnames'
 import { Button, ButtonProps } from './Button'
 import { Form } from '@remix-run/react'
 
-interface BaseDialogButtonProps extends Pick<ButtonProps, 'variant' | 'disabled' | 'children' | 'sprite'> {}
+interface BaseDialogButtonProps
+  extends Pick<ButtonProps, 'variant' | 'disabled' | 'children' | 'sprite' | 'isLoading'> {}
 
 interface FormDialogButtonProps extends BaseDialogButtonProps {
   url: string

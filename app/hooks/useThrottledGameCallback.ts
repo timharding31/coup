@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react'
 import { Game, TurnPhase } from '~/types'
+import { isBotActionInProgress } from '~/utils/game'
 
 export function useThrottledGameCallback(callback: (value: Game<'client'>) => void) {
   const isProcessingRef = useRef(false)
@@ -61,7 +62,7 @@ function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>, prevG
   if (isTurnAboutToEnd(game)) {
     return 1_000
   }
-  if (game.botActionInProgress) {
+  if (isBotActionInProgress({ ...game.currentTurn, actor: game.currentTurn?.action.playerId, players: game.players })) {
     return 200 + Math.random() * 600
   }
   if (game.currentTurn?.phase !== nextGame?.currentTurn?.phase) {

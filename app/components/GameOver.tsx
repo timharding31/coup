@@ -5,6 +5,7 @@ import { PlayerNameTag } from './PlayerNameTag'
 import { GameTableDialog } from './GameTableDialog'
 import { useCoupContext } from '~/context/CoupContext'
 import { Button } from './Button'
+import { useFetcher } from '@remix-run/react'
 
 interface GameOverProps {
   playerId: string
@@ -15,7 +16,33 @@ export const GameOver: React.FC<GameOverProps> = ({
   playerId,
   game: { id: gameId, winnerId, status, players, eliminationOrder }
 }) => {
-  const { handleRematch } = useCoupContext()
+  const fetcher = useFetcher()
+  const handleRematch = () => {
+    fetcher.submit(
+      {
+        type: 'REMATCH',
+        gameId,
+        playerId
+      },
+      {
+        action: '/api/games',
+        method: 'POST'
+      }
+    )
+  }
+  const handleLeave = () => {
+    fetcher.submit(
+      {
+        type: 'LEAVE',
+        gameId,
+        playerId
+      },
+      {
+        action: '/api/games',
+        method: 'POST'
+      }
+    )
+  }
 
   const allPlayers = useMemo(() => new Map(players.map(player => [player.id, player])), [players])
   const losers = eliminationOrder?.slice().reverse()
@@ -34,14 +61,16 @@ export const GameOver: React.FC<GameOverProps> = ({
       className='gap-1'
       actions={[
         {
-          url: `/api/games/${gameId}/leave?playerId=${playerId}`,
+          onClick: handleLeave,
           variant: 'danger',
-          children: 'Exit'
+          children: 'Exit',
+          isLoading: fetcher.state !== 'idle'
         },
         {
           onClick: handleRematch,
           variant: 'secondary',
-          children: 'Rematch'
+          children: 'Rematch',
+          isLoading: fetcher.state !== 'idle'
         }
       ]}
     >
