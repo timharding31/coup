@@ -1,13 +1,43 @@
+# Dependencies
 node_modules
+.pnp
+.pnp.js
 
+# Build directories and cache
 /.cache
 /build
-/public/build/
-.env
+/public/build
+/.firebase
+/.vscode
+/dist
 
-functions/firebase-debug.log
-functions/lib
-functions/node_modules
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log*
+database-debug.log*
+ui-debug.log*
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Firebase specific
 firebase-debug.log
 database.rules.json
-database-debug.log
+firestore-debug.log
+*-service-account-key.json
+functions/lib
+functions/node_modules
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Testing
+/coverage
