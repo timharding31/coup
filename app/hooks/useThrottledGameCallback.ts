@@ -73,7 +73,10 @@ function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>, prevG
       players: game.players
     })
   ) {
-    return 200 + Math.random() * 600
+    if (phase === 'AWAITING_OPPONENT_RESPONSES') {
+      return 200 + Math.random() * 600
+    }
+    return 500 + Math.random() * 1_000
   }
   if (game.currentTurn?.phase !== nextGame?.currentTurn?.phase) {
     return 500

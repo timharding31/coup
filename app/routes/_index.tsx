@@ -93,7 +93,7 @@ export default function Index() {
               </div>
               <span className='text-lg text-nord-0'>You're in an active game</span>
             </div>
-            <div className='grid gap-2 grid-cols-[1fr_2fr]'>
+            <div className='grid gap-2 grid-cols-[2fr_3fr]'>
               <Form method='post'>
                 <input type='hidden' name='intent' value='delete' />
                 <input type='hidden' name='currentGameId' value={player.currentGameId} />

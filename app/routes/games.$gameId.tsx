@@ -1,14 +1,17 @@
 import { CardType, type Game } from '~/types'
-import { redirect, LoaderFunction, LinksFunction, defer } from '@remix-run/node'
-import { Await, Outlet, useLoaderData, useNavigation } from '@remix-run/react'
-import { CoupContextProvider, useCoupContext } from '~/context/CoupContext'
+import { redirect, LoaderFunction, LinksFunction } from '@remix-run/node'
+import { Await, useLoaderData } from '@remix-run/react'
+import { CoupContextProvider } from '~/context/CoupContext'
 import { gameService, playerService, sessionService } from '~/services/index.server'
 import { prepareGameForClient } from '~/utils/game'
 import { GameBoard } from '~/components/GameBoard'
-import { Header } from '~/components/Header'
 import { Sprite } from '~/components/Sprite'
 import { GameBoardSkeleton } from '~/components/GameBoardSkeleton'
 import { Suspense } from 'react'
+
+export const handle = {
+  isLoadingSpinnerDisabled: true
+}
 
 export const links: LinksFunction = () => {
   return Object.keys(CardType).map(character => ({
@@ -19,9 +22,9 @@ export const links: LinksFunction = () => {
 }
 
 export const loader: LoaderFunction = async ({ request, params }) => {
+  const gameId = params.gameId!
   const { playerId } = await sessionService.requirePlayerSession(request)
   const { player } = await playerService.getPlayer(playerId)
-  const gameId = params.gameId!
 
   if (player?.currentGameId && player.currentGameId !== gameId) {
     throw redirect(`/games/${player.currentGameId}`)
@@ -30,35 +33,27 @@ export const loader: LoaderFunction = async ({ request, params }) => {
   const gamePromise: Promise<Game<'client'>> = gameService.getGame(gameId).then(({ game }) => {
     const { players = [] } = game || {}
     const player = players.find(p => p.id === playerId)
-
     if (!game || !player) {
       return Promise.reject(new Error('Game not found'))
     }
-
     return prepareGameForClient(game, playerId)
   })
 
-  return defer({
-    playerId,
+  return {
     gameId,
-    game: gamePromise
-  })
+    player,
+    gamePromise
+  }
 }
 
 export default function GameRoute() {
-  const isLoading = useNavigation().state !== 'idle'
-  const { gameId, playerId, game } = useLoaderData<typeof loader>()
-
-  if (isLoading) {
-    return <GameBoardSkeleton />
-  }
-
+  const { gameId, player, gamePromise } = useLoaderData<typeof loader>()
   return (
-    <Suspense fallback={<GameBoardSkeleton />}>
-      <Await resolve={game}>
+    <Suspense fallback={<GameBoardSkeleton player={player} />}>
+      <Await resolve={gamePromise}>
         {game => (
-          <CoupContextProvider gameId={gameId} playerId={playerId} game={game}>
-            <GameBoard playerId={playerId} />
+          <CoupContextProvider gameId={gameId} playerId={player.id} game={game}>
+            <GameBoard playerId={player.id} />
           </CoupContextProvider>
         )}
       </Await>

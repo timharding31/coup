@@ -14,7 +14,7 @@ interface OpponentHandProps extends Player<'client'> {
   isActor?: boolean
   isBlocker?: boolean
   isChallenger?: boolean
-  isExchanging?: boolean
+  isTarget?: boolean
   className?: string
 }
 
@@ -23,7 +23,7 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   isActor = false,
   isBlocker = false,
   isChallenger = false,
-  isExchanging = false,
+  isTarget = false,
   influence,
   className,
   ...nameTagProps
@@ -39,14 +39,24 @@ export const OpponentHand: React.FC<OpponentHandProps> = ({
   return (
     <div
       className={classNames(
-        'flex flex-col items-center justify-center container-type-inline-size transition-all ease-in-out duration-300 scale-100 z-50',
-        { 'scale-110': isActor },
+        'flex flex-col items-center justify-center container-type-inline-size transition-all ease-in-out duration-300 scale-100 z-50 origin-bottom',
+        { 'scale-105': isActor },
         className
       )}
     >
       <div className='relative self-stretch'>
         <div className='mx-auto w-full max-w-[23vh]'>
-          <PlayerNameTag id={playerId} {...nameTagProps} size='sm' bgColor='nord-1' textColor='nord-4' isActiveGame />
+          <PlayerNameTag
+            id={playerId}
+            {...nameTagProps}
+            size='sm'
+            bgColor='nord-1'
+            textColor='nord-4'
+            isActiveGame
+            isBlocker={isBlocker}
+            isChallenger={isChallenger}
+            isTarget={isTarget}
+          />
         </div>
         <AnimatePresence>
           {isActor && (

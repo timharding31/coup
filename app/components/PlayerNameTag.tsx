@@ -14,6 +14,9 @@ interface PlayerNameTagProps extends Omit<Player<'client'>, 'influence'> {
   cardCount?: number
   isHost?: boolean
   isBot?: boolean
+  isTarget?: boolean
+  isChallenger?: boolean
+  isBlocker?: boolean
   isActiveGame?: boolean
 }
 
@@ -28,6 +31,9 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
   cardCount,
   isHost = false,
   isBot = id.startsWith('bot-'),
+  isTarget = false,
+  isChallenger = false,
+  isBlocker = false,
   className,
   userClassName,
   isActiveGame = false
@@ -49,6 +55,13 @@ export const PlayerNameTag: React.FC<PlayerNameTagProps> = ({
             </span>
           )}
         </span>
+        {isBlocker ? (
+          <Sprite id='shield' color='nord-13' size='sm' />
+        ) : isChallenger ? (
+          <Sprite id='challenge' color='nord-11' size='sm' />
+        ) : isTarget ? (
+          <Sprite id='target' color='nord-8' size='sm' />
+        ) : null}
       </span>
       <div className='flex items-center gap-1 flex-row-reverse'>
         {cardCount != null && (

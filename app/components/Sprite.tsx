@@ -28,6 +28,7 @@ export type SpriteId =
   | 'loading'
   | 'plus'
   | 'robot'
+  | 'target'
 
 export const SpriteSize = {
   xs: 16,
@@ -62,7 +63,6 @@ export const Sprite: React.FC<SpriteProps> = ({
     case 'sword':
     case 'skull':
     case 'shield':
-    // case 'steal':
     case 'lock':
     case 'challenge':
     case 'exchange':
@@ -91,6 +91,7 @@ export const Sprite: React.FC<SpriteProps> = ({
 
     case 'crown':
     case 'steal':
+    case 'target':
       viewBox = '0 0 512 512'
       break
 

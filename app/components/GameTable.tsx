@@ -7,7 +7,7 @@ import classNames from 'classnames'
 interface GameTableProps extends Pick<CoupContextType, 'game' | 'players'>, React.PropsWithChildren {}
 
 export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ game, players, children }) => {
-  const { myself, actor, blocker, challenger } = players
+  const { myself, actor, blocker, challenger, target } = players
 
   const drawerHeight = useDrawerHeight()
 
@@ -37,7 +37,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
                 isActor={actor.id === opponent.id}
                 isBlocker={blocker?.id === opponent.id}
                 isChallenger={challenger?.id === opponent.id}
-                isExchanging={game.currentTurn?.phase === 'AWAITING_EXCHANGE_RETURN' && actor.id === opponent.id}
+                isTarget={target?.id === opponent.id}
                 className={classNames('col-span-2', getOpponentClasses(index, opponentsCount))}
               />
             ))}

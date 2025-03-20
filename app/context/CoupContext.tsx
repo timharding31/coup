@@ -14,10 +14,10 @@ import {
 import { getActionFromType } from '~/utils/action'
 import { getFirebaseDatabase } from '~/utils/firebase.client'
 import { isBotActionInProgress, prepareGameForClient } from '~/utils/game'
+import { isEqual } from '~/utils'
 import { useMessages } from '~/hooks/useMessages'
 import { getPlayerActionMessages, MessageData } from '~/utils/messages'
 import { useThrottledGameCallback } from '~/hooks/useThrottledGameCallback'
-import { BotRequest, CardRequest, GameRequest, TurnRequest } from '~/types/request'
 
 export interface CoupContextType {
   game: Game<'client'>
@@ -60,7 +60,6 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
   const opponentResponsesRef = useRef<OpponentBlockResponse | OpponentChallengeResponse | null>(null)
   const respondedPlayersRef = useRef<string[]>([])
   const { messages: playerMessages, updateMessages, clearPlayerMessages } = useMessages()
-  const navigate = useNavigate()
 
   const onGameCallback = useCallback(
     (game: Game<'client'>) => {
@@ -136,12 +135,11 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
     }
   }, [gameId, playerId, throttledOnGameCallback])
 
-  const turnsFetcher = useFetcher({ key: 'turns' })
-  const cardsFetcher = useFetcher({ key: 'cards' })
+  const fetcher = useFetcher()
 
   const performTargetedAction = useCallback(
     (actionType: TargetedActionType, targetPlayerId: string) => {
-      turnsFetcher.submit(
+      fetcher.submit(
         {
           type: 'ACTION',
           playerId,
@@ -154,12 +152,12 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         }
       )
     },
-    [gameId, playerId, turnsFetcher]
+    [gameId, playerId, fetcher]
   )
 
   const performUntargetedAction = useCallback(
     (actionType: UntargetedActionType) => {
-      turnsFetcher.submit(
+      fetcher.submit(
         {
           type: 'ACTION',
           playerId,
@@ -172,12 +170,12 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         }
       )
     },
-    [gameId, playerId, turnsFetcher]
+    [gameId, playerId, fetcher]
   )
 
   const sendResponse = useCallback(
     (response: 'accept' | 'challenge' | 'block', blockCard: CardType | null = null) => {
-      turnsFetcher.submit(
+      fetcher.submit(
         {
           type: 'RESPONSE',
           playerId,
@@ -191,12 +189,12 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         }
       )
     },
-    [gameId, playerId, turnsFetcher]
+    [gameId, playerId, fetcher]
   )
 
   const selectCard = useCallback(
     (cardId: string) => {
-      cardsFetcher.submit(
+      fetcher.submit(
         {
           type: 'SELECT',
           playerId,
@@ -209,12 +207,12 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         }
       )
     },
-    [gameId, playerId, cardsFetcher]
+    [gameId, playerId, fetcher]
   )
 
   const exchangeCards = useCallback(
     (cardIds: string[]) => {
-      cardsFetcher.submit(
+      fetcher.submit(
         {
           type: 'EXCHANGE',
           playerId,
@@ -227,7 +225,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         }
       )
     },
-    [gameId, playerId, cardsFetcher]
+    [gameId, playerId, fetcher]
   )
 
   const actor = useMemo(() => game.players[game.currentPlayerIndex], [game.players, game.currentPlayerIndex])
@@ -274,7 +272,7 @@ export const CoupContextProvider: React.FC<CoupContextProviderProps> = ({
         exchangeCards,
         players: { myself, actor, blocker, challenger, target, all: game.players },
         playerMessages,
-        isLoading: turnsFetcher.state !== 'idle' || cardsFetcher.state !== 'idle',
+        isLoading: fetcher.state === 'submitting',
         isBotActionInProgress: areBotsResponding
       }}
     >
@@ -303,133 +301,4 @@ export function usePlayers() {
 export function usePlayerMessage(playerId: string): MessageData | null {
   const { playerMessages } = useContext(CoupContext) || {}
   return playerMessages?.get(playerId) || null
-}
-
-function isEqual<T = string>(a: T[], b: T[]): boolean {
-  if (a.length !== b.length) return false
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false
-  }
-  return true
-}
-
-async function handleGamesPost<T extends GameRequest>(
-  type: T extends { type: infer M } ? M : never,
-  body: Omit<T, 'type'>,
-  onError?: (msg: string) => void
-): Promise<{ game: Game<'client'> | null }> {
-  try {
-    const res = await fetch('/api/games', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, ...body })
-    })
-    if (!res.ok) {
-      throw new Error(res.statusText)
-    }
-    return res.json()
-  } catch (err) {
-    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
-    return { game: null }
-  }
-}
-
-async function handleTurnsPost<T extends TurnRequest>(
-  type: T extends { type: infer M } ? M : never,
-  body: Omit<T, 'type'> & { gameId: string },
-  onError?: (msg: string) => void
-): Promise<{ game: Game<'client'> | null }> {
-  const { gameId, ...rest } = body
-  try {
-    const res = await fetch(`/api/games/${gameId}/turns`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, ...rest })
-    })
-    if (!res.ok) {
-      throw new Error(res.statusText)
-    }
-    return res.json()
-  } catch (err) {
-    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
-    return { game: null }
-  }
-}
-
-async function handleCardsPost<T extends CardRequest>(
-  type: T extends { type: infer M } ? M : never,
-  body: Omit<T, 'type'> & { gameId: string },
-  onError?: (msg: string) => void
-): Promise<{ game: Game<'client'> | null }> {
-  const { gameId, ...rest } = body
-  try {
-    const res = await fetch(`/api/games/${gameId}/cards`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, ...rest })
-    })
-    if (!res.ok) {
-      throw new Error(res.statusText)
-    }
-    return res.json()
-  } catch (err) {
-    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
-    return { game: null }
-  }
-}
-
-async function handleBotsPost<T extends BotRequest>(
-  type: T extends { type: infer M } ? M : never,
-  body: Omit<T, 'type'> & { gameId: string },
-  onError?: (msg: string) => void
-): Promise<{ game: Game<'client'> | null }> {
-  const { gameId, ...rest } = body
-  try {
-    const res = await fetch(`/api/games/${gameId}/bots`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, ...rest })
-    })
-    if (!res.ok) {
-      throw new Error(res.statusText)
-    }
-    return res.json()
-  } catch (err) {
-    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
-    return { game: null }
-  }
-}
-
-async function handlePostApiRequest<T>({
-  gameId,
-  playerId,
-  path,
-  body,
-  onCompleted,
-  onError,
-  errorMessage
-}: {
-  gameId: string
-  playerId: string
-  path: string
-  body: T
-  onCompleted?: () => void
-  onError?: (msg: string) => void
-  errorMessage?: string
-}): Promise<any> {
-  try {
-    const res = await fetch(`/api/games/${gameId}` + path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ playerId, ...body })
-    })
-    if (!res.ok) {
-      throw new Error(errorMessage || '')
-    }
-    return res.json()
-  } catch (err) {
-    onError?.(err instanceof Error ? err.message : 'Unknown error occurred')
-  } finally {
-    onCompleted?.()
-  }
 }

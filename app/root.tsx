@@ -1,4 +1,15 @@
-import { Links, Meta, Outlet, Scripts, ScrollRestoration, useLoaderData, useNavigation } from '@remix-run/react'
+import {
+  Links,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+  UIMatch,
+  useLoaderData,
+  useMatch,
+  useMatches,
+  useNavigation
+} from '@remix-run/react'
 import type { LinksFunction, LoaderFunction, MetaFunction } from '@remix-run/node'
 import fonts from './styles/fonts.css?url'
 import tailwind from './tailwind.css?url'
@@ -51,7 +62,13 @@ export const loader: LoaderFunction = async ({ request }) => {
 }
 
 export default function App() {
-  const { ENV, svgContent } = useLoaderData<{ svgContent: string } & (typeof globalThis)['window']>()
+  const { ENV, svgContent } = useLoaderData<RootLoaderData>()
+
+  const isLoading = useNavigation().state !== 'idle'
+  const match = useMatches().at(-1) as CoupMatch
+
+  const { isLoadingSpinnerDisabled = false } = match?.handle || {}
+
   return (
     <html lang='en' translate='no'>
       <head>
@@ -70,6 +87,7 @@ export default function App() {
         <div id='root'>
           <Outlet />
         </div>
+        <LoadingSpinner loading={isLoading && !isLoadingSpinnerDisabled} />
         <ScrollRestoration />
         <Scripts />
         <script
@@ -81,3 +99,7 @@ export default function App() {
     </html>
   )
 }
+
+type RootLoaderData = (typeof globalThis)['window'] & { svgContent: string }
+
+type CoupMatch = UIMatch<any, { isLoadingSpinnerDisabled?: boolean }>
