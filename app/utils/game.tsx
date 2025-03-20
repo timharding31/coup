@@ -133,22 +133,38 @@ export function getTarget<T extends 'server' | 'client' = 'client'>(game: Game<T
 
 export function isBotActionInProgress<T extends 'server' | 'client' = 'client'>({
   actor = '',
+  target = '',
   phase,
   respondedPlayers = [],
   players = []
 }: {
+  actor?: string
+  target?: string
   phase?: TurnPhase
   respondedPlayers?: string[]
-  actor?: string
   players?: Player<T>[]
 }): boolean {
-  if (phase !== 'AWAITING_OPPONENT_RESPONSES') {
-    return false
+  const activeBotPlayers = players.filter(p => p.id.startsWith('bot-') && !p.influence.every(c => c.isRevealed))
+
+  switch (phase) {
+    case undefined: // Actor deciding its turn
+    case 'AWAITING_ACTOR_DEFENSE': // Actor defending challenge
+    case 'AWAITING_ACTIVE_RESPONSE_TO_BLOCK': // Actor responding to block
+      return actor.startsWith('bot-')
+
+    case 'AWAITING_OPPONENT_RESPONSES':
+      const respondingBots = activeBotPlayers.filter(bot => bot.id !== actor)
+      if (respondingBots.length > 0) {
+        return respondingBots.some(bot => !respondedPlayers.includes(bot.id))
+      }
+      break
+
+    case 'AWAITING_TARGET_SELECTION':
+    case 'AWAITING_TARGET_BLOCK_RESPONSE':
+      return target.startsWith('bot-')
+
+    default:
+      break
   }
-  const activeBots = players.filter(p => p.id.startsWith('bot-') && !p.influence.every(c => c.isRevealed))
-  const respondingBots = activeBots.filter(bot => bot.id !== actor)
-  if (respondingBots.length === 0) {
-    return false
-  }
-  return respondingBots.some(bot => !respondedPlayers.includes(bot.id))
+  return false
 }

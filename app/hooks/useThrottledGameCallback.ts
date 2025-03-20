@@ -62,7 +62,17 @@ function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>, prevG
   if (isTurnAboutToEnd(game)) {
     return 1_000
   }
-  if (isBotActionInProgress({ ...game.currentTurn, actor: game.currentTurn?.action.playerId, players: game.players })) {
+  const { phase, action, respondedPlayers = [] } = game.currentTurn || {}
+  const { playerId: actor, targetPlayerId: target } = action || {}
+  if (
+    isBotActionInProgress({
+      actor,
+      target,
+      phase,
+      respondedPlayers,
+      players: game.players
+    })
+  ) {
     return 200 + Math.random() * 600
   }
   if (game.currentTurn?.phase !== nextGame?.currentTurn?.phase) {

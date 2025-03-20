@@ -18,8 +18,6 @@ import { useMessages } from '~/hooks/useMessages'
 import { getPlayerActionMessages, MessageData } from '~/utils/messages'
 import { useThrottledGameCallback } from '~/hooks/useThrottledGameCallback'
 import { BotRequest, CardRequest, GameRequest, TurnRequest } from '~/types/request'
-import { CoupRobot } from '~/services/robot.server'
-import { nonNil } from '~/utils'
 
 export interface CoupContextType {
   game: Game<'client'>
