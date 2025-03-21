@@ -4,9 +4,14 @@ export const loader: LoaderFunction = () => {
   return new Response(
     `<svg xmlns="http://www.w3.org/2000/svg">
       <defs>
+        <g id="info">
+          <path fill="currentColor" d="M245,490C109.9,490,0,380.1,0,245S109.9,0,245,0s245,109.9,245,245S380.1,490,245,490z M245,62C144.1,62,62,144.1,62,245 s82.1,183,183,183s183-82.1,183-183S345.9,62,245,62z"/>
+          <circle fill="currentColor" cx="241.3" cy="159.2" r="29.1"/>
+          <polygon fill="currentColor" points="285.1,359.9 270.4,359.9 219.6,359.9 204.9,359.9 204.9,321 219.6,321 219.6,254.8 205.1,254.8 205.1,215.9 219.6,215.9 263.1,215.9 270.4,215.9 270.4,321 285.1,321"/>
+        </g>
         <g id="notch-path">
-          <line stroke="var(--notch-background)" stroke-width="2px" shape-rendering="optimizeQuality" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-miterlimit="10" x1="1" y1="0" x2="128" y2="0"/>
           <path stroke="var(--notch-border)" fill="var(--notch-background)" shape-rendering="optimizeQuality" stroke-width="1px" stroke-linecap="round" stroke-miterlimit="10" vector-effect="non-scaling-stroke" d="M0,0c5.9,0,10.7,4.8,10.7,10.7v10.7c0,5.9,4.8,10.7,10.7,10.7H128V0"/>
+          <line stroke="var(--notch-background)" stroke-width="4px" shape-rendering="optimizeQuality" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-miterlimit="10" x1=0" y1="-2" x2="128" y2="-2"/>
         </g>
         <g id="question">
           <path fill="currentColor" d="M17 27a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3c.603-.006 6-1 6-5c0-2-2-4-5-4c-2.441 0-4 2-4 3a3 3 0 1 1-6 0c0-4.878 4.58-9 10-9c8 0 11 5.982 11 11c0 4.145-2.277 7.313-6.413 8.92c-.9.351-1.79.587-2.587.747V24a3 3 0 0 1-3 3z"/>

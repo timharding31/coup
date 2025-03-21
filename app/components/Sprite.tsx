@@ -30,6 +30,7 @@ export type SpriteId =
   | 'plus'
   | 'robot'
   | 'target'
+  | 'info'
 
 export const SpriteSize = {
   xs: 16,
@@ -118,6 +119,10 @@ export const Sprite: React.FC<SpriteProps> = ({
 
     case 'robot':
       viewBox = '0 0 16 16'
+      break
+
+    case 'info':
+      viewBox = '0 0 490 490'
       break
   }
 

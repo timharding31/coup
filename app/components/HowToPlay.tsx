@@ -112,7 +112,7 @@ export const HowToPlay = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size='sm' sprite='question' variant='primary' />
+        <Button size='sm' sprite='info' variant='primary' />
       </DialogTrigger>
       <DialogContent>
         <DialogTitle className='text-xl font-bold text-center mb-4'>How to Play Coup</DialogTitle>

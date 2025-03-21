@@ -59,12 +59,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, influence,
             viewBox='0 0 128 32'
             width={160}
             height={40}
-            style={{ '--notch-background': 'var(--nord-0)', '--notch-border': 'var(--nord-3)' } as React.CSSProperties}
-            className='-scale-y-100 absolute -left-6 bottom-0 -z-10 skew-x-[-30deg]' //skew-x-[-30deg]
+            style={
+              {
+                '--notch-background': 'var(--nord-0)',
+                '--notch-border': 'var(--nord-3)'
+              } as React.CSSProperties
+            }
+            className='-scale-y-100 absolute -left-6 bottom-0 -z-10 skew-x-[-30deg]'
           >
             <use href='#notch-path' />
           </svg>
-          <div className='m-[1px]'>
+          <div className='my-[2px] mr-1'>
             <HowToPlay />
           </div>
         </div>
