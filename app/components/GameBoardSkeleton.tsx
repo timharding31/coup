@@ -16,7 +16,7 @@ const GameBoardSkeleton: React.FC<GameBoardSkeletonProps> = ({
 }) => {
   return (
     <div className='w-full h-full grid grid-cols-1 grid-rows-[auto_1fr_auto]'>
-      <header className='relative z-40 flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6'>
+      <header className='relative z-40 flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3'>
         <Link to='/'>
           <h1 className='text-3xl'>polar coup</h1>
         </Link>

@@ -23,26 +23,30 @@ export const GameControls: React.FC<GameControlsProps> = ({
 }) => {
   const { myself, actor, target, blocker, challenger } = players
 
-  if (!myself.influence.some(card => !card.isRevealed)) {
+  if (myself.influence.every(card => card.isRevealed)) {
     // No controls for dead players
     return null
   }
 
-  if (myself.id === actor.id && !game.currentTurn?.action) {
-    return <ActionControls targets={game.players.filter(p => p.id !== myself.id)} coins={myself.coins} />
-  }
-
-  if (!game.currentTurn) {
-    return null
-  }
-
-  const { phase, action, timeoutAt, respondedPlayers = [], opponentResponses, challengeResult } = game.currentTurn
-  const { blockableBy = [] } = action
+  const {
+    phase,
+    action,
+    timeoutAt = null,
+    respondedPlayers = [],
+    opponentResponses,
+    challengeResult
+  } = game?.currentTurn || {}
+  const { blockableBy = [] } = action || {}
   const { challengedCaracter } = challengeResult || {}
-
   const { heading = '', subheading } = getResponseMenuProps(game, myself)
 
   switch (phase) {
+    case undefined:
+      if (myself.id === actor.id) {
+        return <ActionControls targets={game.players.filter(p => p.id !== myself.id)} coins={myself.coins} />
+      }
+      return null
+
     case 'ACTION_EXECUTION':
     case 'ACTION_FAILED':
     case 'TURN_COMPLETE':
@@ -50,7 +54,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
 
     case 'AWAITING_OPPONENT_RESPONSES': {
       // Only unresponded, non-actors can respond to action
-      if (respondedPlayers.includes(myself.id)) {
+      if (!action || respondedPlayers.includes(myself.id)) {
         return null
       }
       if (actor.id !== myself.id) {
@@ -76,7 +80,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
 
     case 'AWAITING_TARGET_BLOCK_RESPONSE':
       // Only target can respond to actor after their challenge defense
-      if (target?.id !== myself.id) {
+      if (!action || target?.id !== myself.id) {
         return null
       }
       return (

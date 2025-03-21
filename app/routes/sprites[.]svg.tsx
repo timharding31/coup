@@ -5,8 +5,8 @@ export const loader: LoaderFunction = () => {
     `<svg xmlns="http://www.w3.org/2000/svg">
       <defs>
         <g id="notch-path">
-          <line stroke="var(--notch-background))" stroke-width="2px" shape-rendering="optimizeQuality" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-miterlimit="10" x1="1" y1="0" x2="128" y2="0"/>
-          <path stroke="var(--notch-border))" class="translate-y-[0.5px]" fill="var(--notch-background)" shape-rendering="optimizeQuality" stroke-width="1px" stroke-linecap="round" stroke-miterlimit="10" vector-effect="non-scaling-stroke" d="M0,0c5.9,0,10.7,4.8,10.7,10.7v10.7c0,5.9,4.8,10.7,10.7,10.7H128V0"/>
+          <line stroke="var(--notch-background)" stroke-width="2px" shape-rendering="optimizeQuality" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-miterlimit="10" x1="1" y1="0" x2="128" y2="0"/>
+          <path stroke="var(--notch-border)" fill="var(--notch-background)" shape-rendering="optimizeQuality" stroke-width="1px" stroke-linecap="round" stroke-miterlimit="10" vector-effect="non-scaling-stroke" d="M0,0c5.9,0,10.7,4.8,10.7,10.7v10.7c0,5.9,4.8,10.7,10.7,10.7H128V0"/>
         </g>
         <g id="question">
           <path fill="currentColor" d="M17 27a3 3 0 0 1-3-3v-4a3 3 0 0 1 3-3c.603-.006 6-1 6-5c0-2-2-4-5-4c-2.441 0-4 2-4 3a3 3 0 1 1-6 0c0-4.878 4.58-9 10-9c8 0 11 5.982 11 11c0 4.145-2.277 7.313-6.413 8.92c-.9.351-1.79.587-2.587.747V24a3 3 0 0 1-3 3z"/>

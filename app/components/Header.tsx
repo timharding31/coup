@@ -13,7 +13,10 @@ export const Header: React.FC<HeaderProps> = ({ className, player, ...rest }) =>
   const myself = usePlayers()?.myself || player || null
   return (
     <header
-      className={classNames('relative z-40 flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6', className)}
+      className={classNames(
+        'relative z-40 flex items-center justify-between gap-2 bg-nord-0 p-1 pl-6 border-b border-nord-3',
+        className
+      )}
       {...rest}
     >
       <Link to='/'>

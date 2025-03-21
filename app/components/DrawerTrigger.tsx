@@ -21,7 +21,7 @@ export const DrawerTrigger: React.FC<DrawerTriggerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useDrawerOpenAtom()
   return isOpen ? null : (
-    <div className='drawer-trigger-background fixed left-max right-max bottom-0 aspect-[138/100] z-[60] grid place-content-center backdrop-blur-[1px]'>
+    <div className='fixed left-max right-max bottom-0 aspect-[138/100] z-[70] grid place-content-center'>
       <div className='drawer-trigger rounded-xl flex flex-col items-stretch mx-auto mb-[14cqi] w-fit max-w-[90cqi] bg-transparent gap-4'>
         {typeof heading === 'string' && (
           <div className='min-h-[28px] mx-auto'>

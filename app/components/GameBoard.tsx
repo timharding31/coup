@@ -34,10 +34,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
         'grid-rows-[auto_1fr_auto]': game.status === 'IN_PROGRESS',
         'grid-rows-[auto_minmax(384px,1fr)_minmax(0,auto)]': game.status === 'COMPLETED'
       })}
-      // style={game.status === 'COMPLETED' ? { gridTemplateRows: 'auto 414px' } : {}}
     >
       <Header />
-      <GameTable game={game} players={players}>
+      <GameTable status={game.status} players={players}>
         {(() => {
           switch (game.status) {
             case 'WAITING':
@@ -67,7 +66,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ playerId }) => {
         })()}
       </GameTable>
 
-      <PlayerHand game={game} {...players.myself} />
+      <PlayerHand status={game.status} phase={game.currentTurn?.phase} {...players.myself} />
     </div>
   )
 }

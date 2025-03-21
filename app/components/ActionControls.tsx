@@ -54,6 +54,7 @@ const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: playerC
 
   return (
     <>
+      <DrawerTrigger heading="It's your turn" label='Start Turn' variant='secondary' />
       <Drawer dismissible>
         <DrawerContent className='p-4'>
           <div className='relative overflow-x-clip'>
@@ -144,8 +145,6 @@ const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: playerC
           </div>
         </DrawerContent>
       </Drawer>
-
-      <DrawerTrigger heading="It's your turn" label='Start' />
     </>
   )
 }

@@ -1,14 +1,22 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { CoupContextType } from '~/context/CoupContext'
 import { OpponentHand } from './OpponentHand'
 import { useDrawerHeight } from './Drawer'
 import classNames from 'classnames'
 import HowToPlay from './HowToPlay'
+import { GameStatus } from '~/types'
 
-interface GameTableProps extends Pick<CoupContextType, 'game' | 'players'>, React.PropsWithChildren {}
+interface GameTableProps extends Pick<CoupContextType, 'players'>, React.PropsWithChildren {
+  status: GameStatus
+}
 
-export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ game, players, children }) => {
+export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ status, players, children }) => {
   const { myself, actor, blocker, challenger, target } = players
+
+  const opponents = useMemo(() => {
+    const myIndex = players.all.findIndex(p => p.id === myself.id)
+    return players.all.slice(myIndex + 1).concat(players.all.slice(0, myIndex))
+  }, [players.all, players.myself])
 
   const drawerHeight = useDrawerHeight()
 
@@ -16,8 +24,6 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
     return null
   }
 
-  const myIndex = game.players.findIndex(p => p.id === myself.id)
-  const opponents = game.players.slice(myIndex + 1).concat(game.players.slice(0, myIndex))
   const opponentsCount = opponents.length
 
   return (
@@ -29,7 +35,7 @@ export const GameTable: React.FC<React.PropsWithChildren<GameTableProps>> = ({ g
           'grid-rows-3': opponentsCount >= 5
         })}
       >
-        {game.status === 'IN_PROGRESS' && (
+        {status === 'IN_PROGRESS' && (
           <>
             {opponents.map((opponent, index) => (
               <OpponentHand
