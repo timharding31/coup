@@ -110,7 +110,7 @@ export const CoinStack: React.FC<CoinStackProps> = ({
         </div>
       </div>
       <AnimatePresence>
-        {showAnimation && (
+        {showAnimation && watchChanges && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
