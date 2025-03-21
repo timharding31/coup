@@ -62,7 +62,7 @@ export const DialogContent: React.FC<DialogContentProps> = ({ children, classNam
   return isHydrated
     ? createPortal(
         <div className='fixed left-max top-0 bottom-0 right-max z-100 flex items-center justify-center' role='dialog'>
-          <div className={classNames('bg-nord-1 nord-shadow p-6 max-h-[100vh] overflow-y-auto', className)} {...props}>
+          <div className={classNames('bg-nord-1 p-6 overflow-y-auto', className)} {...props}>
             {children}
           </div>
           <div className='z-10 absolute top-1 right-1'>
