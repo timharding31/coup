@@ -6,6 +6,7 @@ import { PlayerNameTag } from './PlayerNameTag'
 import { useDrawerHeight, useIsDrawerOpen } from './Drawer'
 import { AnimatePresence, LayoutGroup } from 'framer-motion'
 import classNames from 'classnames'
+import HowToPlay from './HowToPlay'
 
 export interface PlayerHandProps extends Player<'client'> {
   game: Game<'client'>
@@ -35,12 +36,26 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({ id: playerId, game, infl
   return (
     <section
       ref={ref}
-      className='grid grid-rows-[auto_auto] px-4 pb-4 flex-none bg-nord-0 border-t border-nord-3 transition-transform duration-500 ease-in-out container-type-inline-size nord-shadow z-50'
+      className='grid grid-rows-[auto_auto] px-4 pb-4 flex-none bg-nord-0 transition-transform duration-500 ease-in-out container-type-inline-size z-50 relative'
       style={{
         transform: `translateY(${translateAmount.toFixed(2)}px)`,
         boxShadow: '0px 100vh 0px 0px var(--nord-0)'
       }}
     >
+      <div className='absolute right-0 bottom-[calc(100%-1px)] flex items-center justify-center'>
+        <svg
+          viewBox='0 0 128 32'
+          width={160}
+          height={40}
+          style={{ '--notch-background': 'var(--nord-0)', '--notch-border': 'var(--nord-3)' } as React.CSSProperties}
+          className='-scale-y-100 absolute -left-6 bottom-0 -z-10 skew-x-[-30deg]'
+        >
+          <use href='#notch-path' />
+        </svg>
+        <div className='mb-[1px]'>
+          <HowToPlay />
+        </div>
+      </div>
       <PlayerNameTag
         id={playerId}
         {...nameTagProps}
