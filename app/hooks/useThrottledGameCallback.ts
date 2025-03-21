@@ -54,9 +54,13 @@ function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>, prevG
     return 2_500
   }
   if (isActiveBotExchangeReturn(game) && !isActiveBotExchangeReturn(nextGame)) {
-    return 1_000
+    return 1_500
   }
   if (isNewBlockOrChallenge(game, prevGame)) {
+    const { block, challenge } = game.currentTurn?.opponentResponses || {}
+    if (block?.startsWith('bot-') || challenge?.startsWith('bot-')) {
+      return 2_500
+    }
     return 1_000
   }
   if (isTurnAboutToEnd(game)) {
@@ -79,7 +83,7 @@ function getDelayFromGame(game: Game<'client'>, nextGame?: Game<'client'>, prevG
     return 500 + Math.random() * 1_000
   }
   if (game.currentTurn?.phase !== nextGame?.currentTurn?.phase) {
-    return 500
+    return 1_000
   }
   return 200
 }
