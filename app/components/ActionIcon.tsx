@@ -59,7 +59,7 @@ export const SpriteWithMargin: React.FC<SpriteWithMarginProps> = ({ id, color, s
       className={classNames({
         'mr-4': size === 'lg',
         'mr-3': size === 'base',
-        'mr-0.5': size === 'sm'
+        'mr-1': size === 'sm'
       })}
     />
   )
@@ -84,7 +84,7 @@ export const CoinStackWithMargin: React.FC<CoinStackWithMarginProps> = ({ count,
         '-ml-[12px]': count === 3,
         'mr-3': size === 'lg',
         'mr-2': size === 'base',
-        'mr-1': size === 'sm'
+        'mr-0.5': size === 'sm'
       })}
       size={size === 'lg' ? 'base' : size === 'base' ? 'sm' : 'xs'}
     />

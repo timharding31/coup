@@ -3,6 +3,7 @@ import { CoupContextType } from '~/context/CoupContext'
 import { OpponentHand } from './OpponentHand'
 import { useDrawerHeight } from './Drawer'
 import classNames from 'classnames'
+import HowToPlay from './HowToPlay'
 
 interface GameTableProps extends Pick<CoupContextType, 'game' | 'players'>, React.PropsWithChildren {}
 

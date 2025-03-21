@@ -3,6 +3,7 @@ import classNames from 'classnames'
 import { NordColor } from '~/types'
 
 export type SpriteId =
+  | 'question'
   | 'sword'
   | 'skull'
   | 'shield'
@@ -56,6 +57,10 @@ export const Sprite: React.FC<SpriteProps> = ({
     svgClassName: string | undefined
 
   switch (id) {
+    case 'question':
+      viewBox = '0 0 36 36'
+      break
+
     case 'link':
       viewBox = '0 0 16 16'
       break

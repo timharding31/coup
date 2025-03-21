@@ -8,6 +8,7 @@ import { ACTION_REQUIREMENTS } from '~/utils/action'
 import { SpriteId } from './Sprite'
 import { action } from '../routes/_index'
 import { DrawerTrigger } from './DrawerTrigger'
+import HowToPlay from './HowToPlay'
 
 const SHARED_STYLES = 'transition-transform duration-200 ease-in-out w-full grid gap-3 grid-cols-1'
 
@@ -55,7 +56,7 @@ const ActionControls: React.FC<ActionControlsProps> = ({ targets, coins: playerC
     <>
       <Drawer dismissible>
         <DrawerContent className='p-4'>
-          <div className='relative overflow-x-hidden'>
+          <div className='relative overflow-x-clip'>
             <div
               className={classNames(SHARED_STYLES, 'h-[460px]', {
                 'translate-x-[-100%]': targetedAction
