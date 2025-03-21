@@ -1,6 +1,6 @@
 import { CardType, type Game } from '~/types'
 import { redirect, LoaderFunction, LinksFunction } from '@remix-run/node'
-import { Await, useLoaderData } from '@remix-run/react'
+import { Await, useLoaderData, useNavigation } from '@remix-run/react'
 import { CoupContextProvider } from '~/context/CoupContext'
 import { gameService, playerService, sessionService } from '~/services/index.server'
 import { prepareGameForClient } from '~/utils/game'
@@ -47,8 +47,12 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 }
 
 export default function GameRoute() {
+  const isNavigating = useNavigation().state !== 'idle'
   const { gameId, player, gamePromise } = useLoaderData<typeof loader>()
-  return (
+
+  return isNavigating ? (
+    <GameBoardSkeleton player={player} />
+  ) : (
     <Suspense fallback={<GameBoardSkeleton player={player} />}>
       <Await resolve={gamePromise}>
         {game => (
