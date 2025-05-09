@@ -27,12 +27,6 @@ export const action: ActionFunction = async ({ request }) => {
     return { error: 'Username is required' }
   }
 
-  // Check if username is taken by another user
-  const existingUser = await playerService.getPlayerByUsername(username)
-  if (existingUser.playerId && existingUser.playerId !== playerId) {
-    return { error: 'Username already exists' }
-  }
-
   const { player } = await gameService.updatePlayer(playerId, { username })
   return { success: !!player }
 }

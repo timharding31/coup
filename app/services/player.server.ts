@@ -27,24 +27,6 @@ export class PlayerService {
     return { player: snapshot.val() }
   }
 
-  async getPlayerByUsername(username: string): Promise<{ playerId: string | null; player: PlayerInDatabase | null }> {
-    const snapshot = await this.playersRef.get()
-    const players = snapshot.val() as Record<string, PlayerInDatabase>
-
-    if (!players) {
-      return { playerId: null, player: null }
-    }
-
-    const entry = Object.entries(players).find(([_, player]) => player.username === username)
-
-    if (!entry) {
-      return { playerId: null, player: null }
-    }
-
-    const [playerId, player] = entry
-    return { playerId, player }
-  }
-
   async updatePlayer(playerId: string, updates: Partial<PlayerInDatabase>): Promise<{ player: Player | null }> {
     const result = await this.playersRef.child(playerId).transaction((player: Player | null): Player | null => {
       if (!player) return player

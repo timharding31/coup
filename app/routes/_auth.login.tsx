@@ -21,13 +21,6 @@ export const action: ActionFunction = async ({ request, context }) => {
     return { error: 'Username is required' }
   }
 
-  // Check if user exists
-  const existingUser = await playerService.getPlayerByUsername(username)
-
-  if (existingUser.playerId) {
-    return { error: 'Username already exists' }
-  }
-
   // Create new user
   const { playerId } = await playerService.createPlayer(username)
 

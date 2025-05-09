@@ -10,7 +10,8 @@ interface JWTPayload {
 
 export class SessionService {
   private jwtSecret = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'default-secret'
-  private jwtExpiration = 60 * 60 * 24 * 30 // 30 days
+  private sessionExpiration = 60 * 60 * 24 * 30 // 30 days
+  private serviceTokenExpiration = 60 * 60 * 24 * 365 * 2 // 2 years
 
   private sessionStorage = createCookieSessionStorage({
     cookie: {
@@ -19,7 +20,7 @@ export class SessionService {
       secrets: [process.env.SESSION_SECRET || 'default-secret'],
       sameSite: 'lax',
       path: '/',
-      maxAge: this.jwtExpiration,
+      maxAge: this.sessionExpiration,
       httpOnly: true
     }
   })
@@ -79,7 +80,9 @@ export class SessionService {
         serviceId
       },
       this.jwtSecret,
-      { expiresIn: this.jwtExpiration }
+      {
+        expiresIn: this.serviceTokenExpiration
+      }
     )
   }
 
@@ -117,7 +120,7 @@ export class SessionService {
 
   private signJWT(payload: JWTPayload): string {
     return jwt.sign(payload, this.jwtSecret, {
-      expiresIn: this.jwtExpiration
+      expiresIn: this.sessionExpiration
     })
   }
 
